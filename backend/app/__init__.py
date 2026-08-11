@@ -1,0 +1,1 @@
+"""DentistHub backend application package."""

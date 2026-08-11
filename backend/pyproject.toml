@@ -1,0 +1,36 @@
+[project]
+name = "dentisthub-backend"
+version = "0.1.0"
+description = "DentistHub backend — FastAPI service"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "structlog>=24.4",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.8",
+    "mypy>=1.13",
+]
+
+# No [build-system] + package = false → uv treats this as an app (virtual)
+# project: it builds a venv from the dependencies but never installs the
+# project itself. Run modules directly from the `backend/` working directory.
+[tool.uv]
+package = false
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC", "SIM"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+disallow_untyped_defs = true
+no_implicit_reexport = true
