@@ -5,11 +5,11 @@
   "description": "DentistHub — FastAPI + React/Vite monorepo",
   "scripts": {
     "dev": "concurrently -n backend,frontend -c cyan,magenta \"pnpm run dev:backend\" \"pnpm run dev:frontend\"",
-    "dev:backend": "cd backend && uv run uvicorn app.main:app --reload --port ${BACKEND_PORT:-8000}",
+    "dev:backend": "uv run --directory backend uvicorn app.main:app --reload --port 8000",
     "dev:frontend": "pnpm --filter frontend dev",
     "setup": "uv sync --project backend && pnpm install",
     "build": "pnpm --filter frontend build",
-    "lint": "pnpm --filter frontend lint && cd backend && uv run ruff check ."
+    "lint": "pnpm --filter frontend lint && uv run --directory backend ruff check ."
   },
   "devDependencies": {
     "concurrently": "^9.1.0"

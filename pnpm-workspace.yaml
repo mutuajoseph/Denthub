@@ -1,6 +1,10 @@
 packages:
   - "frontend"
 
+allowBuilds:
+  '@biomejs/biome': true
+  esbuild: true
+
 onlyBuiltDependencies:
   - esbuild
   - "@biomejs/biome"
