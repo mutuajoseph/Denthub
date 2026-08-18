@@ -54,11 +54,13 @@ pnpm run dev
 
 Vite proxies `/api` → the backend, so the client calls `/api/v1/health` same-origin.
 
-> **Port in use?** If something already occupies `8000`, run on another port with a
-> single knob — it keeps the backend and the Vite proxy in sync:
-> ```bash
-> BACKEND_PORT=8010 pnpm run dev
-> ```
+> **Port 8000 in use?** The dev command pins the backend to `8000` (kept shell-agnostic
+> for cross-platform use), so free that port before `pnpm run dev`.
+
+## Project docs & guides
+
+- [`docs/PRD.md`](docs/PRD.md) — product requirements (DentHub marketplace, domain truth)
+- [`CLAUDE.md`](CLAUDE.md) — project-wide guide · [`backend/CLAUDE.md`](backend/CLAUDE.md) · [`frontend/CLAUDE.md`](frontend/CLAUDE.md)
 
 ## Handy commands
 
