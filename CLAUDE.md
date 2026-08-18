@@ -68,6 +68,16 @@ pnpm run lint      # ruff (backend) + biome (frontend)
 - **Multi-country is not an afterthought** (see PRD §5–6): design new endpoints to be
   country/currency-aware from the start rather than retrofitting.
 
+## Vendored dev skills
+
+This repo ships a curated set of [Matt Pocock's engineering skills](https://github.com/mattpocock/skills)
+under [`.claude/skills/`](.claude/skills/) (committed, so every contributor has them —
+no marketplace needed). They cover spec/ticket flows, TDD, code review, domain
+modelling, bug diagnosis, and git guardrails. Just describe the task ("turn this into
+tickets", "diagnose this bug", "review my changes") and Claude surfaces the fit. See
+[`.claude/skills/README.md`](.claude/skills/README.md) for the list, provenance, and
+how to add more.
+
 ## Working agreements for Claude
 
 - Keep the **Route → Logic → (Repository)** layering intact on the backend and the
