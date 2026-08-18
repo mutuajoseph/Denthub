@@ -14,8 +14,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  backend:
-    name: Backend · ruff + mypy
+  python-quality:
+    name: Python Quality · ruff + mypy
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -32,7 +32,7 @@ jobs:
         run: uv sync --frozen
 
       - name: Ruff (lint)
-        run: uv run ruff check app
+        run: uv run ruff check app --output-format=github
 
       - name: Ruff (format)
         run: uv run ruff format --check app
@@ -40,8 +40,8 @@ jobs:
       - name: Mypy (strict)
         run: uv run mypy app
 
-  frontend:
-    name: Frontend · biome + build
+  typescript-quality:
+    name: TypeScript Quality · biome + tsc
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -61,7 +61,32 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Biome (lint + format)
-        run: pnpm --filter frontend lint
+        run: pnpm --filter frontend exec biome check --reporter=github .
 
-      - name: Build (tsc + vite)
+      - name: Type-check + build (tsc + vite)
         run: pnpm --filter frontend build
+
+  database-quality:
+    name: Database Quality · sqlfluff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      # Lints every tracked *.sql file against .sqlfluff (postgres dialect).
+      # No SQL in the repo yet, so this is a no-op until the DB layer lands —
+      # it activates automatically the moment .sql files are committed.
+      - name: Lint SQL (sqlfluff · postgres)
+        run: |
+          sql_files=$(git ls-files '*.sql')
+          if [ -z "$sql_files" ]; then
+            echo "No .sql files tracked yet — database quality gate is a no-op until the DB layer lands."
+            exit 0
+          fi
+          echo "Linting SQL files:"
+          echo "$sql_files"
+          uvx --from 'sqlfluff>=3,<4' sqlfluff lint $sql_files

@@ -84,6 +84,9 @@ uv run --directory backend mypy app
 # Frontend (biome + typecheck + build)
 pnpm --filter frontend lint
 pnpm --filter frontend build
+
+# Database (sqlfluff, postgres) — only if the PR touches SQL; no-op otherwise
+sql=$(git diff --name-only origin/main...HEAD -- '*.sql'); [ -n "$sql" ] && uvx --from 'sqlfluff>=3,<4' sqlfluff lint $sql
 ```
 
 Run narrower checks while iterating, but finish with the full set before opening the PR.

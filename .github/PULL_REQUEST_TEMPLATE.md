@@ -23,6 +23,7 @@ Not applicable:
 - [ ] PR title follows Conventional Commits
 - [ ] Backend: `uv run --directory backend ruff check app` + `mypy app` pass
 - [ ] Frontend: `pnpm --filter frontend lint` + `pnpm --filter frontend build` pass
+- [ ] Database (if SQL touched): `sqlfluff lint` passes
 - [ ] Follows the Route → Logic layering / typed-client conventions (see `CLAUDE.md`)
 - [ ] No secrets or credentials committed
 - [ ] Docs updated (`CLAUDE.md` / `README` / `docs/`) if behaviour or setup changed

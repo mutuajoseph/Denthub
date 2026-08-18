@@ -1,0 +1,20 @@
+# sqlfluff config for the DentHub database layer.
+# Dialect is PostgreSQL (per docs/PRD.md). `raw` templater so parameterised
+# queries (e.g. sqlc `$1` placeholders) lint without a real templating engine.
+[sqlfluff]
+dialect = postgres
+templater = raw
+max_line_length = 120
+
+[sqlfluff:indentation]
+indent_unit = space
+tab_space_size = 4
+
+[sqlfluff:rules:capitalisation.keywords]
+capitalisation_policy = upper
+
+[sqlfluff:rules:capitalisation.identifiers]
+extended_capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.functions]
+extended_capitalisation_policy = lower
