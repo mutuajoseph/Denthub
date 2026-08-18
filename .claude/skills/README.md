@@ -4,15 +4,13 @@ These project-level skills are **vendored** (committed into the repo) so every
 contributor gets them on clone — no marketplace, no per-machine setup. Claude Code
 auto-discovers each `.claude/skills/<name>/SKILL.md` when working in this repo.
 
-## Source & license
+## Sources & license
 
-- **Upstream:** [github.com/mattpocock/skills](https://github.com/mattpocock/skills) — Matt Pocock's engineering skills
-- **License:** MIT (see [`LICENSE`](LICENSE) — retained from upstream)
-- **Vendored at commit:** see [`.source-commit`](.source-commit)
+Most skills come from Matt Pocock's collection; `create-pr` was borrowed from the
+Faro engineering skills.
 
-We flattened them from the upstream `skills/<category>/<name>/` layout to
-`.claude/skills/<name>/` (the path Claude Code discovers). Skills reference each other
-by name, so the flattening is transparent.
+- **Matt Pocock:** [github.com/mattpocock/skills](https://github.com/mattpocock/skills) — MIT (see [`LICENSE`](LICENSE)), vendored at the commit in [`.source-commit`](.source-commit). Flattened from the upstream `skills/<category>/<name>/` layout to `.claude/skills/<name>/` (the path Claude Code discovers). Skills reference each other by name, so the flattening is transparent.
+- **`create-pr`:** adapted from `faro-skills/skills/create-pr` — retargeted to this repo's checks (ruff/mypy + biome/build), the vendored `grill-with-docs` skill, and the `github-personal` push routing.
 
 ## What's included (curated for this stack)
 
