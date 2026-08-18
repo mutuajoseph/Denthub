@@ -1,0 +1,121 @@
+name: Release
+
+# Manual, trunk-based releases. Run from `main`: pick a bump, and this creates
+# a unified vX.Y.Z tag + GitHub Release, then deploys that exact tag to
+# production — frontend → Vercel, backend → Render.
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Semver bump for this release"
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+
+permissions:
+  contents: write # create tags + GitHub Releases
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    name: Tag & GitHub Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # need full history + all tags
+
+      - name: Guard — releases run from main only
+        run: |
+          if [ "${GITHUB_REF_NAME}" != "main" ]; then
+            echo "::error::Release must be run from main (got '${GITHUB_REF_NAME}')."
+            exit 1
+          fi
+
+      - name: Compute next version
+        id: version
+        run: |
+          set -euo pipefail
+          latest=$(git tag --list 'v*' --sort=-v:refname | head -n1)
+          [ -z "$latest" ] && latest="v0.0.0"
+          echo "Latest tag: $latest"
+          ver="${latest#v}"
+          IFS='.' read -r major minor patch <<< "$ver"
+          case "${{ inputs.bump }}" in
+            major) major=$((major + 1)); minor=0; patch=0 ;;
+            minor) minor=$((minor + 1)); patch=0 ;;
+            patch) patch=$((patch + 1)) ;;
+          esac
+          next="v${major}.${minor}.${patch}"
+          echo "Next version: $next"
+          echo "version=$next" >> "$GITHUB_OUTPUT"
+
+      - name: Create tag & GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          next="${{ steps.version.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$next" -m "Release $next"
+          git push origin "$next"
+          gh release create "$next" --title "$next" --generate-notes --target "$GITHUB_SHA"
+
+  deploy-frontend:
+    name: Deploy frontend → Vercel
+    needs: tag
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.tag.outputs.version }} # build the tagged commit
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Deploy to Vercel (production)
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERSION: ${{ needs.tag.outputs.version }}
+        run: |
+          set -euo pipefail
+          if [ -z "${VERCEL_TOKEN}" ]; then
+            echo "::warning::VERCEL_TOKEN not set — skipping frontend deploy. See docs/RELEASE.md for setup."
+            exit 0
+          fi
+          npm install -g vercel@latest
+          vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+          vercel build --prod --token="$VERCEL_TOKEN"
+          url=$(vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN")
+          echo "Deployed $VERSION → $url"
+
+  deploy-backend:
+    name: Deploy backend → Render
+    needs: tag
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render deploy (production)
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          VERSION: ${{ needs.tag.outputs.version }}
+        run: |
+          set -euo pipefail
+          if [ -z "${RENDER_DEPLOY_HOOK_URL}" ]; then
+            echo "::warning::RENDER_DEPLOY_HOOK_URL not set — skipping backend deploy. See docs/RELEASE.md for setup."
+            exit 0
+          fi
+          # Deploy hook URLs already carry "?key=..."; append the tag ref so
+          # Render deploys this exact tag (falls back to the tracked branch HEAD
+          # if the provider ignores ref — which equals the tag at release time).
+          echo "Triggering Render deploy for $VERSION"
+          curl -fsS -X POST "${RENDER_DEPLOY_HOOK_URL}&ref=${VERSION}"
+          echo "Render deploy triggered."

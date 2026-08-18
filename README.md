@@ -62,6 +62,7 @@ Vite proxies `/api` → the backend, so the client calls `/api/v1/health` same-o
 ## Project docs & guides
 
 - [`docs/PRD.md`](docs/PRD.md) — product requirements (DentHub marketplace, domain truth)
+- [`docs/RELEASE.md`](docs/RELEASE.md) — trunk-based flow + tag-triggered deploys (Vercel + Render)
 - [`CLAUDE.md`](CLAUDE.md) — project-wide guide · [`backend/CLAUDE.md`](backend/CLAUDE.md) · [`frontend/CLAUDE.md`](frontend/CLAUDE.md)
 
 ## Handy commands

@@ -1,0 +1,31 @@
+# Render Blueprint — backend only (the frontend deploys to Vercel).
+#
+# autoDeploy is OFF: production deploys are triggered by the Release workflow
+# (.github/workflows/release.yml) on a vX.Y.Z tag, not by pushes to main — so
+# the GitHub Action is the single source of production deploys.
+#
+# uv manages the Python toolchain: `pip install uv` bootstraps it, then
+# `uv sync` provisions Python 3.12+ (per backend/pyproject.toml) and the deps.
+services:
+  - type: web
+    name: denthub-backend
+    runtime: python
+    rootDir: backend
+    plan: free
+    region: oregon
+    branch: main
+    autoDeploy: false
+    buildCommand: pip install uv && uv sync --frozen
+    startCommand: uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DEV_MODE
+        value: "0"
+      # Only needed if the browser calls the API cross-origin. With the Vercel
+      # /api rewrite (frontend/vercel.json) requests are same-origin, so CORS
+      # isn't triggered. Set to your Vercel domain otherwise. Managed in the
+      # Render dashboard, not committed here.
+      - key: CORS_ORIGINS
+        sync: false
