@@ -7,6 +7,7 @@ Console renderer in dev (human-readable), JSON in every other environment
 from __future__ import annotations
 
 import logging
+from typing import cast
 
 import structlog
 from structlog.typing import FilteringBoundLogger, Processor
@@ -31,4 +32,4 @@ def configure_logging(*, dev_mode: bool, log_level: str) -> FilteringBoundLogger
         logger_factory=structlog.PrintLoggerFactory(),
         cache_logger_on_first_use=True,
     )
-    return structlog.get_logger()
+    return cast(FilteringBoundLogger, structlog.get_logger())

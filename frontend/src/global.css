@@ -63,8 +63,7 @@ body,
 body {
   font-family: var(--font);
   color: var(--text);
-  background:
-    radial-gradient(1100px 700px at 12% -10%, var(--glow-a), transparent 55%),
+  background: radial-gradient(1100px 700px at 12% -10%, var(--glow-a), transparent 55%),
     radial-gradient(1000px 700px at 100% 8%, var(--glow-b), transparent 50%),
     linear-gradient(160deg, var(--bg-1), var(--bg-0));
   background-attachment: fixed;
@@ -77,7 +76,10 @@ body::before {
   content: "";
   position: fixed;
   inset: 0;
-  background-image: radial-gradient(color-mix(in srgb, var(--text) 8%, transparent) 1px, transparent 1px);
+  background-image: radial-gradient(
+    color-mix(in srgb, var(--text) 8%, transparent) 1px,
+    transparent 1px
+  );
   background-size: 26px 26px;
   -webkit-mask-image: radial-gradient(circle at 50% 38%, #000 0%, transparent 72%);
   mask-image: radial-gradient(circle at 50% 38%, #000 0%, transparent 72%);
@@ -169,9 +171,7 @@ body::before {
   border-radius: 22px;
   color: #fff;
   background: linear-gradient(150deg, var(--brand), var(--brand-2));
-  box-shadow:
-    0 14px 30px -8px var(--brand-soft),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+  box-shadow: 0 14px 30px -8px var(--brand-soft), inset 0 0 0 1px rgba(255, 255, 255, 0.16);
 }
 .logo::after {
   content: "";

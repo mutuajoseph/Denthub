@@ -1,5 +1,7 @@
 # DentistHub
 
+[![CI](https://github.com/mutuajoseph/Denthub/actions/workflows/ci.yml/badge.svg)](https://github.com/mutuajoseph/Denthub/actions/workflows/ci.yml)
+
 A simple full-stack monorepo — **FastAPI** backend + **React / Vite** client —
 scaffolded with the code-design principles from the Faro engineering codebase.
 

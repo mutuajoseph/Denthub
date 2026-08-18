@@ -69,11 +69,11 @@ export function App() {
 function StatusPill({ state }: { state: BackendState }) {
   const { modifier, key, value } = describe(state);
   return (
-    <div className={`status ${modifier}`} role="status" aria-live="polite">
+    <output className={`status ${modifier}`} aria-live="polite">
       <span className="dot" />
       <span className="status-key">{key}</span>
       <span className="status-value">{value}</span>
-    </div>
+    </output>
   );
 }
 
