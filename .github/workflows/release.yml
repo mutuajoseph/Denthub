@@ -1,13 +1,16 @@
 name: Release
 
-# Manual, trunk-based releases. Run from `main`: pick a bump, and this creates
-# a unified vX.Y.Z tag + GitHub Release, then deploys that exact tag to
-# production — frontend → Vercel, backend → Render.
+# Trunk-based, auto on merge. A push to main (a merged PR) cuts a unified
+# vX.Y.Z tag + GitHub Release, then deploys that tag to production
+# (frontend → Vercel, backend → Render). The bump is derived from the merge
+# commit's Conventional Commit type; workflow_dispatch is a manual override.
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       bump:
-        description: "Semver bump for this release"
+        description: "Semver bump (manual override)"
         type: choice
         options: [patch, minor, major]
         default: patch
@@ -25,37 +28,66 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
+      released: ${{ steps.version.outputs.released }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # need full history + all tags
 
-      - name: Guard — releases run from main only
+      - name: Guard — releases come from main only
         run: |
           if [ "${GITHUB_REF_NAME}" != "main" ]; then
-            echo "::error::Release must be run from main (got '${GITHUB_REF_NAME}')."
+            echo "::error::Release must run on main (got '${GITHUB_REF_NAME}')."
             exit 1
           fi
 
-      - name: Compute next version
+      - name: Determine bump & next version
         id: version
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT_BUMP: ${{ inputs.bump }}
         run: |
           set -euo pipefail
+          subject=$(git log -1 --format=%s)
+          body=$(git log -1 --format=%b)
+          echo "HEAD commit: $subject"
+
+          # Escape hatch for auto (merge) releases: skip when the commit says so.
+          if [ "$EVENT" = "push" ] && printf '%s\n%s' "$subject" "$body" | grep -qiE '\[skip release\]'; then
+            echo "Commit requests [skip release] — no release cut."
+            echo "released=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Decide the bump.
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            bump="$INPUT_BUMP"
+          elif printf '%s' "$subject" | grep -qE '^[a-z]+(\([^)]+\))?!:' || printf '%s' "$body" | grep -q 'BREAKING CHANGE'; then
+            bump=major
+          elif printf '%s' "$subject" | grep -qE '^feat(\([^)]+\))?:'; then
+            bump=minor
+          else
+            bump=patch
+          fi
+          echo "Bump: $bump"
+
+          # Compute the next version from the latest v* tag.
           latest=$(git tag --list 'v*' --sort=-v:refname | head -n1)
           [ -z "$latest" ] && latest="v0.0.0"
-          echo "Latest tag: $latest"
           ver="${latest#v}"
           IFS='.' read -r major minor patch <<< "$ver"
-          case "${{ inputs.bump }}" in
+          case "$bump" in
             major) major=$((major + 1)); minor=0; patch=0 ;;
             minor) minor=$((minor + 1)); patch=0 ;;
             patch) patch=$((patch + 1)) ;;
           esac
           next="v${major}.${minor}.${patch}"
-          echo "Next version: $next"
+          echo "Next version: $next (was $latest)"
           echo "version=$next" >> "$GITHUB_OUTPUT"
+          echo "released=true" >> "$GITHUB_OUTPUT"
 
       - name: Create tag & GitHub Release
+        if: steps.version.outputs.released == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -70,6 +102,7 @@ jobs:
   deploy-frontend:
     name: Deploy frontend → Vercel
     needs: tag
+    if: needs.tag.outputs.released == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -101,6 +134,7 @@ jobs:
   deploy-backend:
     name: Deploy backend → Render
     needs: tag
+    if: needs.tag.outputs.released == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Trigger Render deploy (production)

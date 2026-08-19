@@ -92,6 +92,7 @@ how to add more.
   SSH host alias maps to the **mutuajoseph** account; the default `github.com` key on
   this machine is a different account and is **not** authorized on this repo).
 - Default branch: `main`. Do **not** add a `Co-Authored-By: Claude` trailer to commits.
-- **Trunk-based:** feature branches off `main` → PR → CI gates → squash-merge. Production
-  ships only when the **Release** action cuts a `vX.Y.Z` tag (frontend → Vercel, backend →
-  Render). See [`docs/RELEASE.md`](docs/RELEASE.md).
+- **Trunk-based, CD:** feature branches off `main` → PR (CI gates run on open) → squash-merge.
+  **Every merge to `main` auto-releases** — the Release action cuts a `vX.Y.Z` tag (bump from
+  the commit) and deploys (frontend → Vercel, backend → Render). Put `[skip release]` in a
+  commit to skip. See [`docs/RELEASE.md`](docs/RELEASE.md).

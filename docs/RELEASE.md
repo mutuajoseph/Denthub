@@ -1,27 +1,27 @@
 # Release & Deployment
 
-Trunk-based development with **tag-triggered production deploys**. One `main`
-branch; feature branches off it; a manual **Release** action cuts a unified
-`vX.Y.Z` tag that deploys the frontend to **Vercel** and the backend to
-**Render**.
+Trunk-based development with **automatic releases on merge to `main`**. One `main`
+branch; feature branches off it; when a PR merges, the **Release** action cuts a
+unified `vX.Y.Z` tag (bump derived from the merge commit) and deploys the frontend
+to **Vercel** and the backend to **Render**.
 
 ## Flow
 
 ```mermaid
 flowchart TD
-    A[feature branch: feat/*, fix/*] -->|PR| B{CI quality gates<br/>Python · TypeScript · Database}
-    B -->|green + review| C[squash-merge to main]
+    A[feature branch: feat/*, fix/*] -->|open PR to main| B{CI quality gates<br/>Python · TypeScript · Database}
     A -.->|opens| P[Vercel Preview URL]
-    C --> M[main: always deployable]
-    M -->|run Release action<br/>pick patch/minor/major| R[tag vX.Y.Z + GitHub Release]
+    B -->|green + review| C[squash-merge to main]
+    C --> R[Release action auto-runs<br/>bump from commit → tag vX.Y.Z + GitHub Release]
     R --> V[Deploy frontend → Vercel prod]
     R --> D[Deploy backend → Render prod]
 ```
 
-- **PRs** get an automatic **Vercel Preview** URL (frontend). Not production.
-- **`main`** is the integration trunk — always green, but merging to it does **not**
-  deploy to production.
-- **Production only moves when you cut a tag** via the Release action.
+- **Open a PR to `main`** → the CI quality gates run immediately, plus an automatic
+  **Vercel Preview** URL (frontend). Not production.
+- **Merge to `main`** → the Release action fires: it tags `vX.Y.Z` and deploys to
+  production. This is continuous deployment — **every merge ships**.
+- Skip a release for a given merge by putting `[skip release]` in the commit message.
 
 ## Branching
 
@@ -31,13 +31,25 @@ flowchart TD
 
 ## Cutting a release
 
-1. Make sure `main` is green and holds everything you want to ship.
-2. GitHub → **Actions** → **Release** → **Run workflow** (from `main`) → choose the
-   bump (`patch` / `minor` / `major`).
-3. The workflow:
-   - computes the next `vX.Y.Z` from the latest tag,
-   - creates an annotated tag + a GitHub Release with auto-generated notes,
-   - deploys that exact tag: **frontend → Vercel**, **backend → Render** (parallel).
+**Normally you don't** — it's automatic. When a PR squash-merges to `main`, the
+Release action:
+
+- reads the merge commit's Conventional Commit type and picks the bump:
+  `feat:` → **minor**, `fix:` / `chore:` / `docs:` / etc. → **patch**,
+  `feat!:` or `BREAKING CHANGE` → **major**,
+- computes the next `vX.Y.Z` from the latest tag,
+- creates an annotated tag + a GitHub Release with auto-generated notes,
+- deploys that exact tag: **frontend → Vercel**, **backend → Render** (parallel).
+
+> Bump detection assumes **squash-merge** (so `main`'s commit subject is the PR's
+> Conventional Commit title). Keep squash-merge on for `main`.
+
+**Manual override:** GitHub → **Actions** → **Release** → **Run workflow** (from
+`main`) → pick an explicit `patch` / `minor` / `major`. Use this to force a version
+regardless of the last commit.
+
+**Skip a release:** include `[skip release]` in the merge commit message (e.g. for a
+docs- or CI-only change you don't want to ship).
 
 Rollback = run the platform's "redeploy previous" (Vercel: promote an earlier
 deployment; Render: redeploy a prior deploy), or cut a new tag from a fixed commit.
