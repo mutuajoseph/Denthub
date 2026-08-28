@@ -1,10 +1,16 @@
-packages:
-  - "frontend"
+  packages:
+    - "frontend"
 
-allowBuilds:
-  '@biomejs/biome': true
-  esbuild: true
+  allowBuilds:
+    '@biomejs/biome': true
+    esbuild: true
 
-onlyBuiltDependencies:
-  - esbuild
-  - "@biomejs/biome"
+  minimumReleaseAgeExclude:
+    - '@vitejs/plugin-react@6.1.1'
+    - lucide-react@1.35.0
+    - react-router-dom@7.18.3
+    - react-router@7.18.3
+
+  onlyBuiltDependencies:
+    - esbuild
+    - "@biomejs/biome"
