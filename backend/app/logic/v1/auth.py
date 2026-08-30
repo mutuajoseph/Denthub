@@ -117,7 +117,6 @@ async def signup_user(
     """Create a new user, persist to database, and return auth token."""
 
     async with state.db_session_maker() as session:
-
         # Check if email is already registered
         existing = await UserRepository.get_by_email(
             session,
@@ -125,9 +124,7 @@ async def signup_user(
         )
 
         if existing:
-            raise ConflictError(
-                message="A user with this email already exists"
-            )
+            raise ConflictError(message="A user with this email already exists")
 
         # Hash password and save user
         password_hash = hash_password(data.password)
@@ -169,7 +166,6 @@ async def login_user(
     """Verify email/password and return auth token."""
 
     async with state.db_session_maker() as session:
-
         user = await UserRepository.get_by_email(
             session,
             data.email,
@@ -179,14 +175,10 @@ async def login_user(
             data.password,
             user.password_hash,
         ):
-            raise UnauthorizedException(
-                message="Incorrect email or password"
-            )
+            raise UnauthorizedException(message="Incorrect email or password")
 
         if not user.is_active:
-            raise ForbiddenException(
-                message="User account is deactivated"
-            )
+            raise ForbiddenException(message="User account is deactivated")
 
         token = create_access_token(
             state,
@@ -227,26 +219,19 @@ async def get_current_user(
     user_id = payload.get("sub")
 
     if not user_id:
-        raise UnauthorizedException(
-            message="Token payload invalid: subject missing"
-        )
+        raise UnauthorizedException(message="Token payload invalid: subject missing")
 
     async with state.db_session_maker() as session:
-
         user = await UserRepository.get_by_id(
             session,
             user_id,
         )
 
         if not user:
-            raise UnauthorizedException(
-                message="User not found"
-            )
+            raise UnauthorizedException(message="User not found")
 
         if not user.is_active:
-            raise ForbiddenException(
-                message="User account is deactivated"
-            )
+            raise ForbiddenException(message="User account is deactivated")
 
         return UserResponse(
             id=user.id,

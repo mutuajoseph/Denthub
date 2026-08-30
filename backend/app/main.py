@@ -29,21 +29,21 @@ def create_app() -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         logger = configure_logging(dev_mode=settings.dev_mode, log_level=settings.log_level)
-        
+
         # Initialize async database engine and session maker
         logger.info("db.init", url=settings.database_url)
         engine = create_async_engine(settings.database_url, echo=settings.dev_mode)
         db_session_maker = async_sessionmaker(bind=engine, expire_on_commit=False)
-        
+
         app.state.app_state = AppState(
             settings=settings,
             logger=logger,
             db_session_maker=db_session_maker,
         )
-        
+
         logger.info("app.startup", app=settings.app_name, environment=settings.environment)
         yield
-        
+
         logger.info("db.shutdown")
         await engine.dispose()
         logger.info("app.shutdown", app=settings.app_name)
