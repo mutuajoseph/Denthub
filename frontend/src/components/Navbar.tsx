@@ -1,23 +1,23 @@
-import { useEffect, useRef, useState } from "react";
 import {
-  Menu,
-  X,
-  Home,
-  BookOpen,
-  Stethoscope,
-  ShoppingBag,
-  Briefcase,
-  GraduationCap,
-  Newspaper,
-  Moon,
-  ShoppingCart,
   ArrowRight,
-  LogOut,
-  LayoutDashboard,
-  ChevronDown,
+  BookOpen,
+  Briefcase,
   Building2,
+  ChevronDown,
+  GraduationCap,
+  Home,
+  LayoutDashboard,
+  LogOut,
+  Menu,
   MessageCircle,
+  Moon,
+  Newspaper,
+  ShoppingBag,
+  ShoppingCart,
+  Stethoscope,
+  X,
 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 import type { AuthUser } from "../lib/auth";
 
@@ -28,13 +28,13 @@ type NavbarProps = {
 };
 
 const NAV_LINKS = [
-  { label: "Home", icon: Home },
-  { label: "About", icon: BookOpen },
-  { label: "Find a Dentist", icon: Stethoscope },
-  { label: "Oral Care Shop", icon: ShoppingBag },
-  { label: "Jobs", icon: Briefcase },
-  { label: "Training", icon: GraduationCap },
-  { label: "Magazine", icon: Newspaper },
+  { label: "Home", href: "/", icon: Home },
+  { label: "About", href: "/about", icon: BookOpen },
+  { label: "Find a Dentist", href: "/dentists", icon: Stethoscope },
+  { label: "Oral Care Shop", href: "/shop", icon: ShoppingBag },
+  { label: "Jobs", href: "/jobs", icon: Briefcase },
+  { label: "Training", href: "/training", icon: GraduationCap },
+  { label: "Magazine", href: "/magazine", icon: Newspaper },
 ];
 
 /* =========================================================
@@ -52,21 +52,13 @@ function isSupplierUser(user: AuthUser | null) {
 function isTrainingProviderUser(user: AuthUser | null) {
   const role = normalizeRole(user?.role);
 
-  return (
-    role === "training_provider" ||
-    role === "training provider" ||
-    role === "trainer"
-  );
+  return role === "training_provider" || role === "training provider" || role === "trainer";
 }
 
 function canAccessFacility(user: AuthUser | null) {
   const role = normalizeRole(user?.role);
 
-  return (
-    role === "facility" ||
-    role === "facility_admin" ||
-    role === "facility admin"
-  );
+  return role === "facility" || role === "facility_admin" || role === "facility admin";
 }
 
 function isStaffUser(user: AuthUser | null) {
@@ -79,11 +71,7 @@ function isStaffUser(user: AuthUser | null) {
    NAVBAR
 ========================================================= */
 
-export default function Navbar({
-  onSignIn,
-  user,
-  onLogout,
-}: NavbarProps) {
+export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
@@ -94,24 +82,15 @@ export default function Navbar({
   ========================================================= */
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        userMenuRef.current &&
-        !userMenuRef.current.contains(event.target as Node)
-      ) {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setUserMenuOpen(false);
       }
     };
 
-    document.addEventListener(
-      "mousedown",
-      handleClickOutside
-    );
+    document.addEventListener("mousedown", handleClickOutside);
 
     return () => {
-      document.removeEventListener(
-        "mousedown",
-        handleClickOutside
-      );
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
@@ -131,6 +110,14 @@ export default function Navbar({
     setUserMenuOpen(false);
     setMobileOpen(false);
     onLogout();
+  };
+
+  /* =========================================================
+     CLOSE MOBILE MENU AFTER NAVIGATION
+  ========================================================= */
+  const handleMobileNavigation = () => {
+    setMobileOpen(false);
+    setUserMenuOpen(false);
   };
 
   return (
@@ -168,7 +155,8 @@ export default function Navbar({
             BRAND
         ====================================================== */}
         <a
-          href="#"
+          href="/"
+          aria-label="DentHub Kenya home"
           className="
             min-w-0
             whitespace-nowrap
@@ -180,9 +168,7 @@ export default function Navbar({
           "
         >
           Dent
-          <span className="text-orange-500">
-            Hub Kenya
-          </span>
+          <span className="text-orange-500">Hub Kenya</span>
         </a>
 
         {/* =====================================================
@@ -205,11 +191,13 @@ export default function Navbar({
               gap-1
             "
           >
-            {NAV_LINKS.map(
-              ({ label, icon: Icon }, index) => (
+            {NAV_LINKS.map(({ label, href, icon: Icon }) => {
+              const isHome = href === "/";
+
+              return (
                 <a
                   key={label}
-                  href="#"
+                  href={href}
                   className={`
                     relative
                     flex
@@ -222,22 +210,14 @@ export default function Navbar({
                     text-[14px]
                     font-medium
                     transition-colors
-                    ${
-                      index === 0
-                        ? "text-orange-500"
-                        : "text-[#172b4d] hover:text-orange-500"
-                    }
+                    ${isHome ? "text-orange-500" : "text-[#172b4d] hover:text-orange-500"}
                   `}
                 >
-                  <Icon
-                    className="h-[18px] w-[18px]"
-                    strokeWidth={1.7}
-                    aria-hidden="true"
-                  />
+                  <Icon className="h-[18px] w-[18px]" strokeWidth={1.7} aria-hidden="true" />
 
                   {label}
 
-                  {index === 0 && (
+                  {isHome && (
                     <span
                       className="
                         absolute
@@ -251,8 +231,8 @@ export default function Navbar({
                     />
                   )}
                 </a>
-              )
-            )}
+              );
+            })}
           </div>
         </div>
 
@@ -293,10 +273,7 @@ export default function Navbar({
               md:flex
             "
           >
-            <Moon
-              className="h-[18px] w-[18px]"
-              strokeWidth={1.7}
-            />
+            <Moon className="h-[18px] w-[18px]" strokeWidth={1.7} />
           </button>
 
           {/* =================================================
@@ -320,10 +297,7 @@ export default function Navbar({
               hover:text-orange-500
             "
           >
-            <ShoppingCart
-              className="h-[21px] w-[21px]"
-              strokeWidth={1.7}
-            />
+            <ShoppingCart className="h-[21px] w-[21px]" strokeWidth={1.7} />
 
             <span
               className="
@@ -364,9 +338,7 @@ export default function Navbar({
               ================================================== */}
               <button
                 type="button"
-                onClick={() =>
-                  setUserMenuOpen((open) => !open)
-                }
+                onClick={() => setUserMenuOpen((open) => !open)}
                 aria-expanded={userMenuOpen}
                 aria-haspopup="menu"
                 aria-label={`Account menu for ${user.full_name}`}
@@ -401,10 +373,9 @@ export default function Navbar({
                     font-bold
                     text-white
                   "
+                  aria-hidden="true"
                 >
-                  {user.full_name
-                    ?.charAt(0)
-                    .toUpperCase()}
+                  {user.full_name?.charAt(0).toUpperCase()}
                 </span>
 
                 {/* NAME */}
@@ -432,29 +403,26 @@ export default function Navbar({
                     text-[#52627a]
                     transition-transform
                     duration-200
-                    ${
-                      userMenuOpen
-                        ? "rotate-180"
-                        : ""
-                    }
+                    ${userMenuOpen ? "rotate-180" : ""}
                   `}
                   strokeWidth={1.8}
+                  aria-hidden="true"
                 />
               </button>
 
               {/* =================================================
                   USER DROPDOWN
-                  FLOATS ABOVE PAGE
               ================================================== */}
               {userMenuOpen && (
                 <div
                   role="menu"
+                  aria-label="Account menu"
                   className="
                     absolute
                     right-0
                     top-full
-                    mt-2
                     z-[99999]
+                    mt-2
                     w-[250px]
                     overflow-hidden
                     rounded-xl
@@ -473,9 +441,7 @@ export default function Navbar({
                       py-3
                     "
                   >
-                    <p className="text-xs text-slate-400">
-                      Signed in as
-                    </p>
+                    <p className="text-xs text-slate-400">Signed in as</p>
 
                     <p
                       className="
@@ -494,9 +460,7 @@ export default function Navbar({
                   <a
                     href="/dashboard"
                     role="menuitem"
-                    onClick={() =>
-                      setUserMenuOpen(false)
-                    }
+                    onClick={() => setUserMenuOpen(false)}
                     className="
                       flex
                       w-full
@@ -515,6 +479,7 @@ export default function Navbar({
                     <LayoutDashboard
                       className="h-[18px] w-[18px]"
                       strokeWidth={1.7}
+                      aria-hidden="true"
                     />
 
                     <span>Dashboard</span>
@@ -525,9 +490,7 @@ export default function Navbar({
                     <a
                       href="/dashboard/facility"
                       role="menuitem"
-                      onClick={() =>
-                        setUserMenuOpen(false)
-                      }
+                      onClick={() => setUserMenuOpen(false)}
                       className="
                         flex
                         w-full
@@ -546,6 +509,7 @@ export default function Navbar({
                       <Building2
                         className="h-[18px] w-[18px]"
                         strokeWidth={1.7}
+                        aria-hidden="true"
                       />
 
                       <span>Facility</span>
@@ -557,9 +521,7 @@ export default function Navbar({
                     <a
                       href="/dashboard/training"
                       role="menuitem"
-                      onClick={() =>
-                        setUserMenuOpen(false)
-                      }
+                      onClick={() => setUserMenuOpen(false)}
                       className="
                         flex
                         w-full
@@ -578,6 +540,7 @@ export default function Navbar({
                       <GraduationCap
                         className="h-[18px] w-[18px]"
                         strokeWidth={1.7}
+                        aria-hidden="true"
                       />
 
                       <span>Training</span>
@@ -589,9 +552,7 @@ export default function Navbar({
                     <a
                       href="/dashboard/supplier"
                       role="menuitem"
-                      onClick={() =>
-                        setUserMenuOpen(false)
-                      }
+                      onClick={() => setUserMenuOpen(false)}
                       className="
                         flex
                         w-full
@@ -610,6 +571,7 @@ export default function Navbar({
                       <ShoppingBag
                         className="h-[18px] w-[18px]"
                         strokeWidth={1.7}
+                        aria-hidden="true"
                       />
 
                       <span>My store</span>
@@ -621,9 +583,7 @@ export default function Navbar({
                     <a
                       href="/messages"
                       role="menuitem"
-                      onClick={() =>
-                        setUserMenuOpen(false)
-                      }
+                      onClick={() => setUserMenuOpen(false)}
                       className="
                         flex
                         w-full
@@ -642,6 +602,7 @@ export default function Navbar({
                       <MessageCircle
                         className="h-[18px] w-[18px]"
                         strokeWidth={1.7}
+                        aria-hidden="true"
                       />
 
                       <span>Messages</span>
@@ -670,10 +631,7 @@ export default function Navbar({
                       hover:bg-red-50
                     "
                   >
-                    <LogOut
-                      className="h-[18px] w-[18px]"
-                      strokeWidth={1.7}
-                    />
+                    <LogOut className="h-[18px] w-[18px]" strokeWidth={1.7} aria-hidden="true" />
 
                     <span>Log out</span>
                   </button>
@@ -707,11 +665,7 @@ export default function Navbar({
               "
             >
               Sign in
-
-              <ArrowRight
-                className="h-4 w-4"
-                strokeWidth={1.8}
-              />
+              <ArrowRight className="h-4 w-4" strokeWidth={1.8} />
             </button>
           )}
 
@@ -735,16 +689,15 @@ export default function Navbar({
               hover:text-orange-500
               xl:hidden
             "
-            onClick={() =>
-              setMobileOpen((open) => !open)
-            }
+            onClick={() => setMobileOpen((open) => !open)}
             aria-expanded={mobileOpen}
-            aria-label="Menu"
+            aria-controls="mobile-navigation"
+            aria-label={mobileOpen ? "Close menu" : "Open menu"}
           >
             {mobileOpen ? (
-              <X className="h-5 w-5" />
+              <X className="h-5 w-5" aria-hidden="true" />
             ) : (
-              <Menu className="h-5 w-5" />
+              <Menu className="h-5 w-5" aria-hidden="true" />
             )}
           </button>
         </div>
@@ -755,6 +708,7 @@ export default function Navbar({
       ======================================================== */}
       {mobileOpen && (
         <div
+          id="mobile-navigation"
           className="
             border-t
             border-slate-200
@@ -766,14 +720,14 @@ export default function Navbar({
         >
           <div className="space-y-1">
             {/* Navigation links */}
-            {NAV_LINKS.map(
-              ({ label, icon: Icon }, index) => (
+            {NAV_LINKS.map(({ label, href, icon: Icon }) => {
+              const isHome = href === "/";
+
+              return (
                 <a
                   key={label}
-                  href="#"
-                  onClick={() =>
-                    setMobileOpen(false)
-                  }
+                  href={href}
+                  onClick={handleMobileNavigation}
                   className={`
                     flex
                     items-center
@@ -784,22 +738,18 @@ export default function Navbar({
                     text-[15px]
                     font-medium
                     ${
-                      index === 0
+                      isHome
                         ? "bg-orange-50 text-orange-500"
                         : "text-slate-700 hover:bg-orange-50 hover:text-orange-500"
                     }
                   `}
                 >
-                  <Icon
-                    className="h-[18px] w-[18px]"
-                    strokeWidth={1.7}
-                    aria-hidden="true"
-                  />
+                  <Icon className="h-[18px] w-[18px]" strokeWidth={1.7} aria-hidden="true" />
 
                   {label}
                 </a>
-              )
-            )}
+              );
+            })}
 
             {/* =================================================
                 MOBILE AUTHENTICATION
@@ -841,16 +791,13 @@ export default function Navbar({
                         font-bold
                         text-white
                       "
+                      aria-hidden="true"
                     >
-                      {user.full_name
-                        ?.charAt(0)
-                        .toUpperCase()}
+                      {user.full_name?.charAt(0).toUpperCase()}
                     </span>
 
                     <div className="min-w-0">
-                      <p className="text-xs text-slate-400">
-                        Signed in as
-                      </p>
+                      <p className="text-xs text-slate-400">Signed in as</p>
 
                       <p
                         className="
@@ -868,9 +815,7 @@ export default function Navbar({
                   {/* Dashboard */}
                   <a
                     href="/dashboard"
-                    onClick={() =>
-                      setMobileOpen(false)
-                    }
+                    onClick={handleMobileNavigation}
                     className="
                       flex
                       w-full
@@ -890,8 +835,8 @@ export default function Navbar({
                     <LayoutDashboard
                       className="h-[18px] w-[18px]"
                       strokeWidth={1.7}
+                      aria-hidden="true"
                     />
-
                     Dashboard
                   </a>
 
@@ -899,9 +844,7 @@ export default function Navbar({
                   {canAccessFacility(user) && (
                     <a
                       href="/dashboard/facility"
-                      onClick={() =>
-                        setMobileOpen(false)
-                      }
+                      onClick={handleMobileNavigation}
                       className="
                         flex
                         w-full
@@ -921,8 +864,8 @@ export default function Navbar({
                       <Building2
                         className="h-[18px] w-[18px]"
                         strokeWidth={1.7}
+                        aria-hidden="true"
                       />
-
                       Facility
                     </a>
                   )}
@@ -931,9 +874,7 @@ export default function Navbar({
                   {isTrainingProviderUser(user) && (
                     <a
                       href="/dashboard/training"
-                      onClick={() =>
-                        setMobileOpen(false)
-                      }
+                      onClick={handleMobileNavigation}
                       className="
                         flex
                         w-full
@@ -953,8 +894,8 @@ export default function Navbar({
                       <GraduationCap
                         className="h-[18px] w-[18px]"
                         strokeWidth={1.7}
+                        aria-hidden="true"
                       />
-
                       Training
                     </a>
                   )}
@@ -963,9 +904,7 @@ export default function Navbar({
                   {isSupplierUser(user) && (
                     <a
                       href="/dashboard/supplier"
-                      onClick={() =>
-                        setMobileOpen(false)
-                      }
+                      onClick={handleMobileNavigation}
                       className="
                         flex
                         w-full
@@ -985,8 +924,8 @@ export default function Navbar({
                       <ShoppingBag
                         className="h-[18px] w-[18px]"
                         strokeWidth={1.7}
+                        aria-hidden="true"
                       />
-
                       My store
                     </a>
                   )}
@@ -995,9 +934,7 @@ export default function Navbar({
                   {!isStaffUser(user) && (
                     <a
                       href="/messages"
-                      onClick={() =>
-                        setMobileOpen(false)
-                      }
+                      onClick={handleMobileNavigation}
                       className="
                         flex
                         w-full
@@ -1017,8 +954,8 @@ export default function Navbar({
                       <MessageCircle
                         className="h-[18px] w-[18px]"
                         strokeWidth={1.7}
+                        aria-hidden="true"
                       />
-
                       Messages
                     </a>
                   )}
@@ -1043,11 +980,7 @@ export default function Navbar({
                       hover:bg-red-50
                     "
                   >
-                    <LogOut
-                      className="h-[18px] w-[18px]"
-                      strokeWidth={1.7}
-                    />
-
+                    <LogOut className="h-[18px] w-[18px]" strokeWidth={1.7} aria-hidden="true" />
                     Log out
                   </button>
                 </div>
@@ -1080,11 +1013,7 @@ export default function Navbar({
                   "
                 >
                   Sign in
-
-                  <ArrowRight
-                    className="h-4 w-4"
-                    strokeWidth={1.8}
-                  />
+                  <ArrowRight className="h-4 w-4" strokeWidth={1.8} />
                 </button>
               )}
             </div>

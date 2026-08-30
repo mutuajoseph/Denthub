@@ -1,115 +1,87 @@
-import { useState } from "react";
 import {
-  X,
-  User,
-  Stethoscope,
-  Plane,
-  GraduationCap,
-  Building2,
-  Package,
   BookOpen,
-  Mail,
-  Phone,
-  Lock,
+  Building2,
   Eye,
   EyeOff,
+  GraduationCap,
+  Lock,
+  Mail,
+  Package,
+  Phone,
+  Plane,
+  Stethoscope,
+  User,
+  X,
 } from "lucide-react";
+import { useState } from "react";
 
-import {
-  register,
-  type AuthResponse,
-} from "../lib/auth";
+import { type AuthResponse, register } from "../lib/auth";
 
 type RegisterProps = {
   onClose: () => void;
   onSignIn: () => void;
-  onRegisterSuccess?: (
-    auth: AuthResponse
-  ) => void;
+  onRegisterSuccess?: (auth: AuthResponse) => void;
 };
 
 const ACCOUNT_TYPES = [
   {
     id: "patient",
     label: "Patient",
-    description:
-      "Book appointments and manage your dental care",
+    description: "Book appointments and manage your dental care",
     icon: User,
   },
   {
     id: "dentist",
     label: "Dentist",
-    description:
-      "Manage your professional and clinic profile",
+    description: "Manage your professional and clinic profile",
     icon: Stethoscope,
   },
   {
     id: "international",
     label: "International Patient",
-    description:
-      "Plan dental treatment and travel",
+    description: "Plan dental treatment and travel",
     icon: Plane,
   },
   {
     id: "intern",
     label: "Intern / Student",
-    description:
-      "Access training and CPD opportunities",
+    description: "Access training and CPD opportunities",
     icon: GraduationCap,
   },
   {
     id: "clinic",
     label: "Clinic / Employer",
-    description:
-      "Manage your clinic and staff",
+    description: "Manage your clinic and staff",
     icon: Building2,
   },
   {
     id: "supplier",
     label: "Supplier",
-    description:
-      "Manage products, orders and logistics",
+    description: "Manage products, orders and logistics",
     icon: Package,
   },
   {
     id: "training",
     label: "Training Body",
-    description:
-      "Publish courses and issue certificates",
+    description: "Publish courses and issue certificates",
     icon: BookOpen,
   },
 ];
 
-export default function Register({
-  onClose,
-  onSignIn,
-  onRegisterSuccess,
-}: RegisterProps) {
+export default function Register({ onClose, onSignIn, onRegisterSuccess }: RegisterProps) {
   const [step, setStep] = useState(1);
-  const [accountType, setAccountType] =
-    useState("");
+  const [accountType, setAccountType] = useState("");
 
-  const [fullName, setFullName] =
-    useState("");
-  const [email, setEmail] =
-    useState("");
-  const [phone, setPhone] =
-    useState("");
-  const [password, setPassword] =
-    useState("");
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
 
-  const [showPassword, setShowPassword] =
-    useState(false);
-  const [loading, setLoading] =
-    useState(false);
-  const [error, setError] =
-    useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const selectedAccount =
-    ACCOUNT_TYPES.find(
-      (account) =>
-        account.id === accountType
-    );
+  const selectedAccount = ACCOUNT_TYPES.find((account) => account.id === accountType);
 
   const selectAccount = (id: string) => {
     setAccountType(id);
@@ -117,15 +89,11 @@ export default function Register({
     setStep(2);
   };
 
-  const handleSubmit = async (
-    event: React.FormEvent<HTMLFormElement>
-  ) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!accountType) {
-      setError(
-        "Please select an account type."
-      );
+      setError("Please select an account type.");
       return;
     }
 
@@ -136,24 +104,17 @@ export default function Register({
       const response = await register({
         full_name: fullName.trim(),
         email: email.trim(),
-        phone:
-          phone.trim() || undefined,
+        phone: phone.trim() || undefined,
         password,
         account_type: accountType,
       });
 
-      console.log(
-        "Registration successful:",
-        response
-      );
+      console.log("Registration successful:", response);
 
       /*
        * Save the authentication token.
        */
-      localStorage.setItem(
-        "access_token",
-        response.access_token
-      );
+      localStorage.setItem("access_token", response.access_token);
 
       /*
        * Tell the parent application that
@@ -172,11 +133,7 @@ export default function Register({
        */
       onClose();
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Registration failed. Please try again."
-      );
+      setError(err instanceof Error ? err.message : "Registration failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -196,17 +153,13 @@ export default function Register({
         backdrop-blur-[10px]
       "
       onMouseDown={(event) => {
-        if (
-          event.target ===
-          event.currentTarget
-        ) {
+        if (event.target === event.currentTarget) {
           onClose();
         }
       }}
     >
-      <section
-        role="dialog"
-        aria-modal="true"
+      <dialog
+        open
         aria-labelledby="register-title"
         className="
           relative
@@ -248,14 +201,10 @@ export default function Register({
             hover:text-[#152642]
           "
         >
-          <X
-            className="h-4 w-4"
-            strokeWidth={2}
-          />
+          <X className="h-4 w-4" strokeWidth={2} />
         </button>
 
         <div className="px-6 py-6">
-
           {/* Brand */}
           <div className="mb-5 text-center">
             <h1
@@ -268,9 +217,7 @@ export default function Register({
               "
             >
               Dent
-              <span className="text-[#ff851b]">
-                Hub Kenya
-              </span>
+              <span className="text-[#ff851b]">Hub Kenya</span>
             </h1>
           </div>
 
@@ -280,82 +227,66 @@ export default function Register({
           {step === 1 && (
             <>
               <div className="mb-5 text-center">
-                <h2 className="text-[20px] font-bold text-[#152642]">
-                  Join DentHub Kenya
-                </h2>
+                <h2 className="text-[20px] font-bold text-[#152642]">Join DentHub Kenya</h2>
 
-                <p className="mt-1 text-[13px] text-[#98a5b8]">
-                  Choose how you'll use DentHub
-                </p>
+                <p className="mt-1 text-[13px] text-[#98a5b8]">Choose how you'll use DentHub</p>
               </div>
 
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-                {ACCOUNT_TYPES.map(
-                  (account) => {
-                    const Icon =
-                      account.icon;
+                {ACCOUNT_TYPES.map((account) => {
+                  const Icon = account.icon;
 
-                    return (
-                      <button
-                        key={account.id}
-                        type="button"
-                        onClick={() =>
-                          selectAccount(
-                            account.id
-                          )
-                        }
+                  return (
+                    <button
+                      key={account.id}
+                      type="button"
+                      onClick={() => selectAccount(account.id)}
+                      className="
+                        group
+                        flex
+                        items-start
+                        gap-3
+                        rounded-[8px]
+                        border
+                        border-[#d9e3f2]
+                        bg-[#f8fbff]
+                        p-3
+                        text-left
+                        transition
+                        hover:border-[#ff851b]
+                        hover:bg-[#fff7f0]
+                      "
+                    >
+                      <div
                         className="
-                          group
                           flex
-                          items-start
-                          gap-3
-                          rounded-[8px]
-                          border
-                          border-[#d9e3f2]
-                          bg-[#f8fbff]
-                          p-3
-                          text-left
+                          h-9
+                          w-9
+                          shrink-0
+                          items-center
+                          justify-center
+                          rounded-[7px]
+                          bg-[#eaf2ff]
+                          text-[#ff851b]
                           transition
-                          hover:border-[#ff851b]
-                          hover:bg-[#fff7f0]
+                          group-hover:bg-[#fff0e3]
                         "
                       >
-                        <div
-                          className="
-                            flex
-                            h-9
-                            w-9
-                            shrink-0
-                            items-center
-                            justify-center
-                            rounded-[7px]
-                            bg-[#eaf2ff]
-                            text-[#ff851b]
-                            transition
-                            group-hover:bg-[#fff0e3]
-                          "
-                        >
-                          <Icon
-                            className="h-4 w-4"
-                            strokeWidth={1.7}
-                          />
-                        </div>
+                        <Icon className="h-4 w-4" strokeWidth={1.7} />
+                      </div>
 
-                        <div>
-                          <h3 className="text-[13px] font-semibold text-[#152642]">
-                            {account.label}
-                          </h3>
+                      <div>
+                        <h3 className="text-[13px] font-semibold text-[#152642]">
+                          {account.label}
+                        </h3>
 
-                          <p className="mt-0.5 text-[11px] leading-4 text-[#98a5b8]">
-                            {
-                              account.description
-                            }
-                          </p>
-                        </div>
-                      </button>
-                    );
-                  }
-                )}
+                        <p className="mt-0.5 text-[11px] leading-4 text-[#98a5b8]">
+                          {account.description}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </>
           )}
@@ -366,27 +297,14 @@ export default function Register({
           {step === 2 && (
             <>
               <div className="mb-5 text-center">
-                <h2 className="text-[20px] font-bold text-[#152642]">
-                  Create your account
-                </h2>
+                <h2 className="text-[20px] font-bold text-[#152642]">Create your account</h2>
 
-                <p className="mt-1 text-[13px] text-[#98a5b8]">
-                  {
-                    selectedAccount?.label
-                  }{" "}
-                  · Kenya
-                </p>
+                <p className="mt-1 text-[13px] text-[#98a5b8]">{selectedAccount?.label} · Kenya</p>
               </div>
 
-              <form
-                className="flex flex-col gap-1.5"
-                onSubmit={handleSubmit}
-              >
+              <form className="flex flex-col gap-1.5" onSubmit={handleSubmit}>
                 {/* Full Name */}
-                <label
-                  htmlFor="full-name"
-                  className="text-[12px] text-[#91a0b6]"
-                >
+                <label htmlFor="full-name" className="text-[12px] text-[#91a0b6]">
                   Full name
                 </label>
 
@@ -416,11 +334,7 @@ export default function Register({
                     required
                     autoComplete="name"
                     value={fullName}
-                    onChange={(event) =>
-                      setFullName(
-                        event.target.value
-                      )
-                    }
+                    onChange={(event) => setFullName(event.target.value)}
                     className="
                       min-w-0
                       flex-1
@@ -436,10 +350,7 @@ export default function Register({
                 </div>
 
                 {/* Email */}
-                <label
-                  htmlFor="email"
-                  className="mt-1.5 text-[12px] text-[#91a0b6]"
-                >
+                <label htmlFor="email" className="mt-1.5 text-[12px] text-[#91a0b6]">
                   Email
                 </label>
 
@@ -469,11 +380,7 @@ export default function Register({
                     required
                     autoComplete="email"
                     value={email}
-                    onChange={(event) =>
-                      setEmail(
-                        event.target.value
-                      )
-                    }
+                    onChange={(event) => setEmail(event.target.value)}
                     className="
                       min-w-0
                       flex-1
@@ -489,14 +396,8 @@ export default function Register({
                 </div>
 
                 {/* Phone */}
-                <label
-                  htmlFor="phone"
-                  className="mt-1.5 text-[12px] text-[#91a0b6]"
-                >
-                  Phone{" "}
-                  <span className="text-[#a6b1c1]">
-                    (optional)
-                  </span>
+                <label htmlFor="phone" className="mt-1.5 text-[12px] text-[#91a0b6]">
+                  Phone <span className="text-[#a6b1c1]">(optional)</span>
                 </label>
 
                 <div
@@ -524,11 +425,7 @@ export default function Register({
                     placeholder="+254 712 345 678"
                     autoComplete="tel"
                     value={phone}
-                    onChange={(event) =>
-                      setPhone(
-                        event.target.value
-                      )
-                    }
+                    onChange={(event) => setPhone(event.target.value)}
                     className="
                       min-w-0
                       flex-1
@@ -544,10 +441,7 @@ export default function Register({
                 </div>
 
                 {/* Password */}
-                <label
-                  htmlFor="password"
-                  className="mt-1.5 text-[12px] text-[#91a0b6]"
-                >
+                <label htmlFor="password" className="mt-1.5 text-[12px] text-[#91a0b6]">
                   Password
                 </label>
 
@@ -572,21 +466,13 @@ export default function Register({
                   <input
                     id="password"
                     name="password"
-                    type={
-                      showPassword
-                        ? "text"
-                        : "password"
-                    }
+                    type={showPassword ? "text" : "password"}
                     placeholder="At least 8 characters"
                     minLength={8}
                     required
                     autoComplete="new-password"
                     value={password}
-                    onChange={(event) =>
-                      setPassword(
-                        event.target.value
-                      )
-                    }
+                    onChange={(event) => setPassword(event.target.value)}
                     className="
                       min-w-0
                       flex-1
@@ -602,16 +488,8 @@ export default function Register({
 
                   <button
                     type="button"
-                    aria-label={
-                      showPassword
-                        ? "Hide password"
-                        : "Show password"
-                    }
-                    onClick={() =>
-                      setShowPassword(
-                        (value) => !value
-                      )
-                    }
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    onClick={() => setShowPassword((value) => !value)}
                     className="
                       flex
                       h-6
@@ -629,15 +507,9 @@ export default function Register({
                     "
                   >
                     {showPassword ? (
-                      <EyeOff
-                        className="h-3.5 w-3.5"
-                        strokeWidth={1.8}
-                      />
+                      <EyeOff className="h-3.5 w-3.5" strokeWidth={1.8} />
                     ) : (
-                      <Eye
-                        className="h-3.5 w-3.5"
-                        strokeWidth={1.8}
-                      />
+                      <Eye className="h-3.5 w-3.5" strokeWidth={1.8} />
                     )}
                   </button>
                 </div>
@@ -686,9 +558,7 @@ export default function Register({
                     disabled:opacity-60
                   "
                 >
-                  {loading
-                    ? "Creating account..."
-                    : "Create account"}
+                  {loading ? "Creating account..." : "Create account"}
                 </button>
 
                 {/* Back */}
@@ -740,7 +610,7 @@ export default function Register({
             </button>
           </p>
         </div>
-      </section>
+      </dialog>
     </div>
   );
 }

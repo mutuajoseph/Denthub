@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
 import { X } from "lucide-react";
+import { useEffect, useState } from "react";
 
-import { SignIn } from "./SignIn";
-import Register from "./Register";
 import { ForgotPassword } from "./ForgotPassword";
 import { PhoneLogin } from "./PhoneLogin";
+import Register from "./Register";
+import { SignIn } from "./SignIn";
 
 import type { AuthResponse } from "../lib/auth";
 
@@ -15,10 +15,7 @@ type AuthModalProps = {
   onLoginSuccess?: (auth: AuthResponse) => void;
 };
 
-export function AuthModal({
-  onClose,
-  onLoginSuccess,
-}: AuthModalProps) {
+export function AuthModal({ onClose, onLoginSuccess }: AuthModalProps) {
   const [view, setView] = useState<AuthView>("signin");
 
   useEffect(() => {
@@ -41,10 +38,7 @@ export function AuthModal({
 
   const handleLoginSuccess = (auth: AuthResponse) => {
     // Store token
-    localStorage.setItem(
-      "access_token",
-      auth.access_token
-    );
+    localStorage.setItem("access_token", auth.access_token);
 
     // Notify parent application
     onLoginSuccess?.(auth);
@@ -70,7 +64,8 @@ export function AuthModal({
       role="presentation"
       onMouseDown={onClose}
     >
-      <section
+      <dialog
+        open
         className="
           relative
           w-full
@@ -84,12 +79,8 @@ export function AuthModal({
           text-[#11213a]
           shadow-[0_20px_45px_rgba(0,0,0,0.22)]
         "
-        role="dialog"
-        aria-modal="true"
         aria-labelledby="auth-title"
-        onMouseDown={(event) =>
-          event.stopPropagation()
-        }
+        onMouseDown={(event) => event.stopPropagation()}
       >
         {/* Close */}
         <button
@@ -113,10 +104,7 @@ export function AuthModal({
             hover:text-[#66758a]
           "
         >
-          <X
-            className="h-5 w-5"
-            strokeWidth={1.8}
-          />
+          <X className="h-5 w-5" strokeWidth={1.8} />
         </button>
 
         {/* Brand */}
@@ -133,9 +121,7 @@ export function AuthModal({
             "
           >
             Dent
-            <span className="text-[#f47813]">
-              Hub Kenya
-            </span>
+            <span className="text-[#f47813]">Hub Kenya</span>
           </h1>
         </div>
 
@@ -143,15 +129,9 @@ export function AuthModal({
         {view === "signin" && (
           <SignIn
             onLoginSuccess={handleLoginSuccess}
-            onRegister={() =>
-              setView("register")
-            }
-            onForgotPassword={() =>
-              setView("forgot")
-            }
-            onPhoneLogin={() =>
-              setView("phone")
-            }
+            onRegister={() => setView("register")}
+            onForgotPassword={() => setView("forgot")}
+            onPhoneLogin={() => setView("phone")}
           />
         )}
 
@@ -159,33 +139,17 @@ export function AuthModal({
         {view === "register" && (
           <Register
             onClose={onClose}
-            onSignIn={() =>
-              setView("signin")
-            }
-            onRegisterSuccess={
-              handleLoginSuccess
-            }
+            onSignIn={() => setView("signin")}
+            onRegisterSuccess={handleLoginSuccess}
           />
         )}
 
         {/* Forgot password */}
-        {view === "forgot" && (
-          <ForgotPassword
-            onBack={() =>
-              setView("signin")
-            }
-          />
-        )}
+        {view === "forgot" && <ForgotPassword onBack={() => setView("signin")} />}
 
         {/* Phone login */}
-        {view === "phone" && (
-          <PhoneLogin
-            onBack={() =>
-              setView("signin")
-            }
-          />
-        )}
-      </section>
+        {view === "phone" && <PhoneLogin onBack={() => setView("signin")} />}
+      </dialog>
     </div>
   );
 }
