@@ -1,89 +1,120 @@
-import { useEffect, useState } from "react";
-import { ToothMark } from "./components/ToothMark";
-import { type HealthStatus, fetchHealth } from "./lib/api";
+import { useState } from "react";
+import { Route, Routes } from "react-router-dom";
 
-type BackendState =
-  | { kind: "loading" }
-  | { kind: "ready"; health: HealthStatus }
-  | { kind: "error"; message: string };
+import { AuthModal } from "./auth/AuthModal";
+import Navbar from "./components/Navbar";
 
-const STACK = ["React 19", "Vite", "FastAPI", "TypeScript"];
+import { clearStoredAuth, getStoredAuth } from "./lib/auth";
 
-export function App() {
-  const [backend, setBackend] = useState<BackendState>({ kind: "loading" });
+import type { AuthResponse } from "./lib/auth";
 
-  useEffect(() => {
-    let active = true;
-    fetchHealth()
-      .then((health) => {
-        if (active) setBackend({ kind: "ready", health });
-      })
-      .catch((err: unknown) => {
-        if (active) {
-          setBackend({
-            kind: "error",
-            message: err instanceof Error ? err.message : "Unknown error",
-          });
-        }
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
+const App = () => {
+  const [authOpen, setAuthOpen] = useState(false);
+
+  /*
+   * ============================================================
+   * RESTORE AUTHENTICATION ON PAGE REFRESH
+   * ============================================================
+   *
+   * getStoredAuth() reads the authentication session from:
+   *
+   * localStorage["denthub_auth"]
+   *
+   * Because this runs when the state is initialized,
+   * the user remains logged in after refreshing the page.
+   */
+  const [auth, setAuth] = useState<AuthResponse | null>(() => {
+    return getStoredAuth();
+  });
+
+  /*
+   * Get the currently logged-in user.
+   */
+  const user = auth?.user ?? null;
+
+  /*
+   * ============================================================
+   * LOGIN SUCCESS
+   * ============================================================
+   */
+  const handleLoginSuccess = (authResponse: AuthResponse) => {
+    /*
+     * AuthModal/login() already saves the response to
+     * localStorage.
+     *
+     * We also update React state so the Navbar changes
+     * immediately without refreshing.
+     */
+    setAuth(authResponse);
+
+    /*
+     * Close the login modal.
+     */
+    setAuthOpen(false);
+  };
+
+  /*
+   * ============================================================
+   * LOGOUT
+   * ============================================================
+   */
+  const handleLogout = () => {
+    /*
+     * IMPORTANT:
+     *
+     * auth.ts stores the session using:
+     *
+     * "denthub_auth"
+     *
+     * Therefore we must remove it using clearStoredAuth().
+     */
+    clearStoredAuth();
+
+    /*
+     * Clear React authentication state.
+     */
+    setAuth(null);
+  };
 
   return (
-    <main className="page">
-      <div className="glow glow--a" aria-hidden="true" />
-      <div className="glow glow--b" aria-hidden="true" />
+    <>
+      {/* ======================================================
+          NAVBAR
+      ======================================================= */}
+      <Navbar onSignIn={() => setAuthOpen(true)} user={user} onLogout={handleLogout} />
 
-      <section className="card">
-        <div className="logo">
-          <ToothMark />
-        </div>
-        <p className="eyebrow">Dental practice platform</p>
-        <h1 className="title">
-          Welcome to <span className="title-accent">DentistHub</span>
-        </h1>
-        <p className="subtitle">
-          The frontend is live — a React&nbsp;+&nbsp;Vite client wired to a FastAPI backend.
-        </p>
+      {/* ======================================================
+          ROUTES
+      ======================================================= */}
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <div className="p-8">
+              {user ? (
+                <>
+                  <h1 className="text-2xl font-bold text-[#11213a]">Welcome, {user.full_name}</h1>
 
-        <StatusPill state={backend} />
+                  <p className="mt-2 text-slate-500">Role: {user.role}</p>
 
-        <ul className="stack" aria-label="Tech stack">
-          {STACK.map((item) => (
-            <li key={item} className="chip">
-              {item}
-            </li>
-          ))}
-        </ul>
-      </section>
+                  <p className="mt-1 text-sm text-slate-400">{user.email}</p>
+                </>
+              ) : (
+                <h1 className="text-2xl font-bold text-[#11213a]">Home Page</h1>
+              )}
+            </div>
+          }
+        />
+      </Routes>
 
-      <footer className="footnote">
-        <code>localhost:5173</code> proxying <code>/api</code> → FastAPI
-      </footer>
-    </main>
+      {/* ======================================================
+          AUTH MODAL
+      ======================================================= */}
+      {authOpen && (
+        <AuthModal onClose={() => setAuthOpen(false)} onLoginSuccess={handleLoginSuccess} />
+      )}
+    </>
   );
-}
+};
 
-function StatusPill({ state }: { state: BackendState }) {
-  const { modifier, key, value } = describe(state);
-  return (
-    <output className={`status ${modifier}`} aria-live="polite">
-      <span className="dot" />
-      <span className="status-key">{key}</span>
-      <span className="status-value">{value}</span>
-    </output>
-  );
-}
-
-function describe(state: BackendState): { modifier: string; key: string; value: string } {
-  switch (state.kind) {
-    case "loading":
-      return { modifier: "status--pending", key: "Backend", value: "connecting…" };
-    case "error":
-      return { modifier: "status--error", key: "Backend", value: "offline" };
-    case "ready":
-      return { modifier: "status--ok", key: state.health.service, value: state.health.message };
-  }
-}
+export default App;

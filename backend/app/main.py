@@ -13,6 +13,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.config import API_V1_PREFIX, Settings
 from app.exceptions import register_exception_handlers
@@ -28,9 +29,23 @@ def create_app() -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         logger = configure_logging(dev_mode=settings.dev_mode, log_level=settings.log_level)
-        app.state.app_state = AppState(settings=settings, logger=logger)
+
+        # Initialize async database engine and session maker
+        logger.info("db.init", url=settings.database_url)
+        engine = create_async_engine(settings.database_url, echo=settings.dev_mode)
+        db_session_maker = async_sessionmaker(bind=engine, expire_on_commit=False)
+
+        app.state.app_state = AppState(
+            settings=settings,
+            logger=logger,
+            db_session_maker=db_session_maker,
+        )
+
         logger.info("app.startup", app=settings.app_name, environment=settings.environment)
         yield
+
+        logger.info("db.shutdown")
+        await engine.dispose()
         logger.info("app.shutdown", app=settings.app_name)
 
     app = FastAPI(title=f"{settings.app_name} API", version="0.1.0", lifespan=lifespan)
