@@ -1,13 +1,10 @@
 import { useState } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 
-import Navbar from "./components/Navbar";
 import { AuthModal } from "./auth/AuthModal";
+import Navbar from "./components/Navbar";
 
-import {
-  getStoredAuth,
-  clearStoredAuth,
-} from "./lib/auth";
+import { clearStoredAuth, getStoredAuth } from "./lib/auth";
 
 import type { AuthResponse } from "./lib/auth";
 
@@ -40,9 +37,7 @@ const App = () => {
    * LOGIN SUCCESS
    * ============================================================
    */
-  const handleLoginSuccess = (
-    authResponse: AuthResponse
-  ) => {
+  const handleLoginSuccess = (authResponse: AuthResponse) => {
     /*
      * AuthModal/login() already saves the response to
      * localStorage.
@@ -86,11 +81,7 @@ const App = () => {
       {/* ======================================================
           NAVBAR
       ======================================================= */}
-      <Navbar
-        onSignIn={() => setAuthOpen(true)}
-        user={user}
-        onLogout={handleLogout}
-      />
+      <Navbar onSignIn={() => setAuthOpen(true)} user={user} onLogout={handleLogout} />
 
       {/* ======================================================
           ROUTES
@@ -102,22 +93,14 @@ const App = () => {
             <div className="p-8">
               {user ? (
                 <>
-                  <h1 className="text-2xl font-bold text-[#11213a]">
-                    Welcome, {user.full_name}
-                  </h1>
+                  <h1 className="text-2xl font-bold text-[#11213a]">Welcome, {user.full_name}</h1>
 
-                  <p className="mt-2 text-slate-500">
-                    Role: {user.role}
-                  </p>
+                  <p className="mt-2 text-slate-500">Role: {user.role}</p>
 
-                  <p className="mt-1 text-sm text-slate-400">
-                    {user.email}
-                  </p>
+                  <p className="mt-1 text-sm text-slate-400">{user.email}</p>
                 </>
               ) : (
-                <h1 className="text-2xl font-bold text-[#11213a]">
-                  Home Page
-                </h1>
+                <h1 className="text-2xl font-bold text-[#11213a]">Home Page</h1>
               )}
             </div>
           }
@@ -128,10 +111,7 @@ const App = () => {
           AUTH MODAL
       ======================================================= */}
       {authOpen && (
-        <AuthModal
-          onClose={() => setAuthOpen(false)}
-          onLoginSuccess={handleLoginSuccess}
-        />
+        <AuthModal onClose={() => setAuthOpen(false)} onLoginSuccess={handleLoginSuccess} />
       )}
     </>
   );

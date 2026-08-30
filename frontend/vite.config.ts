@@ -1,5 +1,5 @@
-import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 // Dev-time proxy: the browser talks to the Vite origin only, and `/api`
@@ -7,10 +7,7 @@ import { defineConfig } from "vite";
 const backendPort = process.env.BACKEND_PORT ?? "8000";
 
 export default defineConfig({
-  plugins: [
-    react(),
-    tailwindcss(),
-  ],
+  plugins: [react(), tailwindcss()],
 
   server: {
     port: 5173,

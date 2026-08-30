@@ -1,31 +1,20 @@
-import {
-  Phone,
-  ArrowLeft,
-  ArrowRight,
-} from "lucide-react";
+import { ArrowLeft, ArrowRight, Phone } from "lucide-react";
 
 type PhoneLoginProps = {
   onBack: () => void;
 };
 
-export function PhoneLogin({
-  onBack,
-}: PhoneLoginProps) {
+export function PhoneLogin({ onBack }: PhoneLoginProps) {
   return (
     <div className="w-full">
-      <h2 className="text-center text-[18px] font-semibold text-[#11213a]">
-        Sign in with Phone
-      </h2>
+      <h2 className="text-center text-[18px] font-semibold text-[#11213a]">Sign in with Phone</h2>
 
       <p className="mb-5 mt-2 text-center text-[13px] leading-5 text-[#98a5b8]">
         Enter your phone number to continue.
       </p>
 
       <form className="flex flex-col gap-2">
-        <label
-          htmlFor="phone-number"
-          className="text-[12px] text-[#91a0b6]"
-        >
+        <label htmlFor="phone-number" className="text-[12px] text-[#91a0b6]">
           Phone Number
         </label>
 
@@ -41,10 +30,7 @@ export function PhoneLogin({
             focus-within:ring-[#f47813]/10
           "
         >
-          <Phone
-            className="h-4 w-4 text-[#a6b1c1]"
-            strokeWidth={1.7}
-          />
+          <Phone className="h-4 w-4 text-[#a6b1c1]" strokeWidth={1.7} />
 
           <input
             id="phone-number"
@@ -82,10 +68,7 @@ export function PhoneLogin({
           "
         >
           Continue
-          <ArrowRight
-            className="h-4 w-4"
-            strokeWidth={1.8}
-          />
+          <ArrowRight className="h-4 w-4" strokeWidth={1.8} />
         </button>
       </form>
 
@@ -105,10 +88,7 @@ export function PhoneLogin({
           hover:text-[#f47813]
         "
       >
-        <ArrowLeft
-          className="h-4 w-4"
-          strokeWidth={1.8}
-        />
+        <ArrowLeft className="h-4 w-4" strokeWidth={1.8} />
         Back to Sign in
       </button>
     </div>

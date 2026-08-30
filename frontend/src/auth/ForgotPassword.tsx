@@ -1,16 +1,10 @@
-import {
-  Mail,
-  ArrowLeft,
-  ArrowRight,
-} from "lucide-react";
+import { ArrowLeft, ArrowRight, Mail } from "lucide-react";
 
 type ForgotPasswordProps = {
   onBack: () => void;
 };
 
-export function ForgotPassword({
-  onBack,
-}: ForgotPasswordProps) {
+export function ForgotPassword({ onBack }: ForgotPasswordProps) {
   return (
     <div className="w-full">
       <h2 className="text-center text-[18px] font-semibold text-[#11213a]">
@@ -22,10 +16,7 @@ export function ForgotPassword({
       </p>
 
       <form className="flex flex-col gap-2">
-        <label
-          htmlFor="forgot-email"
-          className="text-[12px] text-[#91a0b6]"
-        >
+        <label htmlFor="forgot-email" className="text-[12px] text-[#91a0b6]">
           Email
         </label>
 
@@ -41,10 +32,7 @@ export function ForgotPassword({
             focus-within:ring-[#f47813]/10
           "
         >
-          <Mail
-            className="h-4 w-4 text-[#a6b1c1]"
-            strokeWidth={1.7}
-          />
+          <Mail className="h-4 w-4 text-[#a6b1c1]" strokeWidth={1.7} />
 
           <input
             id="forgot-email"
@@ -82,10 +70,7 @@ export function ForgotPassword({
           "
         >
           Send Reset Link
-          <ArrowRight
-            className="h-4 w-4"
-            strokeWidth={1.8}
-          />
+          <ArrowRight className="h-4 w-4" strokeWidth={1.8} />
         </button>
       </form>
 
@@ -105,10 +90,7 @@ export function ForgotPassword({
           hover:text-[#f47813]
         "
       >
-        <ArrowLeft
-          className="h-4 w-4"
-          strokeWidth={1.8}
-        />
+        <ArrowLeft className="h-4 w-4" strokeWidth={1.8} />
         Back to Sign in
       </button>
     </div>

@@ -1,14 +1,7 @@
+import { ArrowRight, Eye, EyeOff, Lock, Mail, Phone } from "lucide-react";
 import { useState } from "react";
-import {
-  Mail,
-  Lock,
-  Eye,
-  EyeOff,
-  Phone,
-  ArrowRight,
-} from "lucide-react";
 
-import { login, type AuthResponse } from "../lib/auth";
+import { type AuthResponse, login } from "../lib/auth";
 
 type SignInProps = {
   onLoginSuccess: (auth: AuthResponse) => void;
@@ -30,9 +23,7 @@ export function SignIn({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSubmit = async (
-    event: React.FormEvent<HTMLFormElement>
-  ) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     setError("");
@@ -61,11 +52,7 @@ export function SignIn({
        */
       onLoginSuccess(response);
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to sign in. Please try again."
-      );
+      setError(err instanceof Error ? err.message : "Unable to sign in. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -78,15 +65,9 @@ export function SignIn({
         Welcome back to DentHub Kenya
       </p>
 
-      <form
-        className="flex flex-col gap-1.5"
-        onSubmit={handleSubmit}
-      >
+      <form className="flex flex-col gap-1.5" onSubmit={handleSubmit}>
         {/* Email */}
-        <label
-          htmlFor="auth-email"
-          className="text-[12px] text-[#91a0b6]"
-        >
+        <label htmlFor="auth-email" className="text-[12px] text-[#91a0b6]">
           Email
         </label>
 
@@ -107,10 +88,7 @@ export function SignIn({
             focus-within:ring-[#f47813]/10
           "
         >
-          <Mail
-            className="h-4 w-4 shrink-0 text-[#a6b1c1]"
-            strokeWidth={1.7}
-          />
+          <Mail className="h-4 w-4 shrink-0 text-[#a6b1c1]" strokeWidth={1.7} />
 
           <input
             id="auth-email"
@@ -139,10 +117,7 @@ export function SignIn({
         </div>
 
         {/* Password */}
-        <label
-          htmlFor="auth-password"
-          className="mt-1.5 text-[12px] text-[#91a0b6]"
-        >
+        <label htmlFor="auth-password" className="mt-1.5 text-[12px] text-[#91a0b6]">
           Password
         </label>
 
@@ -163,10 +138,7 @@ export function SignIn({
             focus-within:ring-[#f47813]/10
           "
         >
-          <Lock
-            className="h-4 w-4 shrink-0 text-[#a6b1c1]"
-            strokeWidth={1.7}
-          />
+          <Lock className="h-4 w-4 shrink-0 text-[#a6b1c1]" strokeWidth={1.7} />
 
           <input
             id="auth-password"
@@ -195,12 +167,8 @@ export function SignIn({
 
           <button
             type="button"
-            aria-label={
-              showPassword ? "Hide password" : "Show password"
-            }
-            onClick={() =>
-              setShowPassword((value) => !value)
-            }
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            onClick={() => setShowPassword((value) => !value)}
             className="
               flex
               h-6
@@ -218,15 +186,9 @@ export function SignIn({
             "
           >
             {showPassword ? (
-              <EyeOff
-                className="h-3.5 w-3.5"
-                strokeWidth={1.8}
-              />
+              <EyeOff className="h-3.5 w-3.5" strokeWidth={1.8} />
             ) : (
-              <Eye
-                className="h-3.5 w-3.5"
-                strokeWidth={1.8}
-              />
+              <Eye className="h-3.5 w-3.5" strokeWidth={1.8} />
             )}
           </button>
         </div>
@@ -281,12 +243,7 @@ export function SignIn({
         >
           {loading ? "Signing in..." : "Sign in"}
 
-          {!loading && (
-            <ArrowRight
-              className="h-4 w-4"
-              strokeWidth={1.8}
-            />
-          )}
+          {!loading && <ArrowRight className="h-4 w-4" strokeWidth={1.8} />}
         </button>
 
         {/* Google */}
@@ -314,10 +271,7 @@ export function SignIn({
             disabled:opacity-60
           "
         >
-          <span className="text-[15px] font-bold">
-            G
-          </span>
-
+          <span className="text-[15px] font-bold">G</span>
           Sign in with Google
         </button>
 
@@ -345,11 +299,7 @@ export function SignIn({
             disabled:opacity-60
           "
         >
-          <Phone
-            className="h-4 w-4"
-            strokeWidth={1.8}
-          />
-
+          <Phone className="h-4 w-4" strokeWidth={1.8} />
           Continue with Phone Number
         </button>
       </form>

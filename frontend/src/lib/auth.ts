@@ -31,9 +31,7 @@ const AUTH_STORAGE_KEY = "denthub_auth";
 /**
  * Login
  */
-export async function login(
-  credentials: LoginRequest
-): Promise<AuthResponse> {
+export async function login(credentials: LoginRequest): Promise<AuthResponse> {
   const res = await fetch(`${API_BASE}/auth/login`, {
     method: "POST",
     headers: {
@@ -45,20 +43,13 @@ export async function login(
   const data = await res.json();
 
   if (!res.ok) {
-    throw new Error(
-      data?.message ||
-        data?.detail ||
-        `Login failed: ${res.status}`
-    );
+    throw new Error(data?.message || data?.detail || `Login failed: ${res.status}`);
   }
 
   const authResponse = data as AuthResponse;
 
   // Save authentication session
-  localStorage.setItem(
-    AUTH_STORAGE_KEY,
-    JSON.stringify(authResponse)
-  );
+  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authResponse));
 
   return authResponse;
 }
@@ -66,9 +57,7 @@ export async function login(
 /**
  * Register
  */
-export async function register(
-  data: RegisterRequest
-): Promise<AuthResponse> {
+export async function register(data: RegisterRequest): Promise<AuthResponse> {
   const res = await fetch(`${API_BASE}/auth/register`, {
     method: "POST",
     headers: {
@@ -81,19 +70,14 @@ export async function register(
 
   if (!res.ok) {
     throw new Error(
-      responseData?.message ||
-        responseData?.detail ||
-        `Registration failed: ${res.status}`
+      responseData?.message || responseData?.detail || `Registration failed: ${res.status}`,
     );
   }
 
   const authResponse = responseData as AuthResponse;
 
   // Save authentication session
-  localStorage.setItem(
-    AUTH_STORAGE_KEY,
-    JSON.stringify(authResponse)
-  );
+  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authResponse));
 
   return authResponse;
 }
@@ -103,9 +87,7 @@ export async function register(
  */
 export function getStoredAuth(): AuthResponse | null {
   try {
-    const stored = localStorage.getItem(
-      AUTH_STORAGE_KEY
-    );
+    const stored = localStorage.getItem(AUTH_STORAGE_KEY);
 
     if (!stored) {
       return null;
