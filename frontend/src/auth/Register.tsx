@@ -15,52 +15,67 @@ import {
   EyeOff,
 } from "lucide-react";
 
+import {
+  register,
+  type AuthResponse,
+} from "../lib/auth";
+
 type RegisterProps = {
   onClose: () => void;
   onSignIn: () => void;
+  onRegisterSuccess?: (
+    auth: AuthResponse
+  ) => void;
 };
 
 const ACCOUNT_TYPES = [
   {
     id: "patient",
     label: "Patient",
-    description: "Book appointments and manage your dental care",
+    description:
+      "Book appointments and manage your dental care",
     icon: User,
   },
   {
     id: "dentist",
     label: "Dentist",
-    description: "Manage your professional and clinic profile",
+    description:
+      "Manage your professional and clinic profile",
     icon: Stethoscope,
   },
   {
     id: "international",
     label: "International Patient",
-    description: "Plan dental treatment and travel",
+    description:
+      "Plan dental treatment and travel",
     icon: Plane,
   },
   {
     id: "intern",
     label: "Intern / Student",
-    description: "Access training and CPD opportunities",
+    description:
+      "Access training and CPD opportunities",
     icon: GraduationCap,
   },
   {
     id: "clinic",
     label: "Clinic / Employer",
-    description: "Manage your clinic and staff",
+    description:
+      "Manage your clinic and staff",
     icon: Building2,
   },
   {
     id: "supplier",
     label: "Supplier",
-    description: "Manage products, orders and logistics",
+    description:
+      "Manage products, orders and logistics",
     icon: Package,
   },
   {
     id: "training",
     label: "Training Body",
-    description: "Publish courses and issue certificates",
+    description:
+      "Publish courses and issue certificates",
     icon: BookOpen,
   },
 ];
@@ -68,18 +83,103 @@ const ACCOUNT_TYPES = [
 export default function Register({
   onClose,
   onSignIn,
+  onRegisterSuccess,
 }: RegisterProps) {
   const [step, setStep] = useState(1);
-  const [accountType, setAccountType] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  const [accountType, setAccountType] =
+    useState("");
 
-  const selectedAccount = ACCOUNT_TYPES.find(
-    (account) => account.id === accountType
-  );
+  const [fullName, setFullName] =
+    useState("");
+  const [email, setEmail] =
+    useState("");
+  const [phone, setPhone] =
+    useState("");
+  const [password, setPassword] =
+    useState("");
+
+  const [showPassword, setShowPassword] =
+    useState(false);
+  const [loading, setLoading] =
+    useState(false);
+  const [error, setError] =
+    useState("");
+
+  const selectedAccount =
+    ACCOUNT_TYPES.find(
+      (account) =>
+        account.id === accountType
+    );
 
   const selectAccount = (id: string) => {
     setAccountType(id);
+    setError("");
     setStep(2);
+  };
+
+  const handleSubmit = async (
+    event: React.FormEvent<HTMLFormElement>
+  ) => {
+    event.preventDefault();
+
+    if (!accountType) {
+      setError(
+        "Please select an account type."
+      );
+      return;
+    }
+
+    setError("");
+    setLoading(true);
+
+    try {
+      const response = await register({
+        full_name: fullName.trim(),
+        email: email.trim(),
+        phone:
+          phone.trim() || undefined,
+        password,
+        account_type: accountType,
+      });
+
+      console.log(
+        "Registration successful:",
+        response
+      );
+
+      /*
+       * Save the authentication token.
+       */
+      localStorage.setItem(
+        "access_token",
+        response.access_token
+      );
+
+      /*
+       * Tell the parent application that
+       * registration was successful.
+       *
+       * This uses the same authentication
+       * flow as normal Sign In.
+       */
+      onRegisterSuccess?.(response);
+
+      /*
+       * Close the authentication modal.
+       *
+       * The user is already logged in, so
+       * we DO NOT send them back to Sign In.
+       */
+      onClose();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Registration failed. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -91,17 +191,23 @@ export default function Register({
         flex
         items-center
         justify-center
-        bg-transparent
+        bg-black/10
         p-4
         backdrop-blur-[10px]
       "
-      onClick={onClose}
+      onMouseDown={(event) => {
+        if (
+          event.target ===
+          event.currentTarget
+        ) {
+          onClose();
+        }
+      }}
     >
       <section
         role="dialog"
         aria-modal="true"
         aria-labelledby="register-title"
-        onClick={(e) => e.stopPropagation()}
         className="
           relative
           w-full
@@ -120,10 +226,7 @@ export default function Register({
         <button
           type="button"
           aria-label="Close registration"
-          onClick={(e) => {
-            e.stopPropagation();
-            onClose();
-          }}
+          onClick={onClose}
           className="
             absolute
             right-4
@@ -171,7 +274,9 @@ export default function Register({
             </h1>
           </div>
 
-          {/* STEP 1 */}
+          {/* =========================
+              STEP 1 - ACCOUNT TYPE
+          ========================== */}
           {step === 1 && (
             <>
               <div className="mb-5 text-center">
@@ -185,68 +290,79 @@ export default function Register({
               </div>
 
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-                {ACCOUNT_TYPES.map((account) => {
-                  const Icon = account.icon;
+                {ACCOUNT_TYPES.map(
+                  (account) => {
+                    const Icon =
+                      account.icon;
 
-                  return (
-                    <button
-                      key={account.id}
-                      type="button"
-                      onClick={() => selectAccount(account.id)}
-                      className="
-                        group
-                        flex
-                        items-start
-                        gap-3
-                        rounded-[8px]
-                        border
-                        border-[#d9e3f2]
-                        bg-[#f8fbff]
-                        p-3
-                        text-left
-                        transition
-                        hover:border-[#ff851b]
-                        hover:bg-[#fff7f0]
-                      "
-                    >
-                      <div
+                    return (
+                      <button
+                        key={account.id}
+                        type="button"
+                        onClick={() =>
+                          selectAccount(
+                            account.id
+                          )
+                        }
                         className="
+                          group
                           flex
-                          h-9
-                          w-9
-                          shrink-0
-                          items-center
-                          justify-center
-                          rounded-[7px]
-                          bg-[#eaf2ff]
-                          text-[#ff851b]
+                          items-start
+                          gap-3
+                          rounded-[8px]
+                          border
+                          border-[#d9e3f2]
+                          bg-[#f8fbff]
+                          p-3
+                          text-left
                           transition
-                          group-hover:bg-[#fff0e3]
+                          hover:border-[#ff851b]
+                          hover:bg-[#fff7f0]
                         "
                       >
-                        <Icon
-                          className="h-4 w-4"
-                          strokeWidth={1.7}
-                        />
-                      </div>
+                        <div
+                          className="
+                            flex
+                            h-9
+                            w-9
+                            shrink-0
+                            items-center
+                            justify-center
+                            rounded-[7px]
+                            bg-[#eaf2ff]
+                            text-[#ff851b]
+                            transition
+                            group-hover:bg-[#fff0e3]
+                          "
+                        >
+                          <Icon
+                            className="h-4 w-4"
+                            strokeWidth={1.7}
+                          />
+                        </div>
 
-                      <div>
-                        <h3 className="text-[13px] font-semibold text-[#152642]">
-                          {account.label}
-                        </h3>
+                        <div>
+                          <h3 className="text-[13px] font-semibold text-[#152642]">
+                            {account.label}
+                          </h3>
 
-                        <p className="mt-0.5 text-[11px] leading-4 text-[#98a5b8]">
-                          {account.description}
-                        </p>
-                      </div>
-                    </button>
-                  );
-                })}
+                          <p className="mt-0.5 text-[11px] leading-4 text-[#98a5b8]">
+                            {
+                              account.description
+                            }
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  }
+                )}
               </div>
             </>
           )}
 
-          {/* STEP 2 */}
+          {/* =========================
+              STEP 2 - REGISTRATION
+          ========================== */}
           {step === 2 && (
             <>
               <div className="mb-5 text-center">
@@ -255,12 +371,17 @@ export default function Register({
                 </h2>
 
                 <p className="mt-1 text-[13px] text-[#98a5b8]">
-                  {selectedAccount?.label} · Kenya
+                  {
+                    selectedAccount?.label
+                  }{" "}
+                  · Kenya
                 </p>
               </div>
 
-              <form className="flex flex-col gap-1.5">
-
+              <form
+                className="flex flex-col gap-1.5"
+                onSubmit={handleSubmit}
+              >
                 {/* Full Name */}
                 <label
                   htmlFor="full-name"
@@ -289,9 +410,17 @@ export default function Register({
 
                   <input
                     id="full-name"
+                    name="full_name"
                     type="text"
                     placeholder="Jane Doe"
                     required
+                    autoComplete="name"
+                    value={fullName}
+                    onChange={(event) =>
+                      setFullName(
+                        event.target.value
+                      )
+                    }
                     className="
                       min-w-0
                       flex-1
@@ -334,9 +463,17 @@ export default function Register({
 
                   <input
                     id="email"
+                    name="email"
                     type="email"
                     placeholder="Enter your email"
                     required
+                    autoComplete="email"
+                    value={email}
+                    onChange={(event) =>
+                      setEmail(
+                        event.target.value
+                      )
+                    }
                     className="
                       min-w-0
                       flex-1
@@ -382,8 +519,16 @@ export default function Register({
 
                   <input
                     id="phone"
+                    name="phone"
                     type="tel"
                     placeholder="+254 712 345 678"
+                    autoComplete="tel"
+                    value={phone}
+                    onChange={(event) =>
+                      setPhone(
+                        event.target.value
+                      )
+                    }
                     className="
                       min-w-0
                       flex-1
@@ -426,10 +571,22 @@ export default function Register({
 
                   <input
                     id="password"
-                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    type={
+                      showPassword
+                        ? "text"
+                        : "password"
+                    }
                     placeholder="At least 8 characters"
                     minLength={8}
                     required
+                    autoComplete="new-password"
+                    value={password}
+                    onChange={(event) =>
+                      setPassword(
+                        event.target.value
+                      )
+                    }
                     className="
                       min-w-0
                       flex-1
@@ -451,7 +608,9 @@ export default function Register({
                         : "Show password"
                     }
                     onClick={() =>
-                      setShowPassword((value) => !value)
+                      setShowPassword(
+                        (value) => !value
+                      )
                     }
                     className="
                       flex
@@ -470,16 +629,44 @@ export default function Register({
                     "
                   >
                     {showPassword ? (
-                      <EyeOff className="h-3.5 w-3.5" />
+                      <EyeOff
+                        className="h-3.5 w-3.5"
+                        strokeWidth={1.8}
+                      />
                     ) : (
-                      <Eye className="h-3.5 w-3.5" />
+                      <Eye
+                        className="h-3.5 w-3.5"
+                        strokeWidth={1.8}
+                      />
                     )}
                   </button>
                 </div>
 
+                {/* Error */}
+                {error && (
+                  <div
+                    role="alert"
+                    className="
+                      mt-2
+                      rounded-[7px]
+                      border
+                      border-red-200
+                      bg-red-50
+                      px-3
+                      py-2
+                      text-center
+                      text-[12px]
+                      text-red-600
+                    "
+                  >
+                    {error}
+                  </div>
+                )}
+
                 {/* Create Account */}
                 <button
                   type="submit"
+                  disabled={loading}
                   className="
                     mt-2
                     min-h-[42px]
@@ -495,15 +682,23 @@ export default function Register({
                     transition
                     hover:bg-[#f47813]
                     active:scale-[0.99]
+                    disabled:cursor-not-allowed
+                    disabled:opacity-60
                   "
                 >
-                  Create account
+                  {loading
+                    ? "Creating account..."
+                    : "Create account"}
                 </button>
 
                 {/* Back */}
                 <button
                   type="button"
-                  onClick={() => setStep(1)}
+                  disabled={loading}
+                  onClick={() => {
+                    setError("");
+                    setStep(1);
+                  }}
                   className="
                     mx-auto
                     mt-1
@@ -515,6 +710,8 @@ export default function Register({
                     text-[#152642]
                     transition
                     hover:text-[#f47813]
+                    disabled:cursor-not-allowed
+                    disabled:opacity-50
                   "
                 >
                   ← Change account type

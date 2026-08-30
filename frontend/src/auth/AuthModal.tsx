@@ -6,13 +6,19 @@ import Register from "./Register";
 import { ForgotPassword } from "./ForgotPassword";
 import { PhoneLogin } from "./PhoneLogin";
 
+import type { AuthResponse } from "../lib/auth";
+
 type AuthView = "signin" | "register" | "forgot" | "phone";
 
 type AuthModalProps = {
   onClose: () => void;
+  onLoginSuccess?: (auth: AuthResponse) => void;
 };
 
-export function AuthModal({ onClose }: AuthModalProps) {
+export function AuthModal({
+  onClose,
+  onLoginSuccess,
+}: AuthModalProps) {
   const [view, setView] = useState<AuthView>("signin");
 
   useEffect(() => {
@@ -32,6 +38,20 @@ export function AuthModal({ onClose }: AuthModalProps) {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [onClose]);
+
+  const handleLoginSuccess = (auth: AuthResponse) => {
+    // Store token
+    localStorage.setItem(
+      "access_token",
+      auth.access_token
+    );
+
+    // Notify parent application
+    onLoginSuccess?.(auth);
+
+    // Close authentication modal
+    onClose();
+  };
 
   return (
     <div
@@ -67,7 +87,9 @@ export function AuthModal({ onClose }: AuthModalProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="auth-title"
-        onMouseDown={(event) => event.stopPropagation()}
+        onMouseDown={(event) =>
+          event.stopPropagation()
+        }
       >
         {/* Close */}
         <button
@@ -91,7 +113,10 @@ export function AuthModal({ onClose }: AuthModalProps) {
             hover:text-[#66758a]
           "
         >
-          <X className="h-5 w-5" strokeWidth={1.8} />
+          <X
+            className="h-5 w-5"
+            strokeWidth={1.8}
+          />
         </button>
 
         {/* Brand */}
@@ -108,35 +133,56 @@ export function AuthModal({ onClose }: AuthModalProps) {
             "
           >
             Dent
-            <span className="text-[#f47813]">Hub Kenya</span>
+            <span className="text-[#f47813]">
+              Hub Kenya
+            </span>
           </h1>
         </div>
 
-        {/* Authentication screens */}
+        {/* Sign in */}
         {view === "signin" && (
           <SignIn
-            onRegister={() => setView("register")}
-            onForgotPassword={() => setView("forgot")}
-            onPhoneLogin={() => setView("phone")}
+            onLoginSuccess={handleLoginSuccess}
+            onRegister={() =>
+              setView("register")
+            }
+            onForgotPassword={() =>
+              setView("forgot")
+            }
+            onPhoneLogin={() =>
+              setView("phone")
+            }
           />
         )}
 
+        {/* Register */}
         {view === "register" && (
           <Register
             onClose={onClose}
-            onSignIn={() => setView("signin")}
+            onSignIn={() =>
+              setView("signin")
+            }
+            onRegisterSuccess={
+              handleLoginSuccess
+            }
           />
         )}
 
+        {/* Forgot password */}
         {view === "forgot" && (
           <ForgotPassword
-            onBack={() => setView("signin")}
+            onBack={() =>
+              setView("signin")
+            }
           />
         )}
 
+        {/* Phone login */}
         {view === "phone" && (
           <PhoneLogin
-            onBack={() => setView("signin")}
+            onBack={() =>
+              setView("signin")
+            }
           />
         )}
       </section>

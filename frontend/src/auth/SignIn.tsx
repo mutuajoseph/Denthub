@@ -8,18 +8,68 @@ import {
   ArrowRight,
 } from "lucide-react";
 
+import { login, type AuthResponse } from "../lib/auth";
+
 type SignInProps = {
+  onLoginSuccess: (auth: AuthResponse) => void;
   onRegister: () => void;
   onForgotPassword: () => void;
   onPhoneLogin: () => void;
 };
 
 export function SignIn({
+  onLoginSuccess,
   onRegister,
   onForgotPassword,
   onPhoneLogin,
 }: SignInProps) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (
+    event: React.FormEvent<HTMLFormElement>
+  ) => {
+    event.preventDefault();
+
+    setError("");
+
+    if (!email.trim()) {
+      setError("Please enter your email.");
+      return;
+    }
+
+    if (!password) {
+      setError("Please enter your password.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await login({
+        email: email.trim(),
+        password,
+      });
+
+      /*
+       * Pass the successful authentication response
+       * back to AuthModal.
+       */
+      onLoginSuccess(response);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to sign in. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="w-full">
@@ -28,7 +78,10 @@ export function SignIn({
         Welcome back to DentHub Kenya
       </p>
 
-      <form className="flex flex-col gap-1.5">
+      <form
+        className="flex flex-col gap-1.5"
+        onSubmit={handleSubmit}
+      >
         {/* Email */}
         <label
           htmlFor="auth-email"
@@ -64,7 +117,13 @@ export function SignIn({
             name="email"
             type="email"
             placeholder="Enter your email"
+            autoComplete="email"
             required
+            value={email}
+            onChange={(event) => {
+              setEmail(event.target.value);
+              setError("");
+            }}
             className="
               min-w-0
               flex-1
@@ -114,7 +173,13 @@ export function SignIn({
             name="password"
             type={showPassword ? "text" : "password"}
             placeholder="Enter your password"
+            autoComplete="current-password"
             required
+            value={password}
+            onChange={(event) => {
+              setPassword(event.target.value);
+              setError("");
+            }}
             className="
               min-w-0
               flex-1
@@ -133,7 +198,9 @@ export function SignIn({
             aria-label={
               showPassword ? "Hide password" : "Show password"
             }
-            onClick={() => setShowPassword((value) => !value)}
+            onClick={() =>
+              setShowPassword((value) => !value)
+            }
             className="
               flex
               h-6
@@ -144,22 +211,51 @@ export function SignIn({
               rounded-[5px]
               border-0
               bg-[#b8c3d2]
+              p-0
               text-white
               transition
               hover:bg-[#a8b4c5]
             "
           >
             {showPassword ? (
-              <EyeOff className="h-3.5 w-3.5" strokeWidth={1.8} />
+              <EyeOff
+                className="h-3.5 w-3.5"
+                strokeWidth={1.8}
+              />
             ) : (
-              <Eye className="h-3.5 w-3.5" strokeWidth={1.8} />
+              <Eye
+                className="h-3.5 w-3.5"
+                strokeWidth={1.8}
+              />
             )}
           </button>
         </div>
 
+        {/* Error */}
+        {error && (
+          <div
+            role="alert"
+            className="
+              mt-2
+              rounded-[7px]
+              border
+              border-red-200
+              bg-red-50
+              px-3
+              py-2
+              text-center
+              text-[12px]
+              text-red-600
+            "
+          >
+            {error}
+          </div>
+        )}
+
         {/* Sign In */}
         <button
           type="submit"
+          disabled={loading}
           className="
             mt-2
             flex
@@ -179,18 +275,24 @@ export function SignIn({
             transition
             hover:bg-[#f47813]
             active:scale-[0.99]
+            disabled:cursor-not-allowed
+            disabled:opacity-60
           "
         >
-          Sign in
-          <ArrowRight
-            className="h-4 w-4"
-            strokeWidth={1.8}
-          />
+          {loading ? "Signing in..." : "Sign in"}
+
+          {!loading && (
+            <ArrowRight
+              className="h-4 w-4"
+              strokeWidth={1.8}
+            />
+          )}
         </button>
 
         {/* Google */}
         <button
           type="button"
+          disabled={loading}
           className="
             flex
             min-h-[42px]
@@ -208,15 +310,21 @@ export function SignIn({
             text-[#ff851b]
             transition
             hover:bg-orange-50
+            disabled:cursor-not-allowed
+            disabled:opacity-60
           "
         >
-          <span className="text-[15px] font-bold">G</span>
+          <span className="text-[15px] font-bold">
+            G
+          </span>
+
           Sign in with Google
         </button>
 
         {/* Phone */}
         <button
           type="button"
+          disabled={loading}
           onClick={onPhoneLogin}
           className="
             mx-auto
@@ -233,6 +341,8 @@ export function SignIn({
             text-[#152642]
             transition
             hover:text-[#f47813]
+            disabled:cursor-not-allowed
+            disabled:opacity-60
           "
         >
           <Phone
@@ -247,6 +357,7 @@ export function SignIn({
       {/* Forgot Password */}
       <button
         type="button"
+        disabled={loading}
         onClick={onForgotPassword}
         className="
           mx-auto
@@ -260,6 +371,8 @@ export function SignIn({
           text-[#ff851b]
           transition
           hover:text-[#f47813]
+          disabled:cursor-not-allowed
+          disabled:opacity-60
         "
       >
         Forgot password?
@@ -270,6 +383,7 @@ export function SignIn({
         Don't have an account?{" "}
         <button
           type="button"
+          disabled={loading}
           onClick={onRegister}
           className="
             border-0
@@ -279,6 +393,8 @@ export function SignIn({
             text-[#ff851b]
             transition
             hover:text-[#f47813]
+            disabled:cursor-not-allowed
+            disabled:opacity-60
           "
         >
           Register
