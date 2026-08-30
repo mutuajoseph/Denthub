@@ -53,6 +53,16 @@ class ConflictError(BaseApiException):
     message = "Conflict"
 
 
+class UnauthorizedException(BaseApiException):
+    code = 401
+    message = "Unauthorized"
+
+
+class ForbiddenException(BaseApiException):
+    code = 403
+    message = "Forbidden"
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     """Register handlers in priority order: specific first, catch-all last."""
 

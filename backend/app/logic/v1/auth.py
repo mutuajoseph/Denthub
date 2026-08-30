@@ -1,0 +1,256 @@
+"""Authentication and authorization logic.
+
+Handles password hashing, token generation/verification, and signup/login flows.
+"""
+
+from __future__ import annotations
+
+from datetime import UTC, datetime, timedelta
+from typing import Any
+
+import bcrypt
+import jwt
+from pydantic import BaseModel, EmailStr
+
+from app.exceptions import ConflictError, ForbiddenException, UnauthorizedException
+from app.repositories.user import UserRepository
+from app.utils.state import AppState
+
+
+class UserResponse(BaseModel):
+    """Public view of a user."""
+
+    id: str
+    email: str
+    role: str
+    full_name: str
+
+
+class AuthResponseModel(BaseModel):
+    """Response containing access token and user metadata."""
+
+    access_token: str
+    token_type: str
+    user: UserResponse
+
+
+class UserSignup(BaseModel):
+    """Input parameters for signing up."""
+
+    full_name: str
+    email: EmailStr
+    password: str
+    role: str = "patient"
+    phone: str | None = None
+
+
+class UserLogin(BaseModel):
+    """Input parameters for logging in."""
+
+    email: EmailStr
+    password: str
+
+
+def hash_password(password: str) -> str:
+    """Hash a password using bcrypt."""
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password.encode("utf-8"), salt)
+    return hashed.decode("utf-8")
+
+
+def verify_password(password: str, hashed: str) -> bool:
+    """Verify a hashed password."""
+    try:
+        return bcrypt.checkpw(
+            password.encode("utf-8"),
+            hashed.encode("utf-8"),
+        )
+    except Exception:
+        return False
+
+
+def create_access_token(
+    state: AppState,
+    user_id: str,
+    role: str,
+) -> str:
+    """Create a new JSON Web Token for authentication."""
+
+    settings = state.settings
+
+    now = datetime.now(UTC)
+    expire = now + timedelta(days=7)
+
+    payload = {
+        "sub": user_id,
+        "role": role,
+        "iat": int(now.timestamp()),
+        "exp": int(expire.timestamp()),
+    }
+
+    return jwt.encode(
+        payload,
+        settings.jwt_secret_key,
+        algorithm=settings.jwt_algorithm,
+    )
+
+
+def decode_access_token(
+    state: AppState,
+    token: str,
+) -> dict[str, Any]:
+    """Decode and validate an access token."""
+
+    settings = state.settings
+
+    return jwt.decode(
+        token,
+        settings.jwt_secret_key,
+        algorithms=[settings.jwt_algorithm],
+    )
+
+
+async def signup_user(
+    state: AppState,
+    data: UserSignup,
+) -> AuthResponseModel:
+    """Create a new user, persist to database, and return auth token."""
+
+    async with state.db_session_maker() as session:
+
+        # Check if email is already registered
+        existing = await UserRepository.get_by_email(
+            session,
+            data.email,
+        )
+
+        if existing:
+            raise ConflictError(
+                message="A user with this email already exists"
+            )
+
+        # Hash password and save user
+        password_hash = hash_password(data.password)
+
+        user = await UserRepository.create(
+            session,
+            full_name=data.full_name,
+            email=data.email,
+            password_hash=password_hash,
+            role=data.role,
+            phone=data.phone,
+        )
+
+        await session.commit()
+
+        # Create token
+        token = create_access_token(
+            state,
+            user.id,
+            user.role,
+        )
+
+        return AuthResponseModel(
+            access_token=token,
+            token_type="bearer",
+            user=UserResponse(
+                id=user.id,
+                email=user.email,
+                role=user.role,
+                full_name=user.full_name,
+            ),
+        )
+
+
+async def login_user(
+    state: AppState,
+    data: UserLogin,
+) -> AuthResponseModel:
+    """Verify email/password and return auth token."""
+
+    async with state.db_session_maker() as session:
+
+        user = await UserRepository.get_by_email(
+            session,
+            data.email,
+        )
+
+        if not user or not verify_password(
+            data.password,
+            user.password_hash,
+        ):
+            raise UnauthorizedException(
+                message="Incorrect email or password"
+            )
+
+        if not user.is_active:
+            raise ForbiddenException(
+                message="User account is deactivated"
+            )
+
+        token = create_access_token(
+            state,
+            user.id,
+            user.role,
+        )
+
+        return AuthResponseModel(
+            access_token=token,
+            token_type="bearer",
+            user=UserResponse(
+                id=user.id,
+                email=user.email,
+                role=user.role,
+                full_name=user.full_name,
+            ),
+        )
+
+
+async def get_current_user(
+    state: AppState,
+    token: str,
+) -> UserResponse:
+    """Verify authentication token and return current user details."""
+
+    try:
+        payload = decode_access_token(
+            state,
+            token,
+        )
+
+    except jwt.PyJWTError as e:
+        raise UnauthorizedException(
+            message="Invalid or expired access token",
+            detail=str(e),
+        ) from e
+
+    user_id = payload.get("sub")
+
+    if not user_id:
+        raise UnauthorizedException(
+            message="Token payload invalid: subject missing"
+        )
+
+    async with state.db_session_maker() as session:
+
+        user = await UserRepository.get_by_id(
+            session,
+            user_id,
+        )
+
+        if not user:
+            raise UnauthorizedException(
+                message="User not found"
+            )
+
+        if not user.is_active:
+            raise ForbiddenException(
+                message="User account is deactivated"
+            )
+
+        return UserResponse(
+            id=user.id,
+            email=user.email,
+            role=user.role,
+            full_name=user.full_name,
+        )

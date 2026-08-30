@@ -22,6 +22,9 @@ class Settings:
     dev_mode: bool
     log_level: str
     cors_origins: tuple[str, ...]
+    database_url: str
+    jwt_secret_key: str
+    jwt_algorithm: str
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -32,4 +35,9 @@ class Settings:
             dev_mode=os.getenv("DEV_MODE", "1") == "1",
             log_level=os.getenv("LOG_LEVEL", "INFO"),
             cors_origins=tuple(o.strip() for o in origins.split(",") if o.strip()),
+            database_url=os.getenv("DATABASE_URL", "sqlite+aiosqlite:///denthub.db"),
+            jwt_secret_key=os.getenv(
+                "JWT_SECRET_KEY", "denthub-super-secret-dev-key-change-in-prod"
+            ),
+            jwt_algorithm=os.getenv("JWT_ALGORITHM", "HS256"),
         )
