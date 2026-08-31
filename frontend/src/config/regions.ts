@@ -241,14 +241,23 @@ export function detectRegionCode(): string {
   return DEFAULT_REGION_CODE;
 }
 
+export const IP_DETECTION_ENV_FLAG = "VITE_ENABLE_IP_DETECTION";
+
 /**
  * Detect a region from the client's IP address via a public geo service.
  * Used as an enhancement when the locale/timezone signal is ambiguous and no
  * manual selection has been made. Returns null on any failure so callers can
  * fall back to locale/timezone or the default region.
+ *
+ * Gated behind the `VITE_ENABLE_IP_DETECTION` env flag (off by default) so the
+ * third-party ipwho.is call is optional and offline-safe. The PRD §5 model —
+ * server-driven `Accept-Country`/`Accept-Currency`/`Accept-Language` headers —
+ * remains the source of truth once the backend supports it; this is a
+ * first-visit progressive enhancement only.
  */
 export async function detectRegionByIP(): Promise<string | null> {
   if (typeof window === "undefined") return null;
+  if (import.meta.env.VITE_ENABLE_IP_DETECTION !== "true") return null;
 
   const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000));
   const fetchRegion = async (): Promise<string | null> => {
