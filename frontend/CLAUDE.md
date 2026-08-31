@@ -12,50 +12,62 @@ Talks to the backend only through the `/api` proxy.
 
 | Path | Responsibility |
 |---|---|
-| `main.tsx` | React entry — mounts `<App>` into `#root`, imports `global.css`. |
-| `App.tsx` | Top-level component. Today: the welcome hero + live backend-health badge. |
-| `components/` | Reusable presentational components (e.g. `ToothMark.tsx`, the brand glyph). |
-| `lib/api.ts` | **Typed API client.** One function per backend call; response interfaces mirror the backend Pydantic models. |
-| `global.css` | Design tokens + component styles (see Styling below). |
+| `main.tsx` | React entry — mounts `<App>` into `#root`, imports `global.css`, initialises persisted theme. |
+| `App.tsx` | Top-level component — hosts the router (React Router v7); routes to pages, catch-all → `NotFound`. |
+| `pages/` | Route-level screens (e.g. `Home.tsx`, `NotFound.tsx`). |
+| `components/` | Reusable presentational components — `ui/` (Button, Badge, StarRating), `home/` (HeroSection, StatsBar, HowItWorks, FeaturedClinics), plus `Navbar.tsx`, `CartDropdown.tsx`, `CountrySelector.tsx`. |
+| `hooks/` | Shared React hooks (`useRegion`, `useCountryConfig`, `useDentistSearch`). |
+| `store/` | Zustand stores: `themeStore`, `cartStore`, `regionStore`, `countryConfigStore`, `siteContentStore` (persisted where noted). |
+| `config/` | Static domain config — `regions.ts`, `subdivisions.ts`, `dentistConstants.ts`. |
+| `lib/` | Typed API clients and contract types (see Data flow below). `api.ts` mirrors the backend Pydantic models. |
+| `utils/` | `cn` (clsx + tailwind-merge), `iconMap`, `subdivisionCopy`. |
+| `global.css` | Tailwind v4 entry + design tokens (see Styling below). |
 
 ## Data flow & the API contract
 
-- **All network access goes through `lib/api.ts`.** Components never call `fetch`
-  directly — they import a typed function (`fetchHealth()`, and future
-  `fetchPatients()` etc.). This keeps the contract in one place.
-- Types in `lib/api.ts` **mirror the backend response models** (`HealthStatus` ↔
-  backend `HealthStatus`). If a backend model changes, update the matching interface
-  here. As the surface grows this is the natural point to switch to generated types
-  from the FastAPI OpenAPI spec (`openapi-typescript`).
+- **Backend-facing network access lives in `lib/`.** `lib/api.ts` is the typed client
+  for backend endpoints — one function per backend call, response interfaces mirroring
+  the backend Pydantic models (`HealthStatus` ↔ backend `HealthStatus`). As the surface
+  grows, newer clients (`lib/searchApi.ts`, `lib/countryConfigApi.ts`) follow the same
+  typed-function-per-call pattern. Keep all backend calls behind these typed clients —
+  components never call `fetch` against `/api` directly.
+- **Third-party calls** (e.g. IP geolocation in `config/regions.ts`) are separate from
+  `lib/` and are optional, gated behind env flags — see `IP_DETECTION_ENV_FLAG`.
+- Types in `lib/api.ts` **mirror the backend response models**; if a backend model
+  changes, update the matching interface here. As the surface grows this is the natural
+  point to switch to generated types from the FastAPI OpenAPI spec (`openapi-typescript`).
 - **Never hard-code the backend origin.** Call relative paths (`/api/v1/...`); Vite's
   proxy (`vite.config.ts`) forwards `/api` to the backend at `localhost:8000` (the port
   the `dev:backend` script pins).
-- Errors: the backend returns `{ code, message, detail? }`. `fetchHealth` throws on
-  non-`ok`; model UI state as an explicit union (see the `BackendState` type in
-  `App.tsx`) rather than juggling loading/error booleans.
+- Errors: the backend returns `{ code, message, detail? }`. Clients throw on `!res.ok`;
+  model UI state as explicit unions rather than juggling loading/error booleans.
 
-## Styling conventions
+## Styling & theming
 
-- **CSS custom properties are the design system.** Colours, radii, and shadows are
-  tokens on `:root` in `global.css`; components reference `var(--…)` — never hex
-  literals inline.
-- **Theme-aware.** Every colour is defined for light and dark. The dark palette is
-  the default `:root`; the light palette overrides under
-  `@media (prefers-color-scheme: light)`. Add new colours to **both**.
-- **Accessible motion.** All animation is wrapped by a
-  `@media (prefers-reduced-motion: reduce)` kill-switch at the bottom of the file —
-  keep it that way when adding animations.
-- Brand: dental teal (`--brand`) → sky (`--brand-2`) gradient; the tooth mark is the
-  logo. Keep it clean and clinical.
+- **Tailwind v4 `@import "tailwindcss"` with a custom `@theme` block.** Design tokens
+  (navy/gold palette, fonts, shadows) are declared in `@theme` in `global.css`; Tailwind
+  utilities like `bg-navy-900` / `text-gold-500` resolve to them. Reuse tokens over
+  inline literals.
+- **Theme-aware.** The palette is defined for light and dark. Theme is applied via a
+  `.dark` class on `<html>`, toggled by `store/themeStore.ts` (persisted, follows the
+  system preference until the user overrides). `global.css` sets
+  `@custom-variant dark (&:where(.dark, .dark *));` so `dark:` utilities respond to the
+  class. Add new colours to **both** the light `:root` and `.dark` blocks.
+- Fonts: Playfair Display (display), Sora (heading), DM Sans (body). Brand accent:
+  gold/orange.
+- **Accessible motion.** Animation is wrapped by `@media (prefers-reduced-motion: reduce)`
+  kill-switches in `global.css` — keep that when adding animations.
 
 ## How to add a component / screen
 
-1. Presentational component → `src/components/Name.tsx` (named export, typed props).
-2. Needs backend data? Add a typed function to `lib/api.ts` first, then consume it.
-3. Style with existing tokens; add new tokens (light + dark) to `global.css` if
-   genuinely needed.
-4. Routing: none yet (single view). When the app needs multiple screens, add a router
-   (React Router or TanStack Router) and note the choice here.
+1. Presentational component → `src/components/…` (named export, typed props); shared
+   primitives go under `components/ui/`.
+2. Needs backend data? Add a typed function to the relevant `lib/` client first, then
+   consume it via a `hooks/` hook.
+3. Style with existing tokens; add new tokens (light + dark) to `global.css` `@theme` /
+   `:root` / `.dark` if genuinely needed.
+4. Routing: add a `<Route>` in `App.tsx` (React Router v7). The catch-all `<Route path="*">`
+   renders `NotFound`.
 
 ## Commands (run from `frontend/`, or use the root `pnpm` scripts)
 
@@ -76,3 +88,5 @@ pnpm format     # biome format --write .
 - Native deps (`esbuild`, `@biomejs/biome`) are allow-listed in the root
   `pnpm-workspace.yaml` under `onlyBuiltDependencies` — pnpm 10 blocks build scripts
   otherwise.
+- Optional runtime features are gated by `VITE_*` env flags read via `import.meta.env`
+  (e.g. `VITE_ENABLE_IP_DETECTION` to enable the ipwho.is region lookup). Off by default.
