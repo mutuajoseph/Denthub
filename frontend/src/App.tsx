@@ -3,6 +3,8 @@ import { Route, Routes } from "react-router-dom";
 
 import { AuthModal } from "./auth/AuthModal";
 import Navbar from "./components/Navbar";
+import Home from "./pages/Home";
+import NotFound from "./pages/NotFound";
 
 import { clearStoredAuth, getStoredAuth } from "./lib/auth";
 
@@ -90,21 +92,12 @@ const App = () => {
         <Route
           path="/"
           element={
-            <div className="p-8">
-              {user ? (
-                <>
-                  <h1 className="text-2xl font-bold text-[#11213a]">Welcome, {user.full_name}</h1>
-
-                  <p className="mt-2 text-slate-500">Role: {user.role}</p>
-
-                  <p className="mt-1 text-sm text-slate-400">{user.email}</p>
-                </>
-              ) : (
-                <h1 className="text-2xl font-bold text-[#11213a]">Home Page</h1>
-              )}
-            </div>
+            <main>
+              <Home />
+            </main>
           }
         />
+        <Route path="*" element={<NotFound />} />
       </Routes>
 
       {/* ======================================================
