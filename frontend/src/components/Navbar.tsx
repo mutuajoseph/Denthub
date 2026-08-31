@@ -15,11 +15,18 @@ import {
   ShoppingBag,
   ShoppingCart,
   Stethoscope,
+  Sun,
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { NavLink } from "react-router-dom";
 
+import { useRegion } from "../hooks/useRegion";
 import type { AuthUser } from "../lib/auth";
+import { selectCartCount, useCartStore } from "../store/cartStore";
+import { useThemeStore } from "../store/themeStore";
+import CartDropdown from "./CartDropdown";
+import CountrySelector from "./CountrySelector";
 
 type NavbarProps = {
   onSignIn: () => void;
@@ -74,8 +81,19 @@ function isStaffUser(user: AuthUser | null) {
 export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
 
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const cartRef = useRef<HTMLDivElement>(null);
+
+  const theme = useThemeStore((s) => s.theme);
+  const toggleTheme = useThemeStore((s) => s.toggleTheme);
+  const cartCount = useCartStore((s) => selectCartCount(s.items));
+  const { brandName } = useRegion();
+
+  const hubIndex = brandName.indexOf("Hub");
+  const brandPrefix = hubIndex > 0 ? brandName.slice(0, hubIndex) : brandName;
+  const brandAccent = hubIndex >= 0 ? brandName.slice(hubIndex) : "";
 
   /* =========================================================
      CLOSE USER DROPDOWN WHEN CLICKING OUTSIDE
@@ -84,6 +102,9 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
     const handleClickOutside = (event: MouseEvent) => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setUserMenuOpen(false);
+      }
+      if (cartRef.current && !cartRef.current.contains(event.target as Node)) {
+        setCartOpen(false);
       }
     };
 
@@ -118,6 +139,7 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
   const handleMobileNavigation = () => {
     setMobileOpen(false);
     setUserMenuOpen(false);
+    setCartOpen(false);
   };
 
   return (
@@ -132,6 +154,9 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
         border-slate-200
         bg-white
         text-slate-900
+        dark:border-navy-600
+        dark:bg-navy-900
+        dark:text-white
       "
     >
       <nav
@@ -156,7 +181,7 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
         ====================================================== */}
         <a
           href="/"
-          aria-label="DentHub Kenya home"
+          aria-label={`${brandName} home`}
           className="
             min-w-0
             whitespace-nowrap
@@ -164,11 +189,12 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
             font-bold
             tracking-tight
             text-[#11213a]
+            dark:text-white
             sm:text-[24px]
           "
         >
-          Dent
-          <span className="text-orange-500">Hub Kenya</span>
+          {brandPrefix}
+          <span className="text-orange-500">{brandAccent}</span>
         </a>
 
         {/* =====================================================
@@ -191,48 +217,50 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
               gap-1
             "
           >
-            {NAV_LINKS.map(({ label, href, icon: Icon }) => {
-              const isHome = href === "/";
+            {NAV_LINKS.map(({ label, href, icon: Icon }) => (
+              <NavLink
+                key={label}
+                to={href}
+                end={href === "/"}
+                className={({ isActive }) => `
+                  relative
+                  flex
+                  items-center
+                  gap-1.5
+                  whitespace-nowrap
+                  rounded-lg
+                  px-2
+                  py-2.5
+                  text-[14px]
+                  font-medium
+                  transition-colors
+                  ${isActive ? "text-orange-500 dark:text-gold-400" : "text-[#172b4d] hover:text-orange-500 dark:text-slate-200 dark:hover:text-gold-400"}
+                `}
+              >
+                {({ isActive }) => (
+                  <>
+                    <Icon className="h-[18px] w-[18px]" strokeWidth={1.7} aria-hidden="true" />
 
-              return (
-                <a
-                  key={label}
-                  href={href}
-                  className={`
-                    relative
-                    flex
-                    items-center
-                    gap-1.5
-                    whitespace-nowrap
-                    rounded-lg
-                    px-2
-                    py-2.5
-                    text-[14px]
-                    font-medium
-                    transition-colors
-                    ${isHome ? "text-orange-500" : "text-[#172b4d] hover:text-orange-500"}
-                  `}
-                >
-                  <Icon className="h-[18px] w-[18px]" strokeWidth={1.7} aria-hidden="true" />
+                    {label}
 
-                  {label}
-
-                  {isHome && (
-                    <span
-                      className="
-                        absolute
-                        bottom-0
-                        left-2
-                        right-2
-                        h-0.5
-                        rounded-full
-                        bg-orange-500
-                      "
-                    />
-                  )}
-                </a>
-              );
-            })}
+                    {isActive && (
+                      <span
+                        className="
+                          absolute
+                          bottom-0
+                          left-2
+                          right-2
+                          h-0.5
+                          rounded-full
+                          bg-orange-500
+                          dark:bg-gold-400
+                        "
+                      />
+                    )}
+                  </>
+                )}
+              </NavLink>
+            ))}
           </div>
         </div>
 
@@ -251,11 +279,17 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
           "
         >
           {/* =================================================
+              COUNTRY SELECTOR
+          ================================================== */}
+          <CountrySelector onNavigate={handleMobileNavigation} />
+
+          {/* =================================================
               THEME
           ================================================== */}
           <button
             type="button"
-            aria-label="Theme"
+            onClick={toggleTheme}
+            aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
             className="
               hidden
               h-10
@@ -270,57 +304,76 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
               transition
               hover:border-orange-500
               hover:text-orange-500
+              dark:border-navy-600
+              dark:bg-navy-800
+              dark:text-slate-200
+              dark:hover:border-gold-400
+              dark:hover:text-gold-400
               md:flex
             "
           >
-            <Moon className="h-[18px] w-[18px]" strokeWidth={1.7} />
+            {theme === "dark" ? (
+              <Sun className="h-[18px] w-[18px]" strokeWidth={1.7} />
+            ) : (
+              <Moon className="h-[18px] w-[18px]" strokeWidth={1.7} />
+            )}
           </button>
 
           {/* =================================================
               SHOPPING CART
           ================================================== */}
-          <button
-            type="button"
-            aria-label="Shopping cart"
-            className="
-              relative
-              flex
-              h-10
-              w-10
-              shrink-0
-              items-center
-              justify-center
-              border-0
-              bg-transparent
-              text-[#172b4d]
-              transition
-              hover:text-orange-500
-            "
-          >
-            <ShoppingCart className="h-[21px] w-[21px]" strokeWidth={1.7} />
-
-            <span
+          <div ref={cartRef} className="relative z-[100]">
+            <button
+              type="button"
+              aria-label="Shopping cart"
+              aria-expanded={cartOpen}
+              onClick={() => setCartOpen((open) => !open)}
               className="
-                absolute
-                right-0
-                top-[-2px]
+                relative
                 flex
-                h-[20px]
-                min-w-[20px]
+                h-10
+                w-10
+                shrink-0
                 items-center
                 justify-center
-                rounded-full
-                bg-orange-500
-                px-1
-                text-[10px]
-                font-bold
-                leading-none
-                text-white
+                border-0
+                bg-transparent
+                text-[#172b4d]
+                transition
+                hover:text-orange-500
+                dark:text-slate-200
+                dark:hover:text-gold-400
               "
             >
-              2
-            </span>
-          </button>
+              <ShoppingCart className="h-[21px] w-[21px]" strokeWidth={1.7} />
+
+              {cartCount > 0 && (
+                <span
+                  className="
+                    absolute
+                    right-0
+                    top-[-2px]
+                    flex
+                    h-[20px]
+                    min-w-[20px]
+                    items-center
+                    justify-center
+                    rounded-full
+                    bg-orange-500
+                    px-1
+                    text-[10px]
+                    font-bold
+                    leading-none
+                    text-white
+                  "
+                >
+                  {cartCount}
+                </span>
+              )}
+            </button>
+
+            {cartOpen && <CartDropdown />}
+          </div>
 
           {/* =================================================
               AUTHENTICATED USER
@@ -356,6 +409,10 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
                   transition-all
                   hover:border-orange-300
                   hover:bg-orange-50
+                  dark:border-navy-600
+                  dark:bg-navy-800
+                  dark:hover:border-gold-400/40
+                  dark:hover:bg-navy-700
                 "
               >
                 {/* Avatar */}
@@ -388,6 +445,7 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
                     text-[14px]
                     font-semibold
                     text-[#172b4d]
+                    dark:text-white
                     lg:inline
                   "
                 >
@@ -401,6 +459,7 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
                     w-[17px]
                     shrink-0
                     text-[#52627a]
+                    dark:text-gray-400
                     transition-transform
                     duration-200
                     ${userMenuOpen ? "rotate-180" : ""}
@@ -430,6 +489,8 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
                     border-slate-200
                     bg-white
                     shadow-2xl
+                    dark:border-navy-600
+                    dark:bg-navy-800
                   "
                 >
                   {/* User information */}
@@ -439,9 +500,10 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
                       border-slate-100
                       px-4
                       py-3
+                      dark:border-navy-600
                     "
                   >
-                    <p className="text-xs text-slate-400">Signed in as</p>
+                    <p className="text-xs text-slate-400 dark:text-gray-400">Signed in as</p>
 
                     <p
                       className="
@@ -450,6 +512,7 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
                         text-sm
                         font-semibold
                         text-[#172b4d]
+                        dark:text-white
                       "
                     >
                       {user.full_name}
@@ -474,6 +537,9 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
                       transition
                       hover:bg-orange-50
                       hover:text-orange-500
+                      dark:text-slate-200
+                      dark:hover:bg-navy-700
+                      dark:hover:text-gold-400
                     "
                   >
                     <LayoutDashboard
@@ -504,6 +570,9 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
                         transition
                         hover:bg-orange-50
                         hover:text-orange-500
+                        dark:text-slate-200
+                        dark:hover:bg-navy-700
+                        dark:hover:text-gold-400
                       "
                     >
                       <Building2
@@ -535,6 +604,9 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
                         transition
                         hover:bg-orange-50
                         hover:text-orange-500
+                        dark:text-slate-200
+                        dark:hover:bg-navy-700
+                        dark:hover:text-gold-400
                       "
                     >
                       <GraduationCap
@@ -566,6 +638,9 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
                         transition
                         hover:bg-orange-50
                         hover:text-orange-500
+                        dark:text-slate-200
+                        dark:hover:bg-navy-700
+                        dark:hover:text-gold-400
                       "
                     >
                       <ShoppingBag
@@ -597,6 +672,9 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
                         transition
                         hover:bg-orange-50
                         hover:text-orange-500
+                        dark:text-slate-200
+                        dark:hover:bg-navy-700
+                        dark:hover:text-gold-400
                       "
                     >
                       <MessageCircle
@@ -715,41 +793,81 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
             bg-white
             px-5
             py-4
+            dark:border-navy-600
+            dark:bg-navy-900
             xl:hidden
           "
         >
           <div className="space-y-1">
             {/* Navigation links */}
-            {NAV_LINKS.map(({ label, href, icon: Icon }) => {
-              const isHome = href === "/";
+            {NAV_LINKS.map(({ label, href, icon: Icon }) => (
+              <NavLink
+                key={label}
+                to={href}
+                end={href === "/"}
+                onClick={handleMobileNavigation}
+                className={({ isActive }) => `
+                  flex
+                  items-center
+                  gap-3
+                  rounded-lg
+                  px-3
+                  py-2.5
+                  text-[15px]
+                  font-medium
+                  ${
+                    isActive
+                      ? "bg-orange-50 text-orange-500 dark:bg-navy-700 dark:text-gold-400"
+                      : "text-slate-700 hover:bg-orange-50 hover:text-orange-500 dark:text-slate-200 dark:hover:bg-navy-700 dark:hover:text-gold-400"
+                  }
+                `}
+              >
+                <Icon className="h-[18px] w-[18px]" strokeWidth={1.7} aria-hidden="true" />
 
-              return (
-                <a
-                  key={label}
-                  href={href}
-                  onClick={handleMobileNavigation}
-                  className={`
-                    flex
-                    items-center
-                    gap-3
-                    rounded-lg
-                    px-3
-                    py-2.5
-                    text-[15px]
-                    font-medium
-                    ${
-                      isHome
-                        ? "bg-orange-50 text-orange-500"
-                        : "text-slate-700 hover:bg-orange-50 hover:text-orange-500"
-                    }
-                  `}
-                >
-                  <Icon className="h-[18px] w-[18px]" strokeWidth={1.7} aria-hidden="true" />
+                {label}
+              </NavLink>
+            ))}
 
-                  {label}
-                </a>
-              );
-            })}
+            {/* =================================================
+                MOBILE COUNTRY + THEME
+            ================================================== */}
+            <div className="mt-2 flex items-center justify-between gap-3 border-t border-slate-200 pt-3 dark:border-navy-600">
+              <CountrySelector onNavigate={handleMobileNavigation} />
+              <button
+                type="button"
+                onClick={toggleTheme}
+                aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+                className="
+                  flex
+                  h-10
+                  items-center
+                  gap-2
+                  rounded-full
+                  border
+                  border-slate-300
+                  bg-white
+                  px-4
+                  text-sm
+                  font-medium
+                  text-[#172b4d]
+                  transition
+                  hover:border-orange-500
+                  hover:text-orange-500
+                  dark:border-navy-600
+                  dark:bg-navy-800
+                  dark:text-slate-200
+                  dark:hover:border-gold-400
+                  dark:hover:text-gold-400
+                "
+              >
+                {theme === "dark" ? (
+                  <Sun className="h-[18px] w-[18px]" strokeWidth={1.7} />
+                ) : (
+                  <Moon className="h-[18px] w-[18px]" strokeWidth={1.7} />
+                )}
+                {theme === "dark" ? "Light" : "Dark"}
+              </button>
+            </div>
 
             {/* =================================================
                 MOBILE AUTHENTICATION
@@ -775,6 +893,7 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
                       bg-[#f8fbff]
                       px-4
                       py-3
+                      dark:bg-navy-800
                     "
                   >
                     <span
@@ -797,7 +916,7 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
                     </span>
 
                     <div className="min-w-0">
-                      <p className="text-xs text-slate-400">Signed in as</p>
+                      <p className="text-xs text-slate-400 dark:text-gray-400">Signed in as</p>
 
                       <p
                         className="
@@ -805,6 +924,7 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
                           text-sm
                           font-medium
                           text-[#172b4d]
+                          dark:text-white
                         "
                       >
                         {user.full_name}
@@ -859,6 +979,9 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
                         transition
                         hover:bg-orange-50
                         hover:text-orange-500
+                        dark:text-slate-200
+                        dark:hover:bg-navy-700
+                        dark:hover:text-gold-400
                       "
                     >
                       <Building2
@@ -889,6 +1012,9 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
                         transition
                         hover:bg-orange-50
                         hover:text-orange-500
+                        dark:text-slate-200
+                        dark:hover:bg-navy-700
+                        dark:hover:text-gold-400
                       "
                     >
                       <GraduationCap
@@ -919,6 +1045,9 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
                         transition
                         hover:bg-orange-50
                         hover:text-orange-500
+                        dark:text-slate-200
+                        dark:hover:bg-navy-700
+                        dark:hover:text-gold-400
                       "
                     >
                       <ShoppingBag
@@ -949,6 +1078,9 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
                         transition
                         hover:bg-orange-50
                         hover:text-orange-500
+                        dark:text-slate-200
+                        dark:hover:bg-navy-700
+                        dark:hover:text-gold-400
                       "
                     >
                       <MessageCircle

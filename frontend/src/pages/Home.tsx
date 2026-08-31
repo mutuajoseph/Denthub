@@ -1,5 +1,15 @@
-const Home = () => {
-  return <div>Home</div>;
-};
+import FeaturedClinics from "../components/home/FeaturedClinics";
+import HeroSection from "../components/home/HeroSection";
+import HowItWorks from "../components/home/HowItWorks";
+import StatsBar from "../components/home/StatsBar";
 
-export default Home;
+export default function Home() {
+  return (
+    <>
+      <HeroSection />
+      <StatsBar />
+      <HowItWorks />
+      <FeaturedClinics />
+    </>
+  );
+}

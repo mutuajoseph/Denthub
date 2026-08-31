@@ -1,9 +1,99 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-KE">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DentistHub</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta
+      name="description"
+      content="DentHub Kenya — Find verified dentists, shop dentist-recommended oral care, dental jobs, CPD training & dental tourism. NHIF accepted. M-Pesa ready."
+    />
+    <meta
+      name="keywords"
+      content="dentist Kenya, dental clinic Nairobi, oral care shop Kenya, dental jobs Kenya, CPD dentistry, dental tourism Kenya"
+    />
+    <meta name="theme-color" content="#0a1628" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://denthub.co.ke/" />
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem("denthub-theme");
+          var theme = null;
+          if (stored) {
+            try {
+              theme = JSON.parse(stored).state.theme;
+            } catch (e) {
+              theme = null;
+            }
+          }
+          if (!theme) {
+            theme = window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light";
+          }
+          if (theme === "dark") {
+            document.documentElement.classList.add("dark");
+          }
+        } catch (e) {
+          void e;
+        }
+      })();
+    </script>
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="DentHub Kenya" />
+    <meta property="og:title" content="DentHub Kenya — Complete Dental Platform" />
+    <meta
+      property="og:description"
+      content="Find dentists, shop oral care, discover jobs & training — all in one place."
+    />
+    <meta property="og:url" content="https://denthub.co.ke/" />
+    <meta property="og:locale" content="en_KE" />
+
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="DentHub Kenya — Complete Dental Platform" />
+    <meta
+      name="twitter:description"
+      content="Find dentists, shop oral care, discover jobs & training in Kenya."
+    />
+
+    <title>DentHub Kenya — Complete Dental Platform</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:wght@600;700&family=Sora:wght@400;500;600;700&display=swap"
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:wght@600;700&family=Sora:wght@400;500;600;700&display=swap"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:wght@600;700&family=Sora:wght@400;500;600;700&display=swap"
+      />
+    </noscript>
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "DentHub Kenya",
+        "url": "https://denthub.co.ke",
+        "description": "Kenya's complete dental platform for finding dentists, oral care shopping, jobs, and CPD training.",
+        "inLanguage": "en-KE",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://denthub.co.ke/find-dentist?q={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
