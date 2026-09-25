@@ -37,13 +37,7 @@ export function AuthModal({ onClose, onLoginSuccess }: AuthModalProps) {
   }, [onClose]);
 
   const handleLoginSuccess = (auth: AuthResponse) => {
-    // Store token
-    localStorage.setItem("access_token", auth.access_token);
-
-    // Notify parent application
     onLoginSuccess?.(auth);
-
-    // Close authentication modal
     onClose();
   };
 
