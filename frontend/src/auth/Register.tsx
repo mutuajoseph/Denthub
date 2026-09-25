@@ -16,6 +16,7 @@ import {
 import { useState } from "react";
 
 import { type AuthResponse, register } from "../lib/auth";
+import { ROLE } from "./roles";
 
 type RegisterProps = {
   onClose: () => void;
@@ -26,51 +27,60 @@ type RegisterProps = {
 const ACCOUNT_TYPES = [
   {
     id: "patient",
+    role: ROLE.PATIENT,
     label: "Patient",
     description: "Book appointments and manage your dental care",
     icon: User,
   },
   {
     id: "dentist",
+    role: ROLE.DENTIST,
     label: "Dentist",
     description: "Manage your professional and clinic profile",
     icon: Stethoscope,
   },
   {
     id: "international",
+    role: ROLE.INTERNATIONAL_PATIENT,
     label: "International Patient",
     description: "Plan dental treatment and travel",
     icon: Plane,
   },
   {
     id: "intern",
+    role: ROLE.INTERN,
     label: "Intern / Student",
     description: "Access training and CPD opportunities",
     icon: GraduationCap,
   },
   {
     id: "clinic",
+    role: ROLE.FACILITY_OWNER,
     label: "Clinic / Employer",
     description: "Manage your clinic and staff",
     icon: Building2,
   },
   {
     id: "supplier",
+    role: ROLE.SUPPLIER,
     label: "Supplier",
     description: "Manage products, orders and logistics",
     icon: Package,
   },
   {
     id: "training",
+    role: ROLE.TRAINING_PROVIDER,
     label: "Training Body",
     description: "Publish courses and issue certificates",
     icon: BookOpen,
   },
-];
+] as const;
+
+type AccountTypeId = (typeof ACCOUNT_TYPES)[number]["id"];
 
 export default function Register({ onClose, onSignIn, onRegisterSuccess }: RegisterProps) {
   const [step, setStep] = useState(1);
-  const [accountType, setAccountType] = useState("");
+  const [accountType, setAccountType] = useState<AccountTypeId | "">("");
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -83,7 +93,7 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
 
   const selectedAccount = ACCOUNT_TYPES.find((account) => account.id === accountType);
 
-  const selectAccount = (id: string) => {
+  const selectAccount = (id: AccountTypeId) => {
     setAccountType(id);
     setError("");
     setStep(2);
@@ -92,7 +102,7 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!accountType) {
+    if (!selectedAccount) {
       setError("Please select an account type.");
       return;
     }
@@ -106,23 +116,9 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
         email: email.trim(),
         phone: phone.trim() || undefined,
         password,
-        account_type: accountType,
+        role: selectedAccount.role,
       });
 
-      console.log("Registration successful:", response);
-
-      /*
-       * Save the authentication token.
-       */
-      localStorage.setItem("access_token", response.access_token);
-
-      /*
-       * Tell the parent application that
-       * registration was successful.
-       *
-       * This uses the same authentication
-       * flow as normal Sign In.
-       */
       onRegisterSuccess?.(response);
 
       /*
