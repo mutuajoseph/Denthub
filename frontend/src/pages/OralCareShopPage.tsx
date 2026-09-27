@@ -1,13 +1,13 @@
 import { AlertCircle } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 
-import CartDrawer from "../components/shop/CartDrawer";
 import CategoryFilter from "../components/shop/CategoryFilter";
 import ProductGrid from "../components/shop/ProductGrid";
 import ShopHero from "../components/shop/ShopHero";
 import SubscriptionBox from "../components/shop/SubscriptionBox";
 import { ALL_CATEGORIES } from "../config/productConstants";
 import { useProductCategories, useProductSearch } from "../hooks/useProductSearch";
+import { useCartUiStore } from "../store/cartUiStore";
 
 /**
  * Oral Care Shop.
@@ -19,10 +19,10 @@ import { useProductCategories, useProductSearch } from "../hooks/useProductSearc
 export default function OralCareShopPage() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>(ALL_CATEGORIES);
-  const [isCartOpen, setCartOpen] = useState(false);
 
-  const openCart = useCallback(() => setCartOpen(true), []);
-  const closeCart = useCallback(() => setCartOpen(false), []);
+  // The drawer itself is rendered once by `AppShell`; this page only signals
+  // that it should open.
+  const openCart = useCartUiStore((state) => state.openCartDrawer);
 
   // Grid is priced for a single unit; the drawer warns on wholesale minimums.
   const catalog = useProductSearch({ search, category, quantity: 1 });
@@ -77,8 +77,6 @@ export default function OralCareShopPage() {
       )}
 
       <SubscriptionBox currency={currency} />
-
-      <CartDrawer open={isCartOpen} onClose={closeCart} currency={currency} />
     </div>
   );
 }

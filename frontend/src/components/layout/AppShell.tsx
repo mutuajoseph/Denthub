@@ -3,6 +3,7 @@ import { Outlet } from "react-router-dom";
 import type { AuthUser } from "../../lib/auth";
 import Navbar from "../Navbar";
 import { DentalChatbot } from "../chatbot/DentalChatbot";
+import CartDrawer from "../shop/CartDrawer";
 import { AnnouncementBar } from "./AnnouncementBar";
 import { BackToTop } from "./BackToTop";
 import { EmergencyFAB } from "./EmergencyFAB";
@@ -48,6 +49,8 @@ export function AppShell({
       <EmergencyFAB />
       <DentalChatbot />
       <BackToTop />
+      {/* Single global cart surface, opened from the navbar or the shop page. */}
+      <CartDrawer />
     </div>
   );
 }

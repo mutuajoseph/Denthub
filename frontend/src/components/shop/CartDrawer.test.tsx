@@ -1,8 +1,9 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import { type AddCartItemInput, useCartStore } from "../../store/cartStore";
+import { useCartUiStore } from "../../store/cartUiStore";
 import CartDrawer from "./CartDrawer";
 
 function addLine(overrides: Partial<AddCartItemInput> = {}) {
@@ -11,17 +12,34 @@ function addLine(overrides: Partial<AddCartItemInput> = {}) {
     name: "Adult Medium Toothbrush",
     unitPrice: 350,
     purchaseMode: "retail",
+    currency: "KES",
     ...overrides,
   });
+}
+
+/** Render the drawer in its open state, as `AppShell` leaves it. */
+function renderOpenDrawer() {
+  act(() => useCartUiStore.getState().openCartDrawer());
+  return render(<CartDrawer />);
 }
 
 describe("CartDrawer", () => {
   beforeEach(() => {
     useCartStore.getState().clearCart();
+    useCartUiStore.setState({ isDrawerOpen: true });
+  });
+
+  it("stays mounted but off-screen when closed, so it is not a tab trap", () => {
+    useCartUiStore.setState({ isDrawerOpen: false });
+    const { container } = render(<CartDrawer />);
+
+    const panel = container.querySelector("dialog");
+    expect(panel).not.toBeNull();
+    expect(panel?.className).toContain("translate-x-full");
   });
 
   it("shows an empty state with a way back to the shop", () => {
-    render(<CartDrawer open onClose={vi.fn()} currency="KES" />);
+    renderOpenDrawer();
 
     expect(screen.getByText(/your cart is empty/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /continue shopping/i })).toBeInTheDocument();
@@ -30,7 +48,7 @@ describe("CartDrawer", () => {
 
   it("lists lines and totals the server unit price times quantity", () => {
     addLine({ quantity: 3 });
-    render(<CartDrawer open onClose={vi.fn()} currency="KES" />);
+    renderOpenDrawer();
 
     expect(screen.getByText("Adult Medium Toothbrush")).toBeInTheDocument();
     // A single line shows the same figure as the line total and the subtotal.
@@ -48,7 +66,7 @@ describe("CartDrawer", () => {
       wholesaleMinQty: 12,
     });
 
-    render(<CartDrawer open onClose={vi.fn()} currency="KES" />);
+    renderOpenDrawer();
 
     // 350*2 + 262.50*4 = 1750
     expect(screen.getByText("KES 1,750")).toBeInTheDocument();
@@ -56,7 +74,7 @@ describe("CartDrawer", () => {
 
   it("warns when a wholesale line is under the server's minimum quantity", () => {
     addLine({ purchaseMode: "wholesale", unitPrice: 262.5, quantity: 2, wholesaleMinQty: 12 });
-    render(<CartDrawer open onClose={vi.fn()} currency="KES" />);
+    renderOpenDrawer();
 
     expect(screen.getByText(/wholesale starts at 12 units — add 10 more/i)).toBeInTheDocument();
   });
@@ -64,7 +82,7 @@ describe("CartDrawer", () => {
   it("drops the minimum warning once the quantity reaches it", async () => {
     const user = userEvent.setup();
     addLine({ purchaseMode: "wholesale", unitPrice: 262.5, quantity: 11, wholesaleMinQty: 12 });
-    render(<CartDrawer open onClose={vi.fn()} currency="KES" />);
+    renderOpenDrawer();
 
     expect(screen.getByText(/add 1 more/i)).toBeInTheDocument();
 
@@ -75,7 +93,7 @@ describe("CartDrawer", () => {
 
   it("does not warn about minimums for a retail line", () => {
     addLine({ purchaseMode: "retail", unitPrice: 350, quantity: 1, wholesaleMinQty: 12 });
-    render(<CartDrawer open onClose={vi.fn()} currency="KES" />);
+    renderOpenDrawer();
 
     expect(screen.queryByText(/wholesale starts at/i)).not.toBeInTheDocument();
   });
@@ -83,7 +101,7 @@ describe("CartDrawer", () => {
   it("removes a line when its quantity is decremented to zero", async () => {
     const user = userEvent.setup();
     addLine({ quantity: 1 });
-    render(<CartDrawer open onClose={vi.fn()} currency="KES" />);
+    renderOpenDrawer();
 
     await user.click(screen.getByRole("button", { name: /decrease .* quantity/i }));
 
@@ -94,7 +112,7 @@ describe("CartDrawer", () => {
   it("removes a line from the trash button", async () => {
     const user = userEvent.setup();
     addLine();
-    render(<CartDrawer open onClose={vi.fn()} currency="KES" />);
+    renderOpenDrawer();
 
     await user.click(screen.getByRole("button", { name: /remove .* from cart/i }));
 
@@ -103,40 +121,62 @@ describe("CartDrawer", () => {
 
   it("notes that wholesale lines need a clinic account", () => {
     addLine({ purchaseMode: "wholesale", unitPrice: 262.5, wholesaleMinQty: 12 });
-    render(<CartDrawer open onClose={vi.fn()} currency="KES" />);
+    renderOpenDrawer();
 
     expect(screen.getByText(/wholesale lines need a clinic account/i)).toBeInTheDocument();
   });
 
   it("does not show the clinic note for a retail-only cart", () => {
     addLine({ purchaseMode: "retail", unitPrice: 350 });
-    render(<CartDrawer open onClose={vi.fn()} currency="KES" />);
+    renderOpenDrawer();
 
     expect(screen.queryByText(/wholesale lines need a clinic account/i)).not.toBeInTheDocument();
   });
 
-  it("closes on Escape and on the backdrop", async () => {
+  it("closes on Escape and on the close button via the ui store", async () => {
     const user = userEvent.setup();
-    const onClose = vi.fn();
-    const { container } = render(<CartDrawer open onClose={onClose} currency="KES" />);
+    renderOpenDrawer();
+
+    expect(useCartUiStore.getState().isDrawerOpen).toBe(true);
 
     await user.keyboard("{Escape}");
-    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(useCartUiStore.getState().isDrawerOpen).toBe(false);
 
+    act(() => useCartUiStore.getState().openCartDrawer());
     await user.click(screen.getByRole("button", { name: /close cart/i }));
-    expect(onClose).toHaveBeenCalledTimes(2);
+    expect(useCartUiStore.getState().isDrawerOpen).toBe(false);
+  });
 
-    // The backdrop is a decorative div, not a second "Close cart" control.
-    const backdrop = container.querySelector(".fixed.inset-0.z-40");
-    expect(backdrop).not.toBeNull();
+  it("closes when the backdrop is clicked, and the backdrop is not a second close control", async () => {
+    const user = userEvent.setup();
+    const { container } = renderOpenDrawer();
+
+    const backdrop = container.querySelector(".fixed.inset-0");
     expect(backdrop?.tagName).toBe("DIV");
+    expect(backdrop).toHaveAttribute("aria-hidden", "true");
+
+    // Only one "Close cart" control exists, in the drawer header.
+    expect(screen.getAllByRole("button", { name: /close cart/i })).toHaveLength(1);
+
+    await user.click(backdrop as Element);
+    expect(useCartUiStore.getState().isDrawerOpen).toBe(false);
+  });
+
+  it("puts the backdrop above the sticky header so the nav is inert", () => {
+    const { container } = renderOpenDrawer();
+
+    const backdrop = container.querySelector(".fixed.inset-0");
+    const zIndex = Number.parseInt(/z-\[(\d+)\]/.exec(backdrop?.className ?? "")?.[1] ?? "0", 10);
+
+    // AppShell pins the header at z-50.
+    expect(zIndex).toBeGreaterThan(50);
   });
 
   it("clears the cart from the footer", async () => {
     const user = userEvent.setup();
     addLine();
     addLine({ productId: "p2", name: "Dental Floss" });
-    render(<CartDrawer open onClose={vi.fn()} currency="KES" />);
+    renderOpenDrawer();
 
     await user.click(screen.getByRole("button", { name: /clear cart/i }));
 
@@ -145,7 +185,7 @@ describe("CartDrawer", () => {
 
   it("truncates fractional cents in the line total rather than showing float dust", () => {
     addLine({ unitPrice: 0.1, quantity: 3 });
-    render(<CartDrawer open onClose={vi.fn()} currency="KES" />);
+    renderOpenDrawer();
 
     // 0.1 * 3 === 0.30000000000000004 in IEEE754
     expect(screen.getAllByText("KES 0.30")).toHaveLength(2);

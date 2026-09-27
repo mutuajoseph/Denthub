@@ -1,22 +1,18 @@
 import { Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 
+import { useRegion } from "../../hooks/useRegion";
 import {
   type CartItem,
+  selectCartCurrency,
   selectCartSubtotal,
   selectHasWholesaleLine,
   useCartStore,
 } from "../../store/cartStore";
+import { useCartUiStore } from "../../store/cartUiStore";
 import { cn } from "../../utils/cn";
 import { formatPrice } from "../../utils/formatCurrency";
 import { ProductThumbnail } from "./ProductImage";
-
-interface CartDrawerProps {
-  open: boolean;
-  onClose: () => void;
-  /** Currency the catalog is priced in, from the API. */
-  currency: string;
-}
 
 /** Money is summed in the browser here, so round off the float dust. */
 function toCents(value: number): number {
@@ -123,24 +119,33 @@ function CartLine({
 /**
  * Slide-over cart.
  *
- * Shares `useCartStore` with the navbar `CartDropdown`, so the two stay in
- * sync. Wholesale minimums are surfaced here as an advisory note; the API
+ * The single global cart surface, rendered once by `AppShell`. It reads
+ * visibility from `useCartUiStore` so the navbar button and the shop page can
+ * both open it. Wholesale minimums are surfaced as an advisory note; the API
  * re-prices and can reject the order, so the client does not enforce them.
  */
-export default function CartDrawer({ open, onClose, currency }: CartDrawerProps) {
+export default function CartDrawer() {
   const items = useCartStore((state) => state.items);
   const clearCart = useCartStore((state) => state.clearCart);
   const subtotal = selectCartSubtotal(items);
   const hasWholesale = selectHasWholesaleLine(items);
 
+  const isDrawerOpen = useCartUiStore((state) => state.isDrawerOpen);
+  const closeCartDrawer = useCartUiStore((state) => state.closeCartDrawer);
+
+  // The API prices each line in its own currency; fall back to the active
+  // region for lines persisted before `currency` was recorded.
+  const regionCurrency = useRegion().currency;
+  const currency = selectCartCurrency(items, regionCurrency);
+
   const panelRef = useRef<HTMLDialogElement>(null);
 
   // Escape to close, and lock background scroll while the drawer is open.
   useEffect(() => {
-    if (!open) return;
+    if (!isDrawerOpen) return;
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") closeCartDrawer();
     };
 
     document.addEventListener("keydown", onKeyDown);
@@ -154,32 +159,35 @@ export default function CartDrawer({ open, onClose, currency }: CartDrawerProps)
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = previousOverflow;
     };
-  }, [open, onClose]);
+  }, [isDrawerOpen, closeCartDrawer]);
 
   return (
     <>
-      {open && (
+      {isDrawerOpen && (
         // Decorative click-catcher. A labelled button here would duplicate the
         // header close button's accessible name; `ui/Modal` uses the same
         // aria-hidden div. Escape is handled by the document listener above.
         <div
           aria-hidden="true"
-          onClick={onClose}
+          onClick={closeCartDrawer}
           onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") onClose();
+            if (event.key === "Enter" || event.key === " ") closeCartDrawer();
           }}
-          className="fixed inset-0 z-40 cursor-default bg-navy-950/60 backdrop-blur-sm"
+          // Above the sticky header (z-50) so the nav is inert while open.
+          className="fixed inset-0 z-[90] cursor-default bg-navy-950/60 backdrop-blur-sm"
         />
       )}
 
       <dialog
-        open
+        open={isDrawerOpen}
         aria-label="Shopping cart"
         ref={panelRef}
         tabIndex={-1}
         className={cn(
-          "fixed right-0 top-0 z-50 m-0 flex h-full max-h-none w-full max-w-md flex-col border-l border-slate-200 bg-white p-0 text-[#172b4d] shadow-xl transition-transform duration-300 outline-none dark:border-navy-600 dark:bg-navy-900 dark:text-white",
-          open ? "translate-x-0" : "translate-x-full",
+          // z-[100] clears the sticky header (z-50) and the drawer's own
+          // backdrop (z-[90]).
+          "fixed right-0 top-0 z-[100] m-0 flex h-full max-h-none w-full max-w-md flex-col border-l border-slate-200 bg-white p-0 text-[#172b4d] shadow-xl transition-transform duration-300 outline-none dark:border-navy-600 dark:bg-navy-900 dark:text-white",
+          isDrawerOpen ? "translate-x-0" : "translate-x-full",
         )}
       >
         <div className="flex items-center justify-between border-b border-slate-200 p-4 dark:border-navy-600">
@@ -194,7 +202,7 @@ export default function CartDrawer({ open, onClose, currency }: CartDrawerProps)
 
           <button
             type="button"
-            onClick={onClose}
+            onClick={closeCartDrawer}
             aria-label="Close cart"
             className="rounded p-1.5 text-slate-500 transition-colors hover:text-[#172b4d] dark:text-gray-400 dark:hover:text-white"
           >
@@ -213,7 +221,7 @@ export default function CartDrawer({ open, onClose, currency }: CartDrawerProps)
             </p>
             <button
               type="button"
-              onClick={onClose}
+              onClick={closeCartDrawer}
               className="mt-2 rounded-lg border border-navy-600 px-4 py-2 text-sm font-medium text-gray-300 transition-colors hover:border-gold-400/50 hover:text-gold-400"
             >
               Continue shopping

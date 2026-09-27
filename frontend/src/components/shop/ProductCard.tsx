@@ -41,6 +41,9 @@ export default function ProductCard({ product }: ProductCardProps) {
       name: product.name,
       unitPrice: activePrice,
       purchaseMode: mode,
+      // Freeze the API's currency on the line so the global drawer can label
+      // the cart even when it is opened from a page with no catalog response.
+      currency,
       ...(product.brand === null ? {} : { brand: product.brand }),
       ...(product.imageUrl === null ? {} : { image: product.imageUrl }),
       ...(wholesaleAvailable ? { wholesaleMinQty: minQty } : {}),

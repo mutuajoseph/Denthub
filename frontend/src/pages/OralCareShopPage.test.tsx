@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { type ProductPage, fetchProductCategories, fetchProducts } from "../lib/productApi";
 import { useCartStore } from "../store/cartStore";
+import { useCartUiStore } from "../store/cartUiStore";
 import OralCareShopPage from "./OralCareShopPage";
 
 vi.mock("../lib/productApi", async (importOriginal) => {
@@ -85,6 +86,7 @@ function renderPage() {
 describe("OralCareShopPage", () => {
   beforeEach(() => {
     useCartStore.getState().clearCart();
+    useCartUiStore.setState({ isDrawerOpen: false });
     fetchCategoriesMock.mockResolvedValue({ countryCode: "KE", categories: ["brushing", "floss"] });
     fetchProductsMock.mockResolvedValue(page());
   });
@@ -204,16 +206,22 @@ describe("OralCareShopPage", () => {
     expect(screen.getByRole("button", { name: /cart is empty/i })).toBeInTheDocument();
   });
 
-  it("opens the cart drawer and shows what was added", async () => {
+  it("adds the server price with the API's currency, then asks for the shared drawer", async () => {
     const user = userEvent.setup();
     renderPage();
     await screen.findByText("Adult Medium Toothbrush");
 
     await user.click(screen.getByRole("button", { name: /add to cart/i }));
-    await user.click(screen.getByRole("button", { name: /cart is empty|1 item in cart/i }));
 
-    const drawer = await screen.findByRole("dialog", { name: /shopping cart/i });
-    expect(drawer).toHaveTextContent("Adult Medium Toothbrush");
-    expect(drawer).toHaveTextContent("KES 350");
+    // The line freezes the currency the API priced it in, so the global drawer
+    // can label the cart from any page.
+    expect(useCartStore.getState().items[0]).toMatchObject({
+      unitPrice: 350,
+      currency: "KES",
+    });
+
+    // The drawer itself is rendered by AppShell; the page only opens it.
+    await user.click(screen.getByRole("button", { name: /cart is empty|1 item in cart/i }));
+    expect(useCartUiStore.getState().isDrawerOpen).toBe(true);
   });
 });
