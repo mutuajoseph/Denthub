@@ -163,8 +163,9 @@ If a change edits dependencies, commit the regenerated lockfile (`uv.lock` or
 Any change that adds, renames, drops, or repurposes a table, column, or enum
 runs this whole checklist. Check every item before calling the plan done.
 
-1. **Migration.** `alembic revision --autogenerate`, import new models in
-   `backend/migrations/env.py`, then read the generated file end to end.
+1. **Migration.** Import new models in `backend/migrations/env.py` first (so
+   autogenerate sees them), then `alembic revision --autogenerate -m "..."`,
+   then read the generated file end to end.
 2. **Forward-only.** A migration already on `main` is never edited; fix it with
    a new migration. Render runs `alembic upgrade head` *before* new code goes
    live, so the old code must tolerate the new schema: use expand, migrate,

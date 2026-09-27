@@ -5,7 +5,7 @@ Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all o
 ## Conventions
 
 - **Create an issue**: `gh issue create --title "..." --body "..."`. Use a heredoc for multi-line bodies.
-- **Read an issue**: `gh issue view <number> --comments`, filtering comments by `jq` and also fetching labels.
+- **Read an issue**: `gh issue view <number> --json title,body,labels,comments --jq '{title, body, labels: [.labels[].name], comments: [.comments[].body]}'`.
 - **List issues**: `gh issue list --state open --json number,title,body,labels,comments --jq '[.[] | {number, title, body, labels: [.labels[].name], comments: [.comments[].body]}]'` with appropriate `--label` and `--state` filters.
 - **Comment on an issue**: `gh issue comment <number> --body "..."`
 - **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`
@@ -34,6 +34,10 @@ Create a GitHub issue.
 Run `gh issue view <number> --comments`.
 
 ## Wayfinding operations
+
+The `wayfinder:*` labels don't exist on this repo yet. Before the first map, create
+`wayfinder:map`, `wayfinder:research`, `wayfinder:prototype`, `wayfinder:grilling`,
+and `wayfinder:task` with `gh label create`, after the user approves.
 
 Used by `/wayfinder`. The **map** is a single issue with **child** issues as tickets.
 

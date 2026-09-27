@@ -1,8 +1,9 @@
 # Backend
 
 FastAPI service for DentHub: async, strictly layered, typed end to end, managed
-by `uv` (Python 3.12+). Run every command from `backend/` (the project is a
-virtual `uv` app, `package = false`, so `app` only resolves from here).
+by `uv` (Python 3.12+). Commands in this file run from `backend/` (the project
+is a virtual `uv` app, `package = false`, so `app` only resolves from here);
+the root docs' `uv run --directory backend ...` forms run from the repo root.
 Repo-wide rules (definition of done, schema checklist, API contract) live in
 the root [`AGENTS.md`](../AGENTS.md).
 
