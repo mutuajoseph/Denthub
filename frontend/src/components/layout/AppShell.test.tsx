@@ -1,6 +1,6 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useNavigate } from "react-router-dom";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { useCartStore } from "../../store/cartStore";
@@ -57,6 +57,36 @@ describe("AppShell cart", () => {
     const drawer = screen.getByRole("dialog", { name: /shopping cart/i });
     expect(drawer).toHaveTextContent("Adult Medium Toothbrush");
     expect(drawer).toHaveTextContent("KES 350");
+  });
+
+  it("dismisses the drawer when the route changes", async () => {
+    const user = userEvent.setup();
+
+    function NavigatingShell() {
+      const navigate = useNavigate();
+
+      return (
+        <>
+          <button type="button" onClick={() => navigate("/jobs")}>
+            Go to jobs
+          </button>
+          <AppShell />
+        </>
+      );
+    }
+
+    render(
+      <MemoryRouter initialEntries={["/shop"]}>
+        <NavigatingShell />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Shopping cart" }));
+    expect(useCartUiStore.getState().isDrawerOpen).toBe(true);
+
+    await user.click(screen.getByRole("button", { name: /go to jobs/i }));
+
+    await waitFor(() => expect(useCartUiStore.getState().isDrawerOpen).toBe(false));
   });
 
   it("keeps the navbar badge in step with the cart", async () => {

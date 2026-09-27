@@ -1,6 +1,7 @@
-import type { ReactNode } from "react";
-import { Outlet } from "react-router-dom";
+import { type ReactNode, useEffect, useRef } from "react";
+import { Outlet, useLocation } from "react-router-dom";
 import type { AuthUser } from "../../lib/auth";
+import { useCartUiStore } from "../../store/cartUiStore";
 import Navbar from "../Navbar";
 import { DentalChatbot } from "../chatbot/DentalChatbot";
 import CartDrawer from "../shop/CartDrawer";
@@ -25,6 +26,19 @@ export function AppShell({
   onLogout = noop,
   children,
 }: AppShellProps) {
+  const { pathname } = useLocation();
+  const closeCartDrawer = useCartUiStore((state) => state.closeCartDrawer);
+  const lastPathname = useRef(pathname);
+
+  // The drawer is global, so a route change has to dismiss it. Without this it
+  // survives navigation and sits over the next page.
+  useEffect(() => {
+    if (lastPathname.current === pathname) return;
+
+    lastPathname.current = pathname;
+    closeCartDrawer();
+  }, [pathname, closeCartDrawer]);
+
   return (
     <div className="flex min-h-screen w-full flex-col overflow-x-hidden">
       <a

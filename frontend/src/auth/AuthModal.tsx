@@ -51,7 +51,7 @@ export function AuthModal({ onClose, onLoginSuccess }: AuthModalProps) {
         items-center
         justify-center
         overflow-hidden
-        bg-[#161b23]/60
+        bg-auth-scrim/60
         p-4
         backdrop-blur-[6px]
       "
@@ -67,10 +67,10 @@ export function AuthModal({ onClose, onLoginSuccess }: AuthModalProps) {
           max-h-[90vh]
           overflow-hidden
           rounded-[16px]
-          bg-white
+          bg-auth-surface
           px-6
           py-5
-          text-[#11213a]
+          text-auth-heading
           shadow-[0_20px_45px_rgba(0,0,0,0.22)]
         "
         aria-labelledby="auth-title"
@@ -93,9 +93,9 @@ export function AuthModal({ onClose, onLoginSuccess }: AuthModalProps) {
             rounded-md
             border-0
             bg-transparent
-            text-[#a2adbd]
+            text-auth-icon
             transition
-            hover:text-[#66758a]
+            hover:text-auth-body
           "
         >
           <X className="h-5 w-5" strokeWidth={1.8} />
@@ -111,11 +111,11 @@ export function AuthModal({ onClose, onLoginSuccess }: AuthModalProps) {
               font-bold
               leading-none
               tracking-tight
-              text-[#11213a]
+              text-auth-heading
             "
           >
             Dent
-            <span className="text-[#f47813]">Hub Kenya</span>
+            <span className="text-auth-accent-strong">Hub Kenya</span>
           </h1>
         </div>
 

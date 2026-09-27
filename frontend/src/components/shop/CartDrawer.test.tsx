@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -29,13 +29,17 @@ describe("CartDrawer", () => {
     useCartUiStore.setState({ isDrawerOpen: true });
   });
 
-  it("stays mounted but off-screen when closed, so it is not a tab trap", () => {
-    useCartUiStore.setState({ isDrawerOpen: false });
-    const { container } = render(<CartDrawer />);
+  it("is fully removed from the DOM when closed, so nothing can linger or trap tabs", async () => {
+    const { container } = renderOpenDrawer();
+    expect(container.querySelector("dialog")).not.toBeNull();
 
-    const panel = container.querySelector("dialog");
-    expect(panel).not.toBeNull();
-    expect(panel?.className).toContain("translate-x-full");
+    act(() => useCartUiStore.getState().closeCartDrawer());
+
+    // Unmounted after the exit animation rather than merely translated
+    // off-screen: a lingering `position: fixed` panel is what left the cart
+    // stuck over the page.
+    await waitFor(() => expect(container.querySelector("dialog")).toBeNull());
+    expect(container.querySelector(".fixed.inset-0")).toBeNull();
   });
 
   it("shows an empty state with a way back to the shop", () => {
