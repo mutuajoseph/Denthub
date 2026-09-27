@@ -19,6 +19,13 @@ export interface CartItem {
   unitPrice: number;
   /** Quantity at which this product's wholesale tier starts, when it has one. */
   wholesaleMinQty?: number;
+  /**
+   * Currency the API priced this line in, frozen at add time.
+   *
+   * Optional so carts persisted before this field existed still load; the
+   * drawer falls back to the active region's currency.
+   */
+  currency?: string;
 }
 
 export interface AddCartItemInput {
@@ -30,6 +37,7 @@ export interface AddCartItemInput {
   brand?: string;
   image?: string;
   wholesaleMinQty?: number;
+  currency?: string;
 }
 
 interface CartState {
@@ -54,6 +62,13 @@ export const selectCartSubtotal = (items: CartItem[]): number =>
 export const selectHasWholesaleLine = (items: CartItem[]): boolean =>
   items.some((item) => item.purchaseMode === "wholesale");
 
+/**
+ * Currency to label the cart with: the first line the API priced, else the
+ * caller's fallback. Lines added before this field existed carry no currency.
+ */
+export const selectCartCurrency = (items: CartItem[], fallback = "KES"): string =>
+  items.find((item) => item.currency !== undefined)?.currency ?? fallback;
+
 export const useCartStore = create<CartState>()(
   persist(
     (set) => ({
@@ -73,6 +88,7 @@ export const useCartStore = create<CartState>()(
                       ...item,
                       quantity: item.quantity + quantity,
                       unitPrice: input.unitPrice,
+                      ...(input.currency === undefined ? {} : { currency: input.currency }),
                     }
                   : item,
               ),
@@ -91,6 +107,7 @@ export const useCartStore = create<CartState>()(
             ...(input.wholesaleMinQty === undefined
               ? {}
               : { wholesaleMinQty: input.wholesaleMinQty }),
+            ...(input.currency === undefined ? {} : { currency: input.currency }),
           };
 
           return { items: [...state.items, item] };

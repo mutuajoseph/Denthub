@@ -22,6 +22,27 @@
 
   --shadow-gold: 0 0 20px rgba(245, 166, 35, 0.2);
   --shadow-gold-lg: 0 0 30px rgba(245, 166, 35, 0.35);
+
+  /*
+   * Auth modal surfaces. Declared as roles rather than raw hexes so light and
+   * dark are defined once each and every consumer flips automatically.
+   */
+  --color-auth-surface: var(--auth-surface);
+  --color-auth-heading: var(--auth-heading);
+  --color-auth-body: var(--auth-body);
+  --color-auth-muted: var(--auth-muted);
+  --color-auth-label: var(--auth-label);
+  --color-auth-icon: var(--auth-icon);
+  --color-auth-field: var(--auth-field);
+  --color-auth-field-border: var(--auth-field-border);
+  --color-auth-card: var(--auth-card);
+  --color-auth-card-hover: var(--auth-card-hover);
+  --color-auth-chip-hover: var(--auth-chip-hover);
+  --color-auth-toggle: var(--auth-toggle);
+  --color-auth-toggle-hover: var(--auth-toggle-hover);
+  --color-auth-accent: var(--auth-accent);
+  --color-auth-accent-strong: var(--auth-accent-strong);
+  --color-auth-scrim: var(--auth-scrim);
 }
 
 :root {
@@ -39,6 +60,23 @@
   --gray-400: #475569;
   --success: #22c55e;
   --danger: #ef4444;
+
+  --auth-surface: #ffffff;
+  --auth-heading: #111c2c;
+  --auth-body: #152642;
+  --auth-muted: #98a5b8;
+  --auth-label: #91a0b6;
+  --auth-icon: #a6b1c1;
+  --auth-field: #eaf2ff;
+  --auth-field-border: #d9e3f2;
+  --auth-card: #f8fbff;
+  --auth-card-hover: #fff7f0;
+  --auth-chip-hover: #fff0e3;
+  --auth-toggle: #b8c3d2;
+  --auth-toggle-hover: #a8b4c5;
+  --auth-accent: #ff851b;
+  --auth-accent-strong: #f47813;
+  --auth-scrim: #161b23;
 }
 
 .dark {
@@ -54,6 +92,23 @@
   --white: #ffffff;
   --gray-300: #cbd5e1;
   --gray-400: #a8b4c7;
+
+  --auth-surface: #0a1628;
+  --auth-heading: #f8fafc;
+  --auth-body: #e2e8f0;
+  --auth-muted: #94a3b8;
+  --auth-label: #a3b1c6;
+  --auth-icon: #7f8ea6;
+  --auth-field: #0f2040;
+  --auth-field-border: #1e3d70;
+  --auth-card: #0f2040;
+  --auth-card-hover: #1a2f52;
+  --auth-chip-hover: #22375c;
+  --auth-toggle: #1e3d70;
+  --auth-toggle-hover: #2b4f8a;
+  --auth-accent: #ff851b;
+  --auth-accent-strong: #f47813;
+  --auth-scrim: #020617;
 }
 
 @layer base {

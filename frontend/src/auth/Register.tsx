@@ -165,8 +165,8 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
           overflow-y-auto
           rounded-[12px]
           border
-          border-[#d9e3f2]
-          bg-white
+          border-auth-field-border
+          bg-auth-surface
           shadow-[0_20px_55px_rgba(21,38,66,0.16)]
           scrollbar-hide
         "
@@ -191,10 +191,10 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
             border-0
             bg-transparent
             p-0
-            text-[#98a5b8]
+            text-auth-muted
             transition
-            hover:bg-[#eaf2ff]
-            hover:text-[#152642]
+            hover:bg-auth-field
+            hover:text-auth-body
           "
         >
           <X className="h-4 w-4" strokeWidth={2} />
@@ -209,11 +209,11 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
                 text-[24px]
                 font-extrabold
                 tracking-tight
-                text-[#152642]
+                text-auth-body
               "
             >
               Dent
-              <span className="text-[#ff851b]">Hub Kenya</span>
+              <span className="text-auth-accent">Hub Kenya</span>
             </h1>
           </div>
 
@@ -223,9 +223,9 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
           {step === 1 && (
             <>
               <div className="mb-5 text-center">
-                <h2 className="text-[20px] font-bold text-[#152642]">Join DentHub Kenya</h2>
+                <h2 className="text-[20px] font-bold text-auth-body">Join DentHub Kenya</h2>
 
-                <p className="mt-1 text-[13px] text-[#98a5b8]">Choose how you'll use DentHub</p>
+                <p className="mt-1 text-[13px] text-auth-muted">Choose how you'll use DentHub</p>
               </div>
 
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
@@ -244,13 +244,13 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
                         gap-3
                         rounded-[8px]
                         border
-                        border-[#d9e3f2]
-                        bg-[#f8fbff]
+                        border-auth-field-border
+                        bg-auth-card
                         p-3
                         text-left
                         transition
-                        hover:border-[#ff851b]
-                        hover:bg-[#fff7f0]
+                        hover:border-auth-accent
+                        hover:bg-auth-card-hover
                       "
                     >
                       <div
@@ -262,21 +262,21 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
                           items-center
                           justify-center
                           rounded-[7px]
-                          bg-[#eaf2ff]
-                          text-[#ff851b]
+                          bg-auth-field
+                          text-auth-accent
                           transition
-                          group-hover:bg-[#fff0e3]
+                          group-hover:bg-auth-chip-hover
                         "
                       >
                         <Icon className="h-4 w-4" strokeWidth={1.7} />
                       </div>
 
                       <div>
-                        <h3 className="text-[13px] font-semibold text-[#152642]">
+                        <h3 className="text-[13px] font-semibold text-auth-body">
                           {account.label}
                         </h3>
 
-                        <p className="mt-0.5 text-[11px] leading-4 text-[#98a5b8]">
+                        <p className="mt-0.5 text-[11px] leading-4 text-auth-muted">
                           {account.description}
                         </p>
                       </div>
@@ -293,14 +293,14 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
           {step === 2 && (
             <>
               <div className="mb-5 text-center">
-                <h2 className="text-[20px] font-bold text-[#152642]">Create your account</h2>
+                <h2 className="text-[20px] font-bold text-auth-body">Create your account</h2>
 
-                <p className="mt-1 text-[13px] text-[#98a5b8]">{selectedAccount?.label} · Kenya</p>
+                <p className="mt-1 text-[13px] text-auth-muted">{selectedAccount?.label} · Kenya</p>
               </div>
 
               <form className="flex flex-col gap-1.5" onSubmit={handleSubmit}>
                 {/* Full Name */}
-                <label htmlFor="full-name" className="text-[12px] text-[#91a0b6]">
+                <label htmlFor="full-name" className="text-[12px] text-auth-label">
                   Full name
                 </label>
 
@@ -312,15 +312,15 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
                     gap-2
                     rounded-[8px]
                     border
-                    border-[#d9e3f2]
-                    bg-[#eaf2ff]
+                    border-auth-field-border
+                    bg-auth-field
                     px-2.5
-                    focus-within:border-[#f47813]
+                    focus-within:border-auth-accent-strong
                     focus-within:ring-2
-                    focus-within:ring-[#f47813]/10
+                    focus-within:ring-auth-accent-strong/10
                   "
                 >
-                  <User className="h-4 w-4 text-[#a6b1c1]" />
+                  <User className="h-4 w-4 text-auth-icon" />
 
                   <input
                     id="full-name"
@@ -338,15 +338,15 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
                       bg-transparent
                       p-0
                       text-[13px]
-                      text-[#111c2c]
+                      text-auth-heading
                       outline-none
-                      placeholder:text-[#98a5b8]
+                      placeholder:text-auth-muted
                     "
                   />
                 </div>
 
                 {/* Email */}
-                <label htmlFor="email" className="mt-1.5 text-[12px] text-[#91a0b6]">
+                <label htmlFor="email" className="mt-1.5 text-[12px] text-auth-label">
                   Email
                 </label>
 
@@ -358,15 +358,15 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
                     gap-2
                     rounded-[8px]
                     border
-                    border-[#d9e3f2]
-                    bg-[#eaf2ff]
+                    border-auth-field-border
+                    bg-auth-field
                     px-2.5
-                    focus-within:border-[#f47813]
+                    focus-within:border-auth-accent-strong
                     focus-within:ring-2
-                    focus-within:ring-[#f47813]/10
+                    focus-within:ring-auth-accent-strong/10
                   "
                 >
-                  <Mail className="h-4 w-4 text-[#a6b1c1]" />
+                  <Mail className="h-4 w-4 text-auth-icon" />
 
                   <input
                     id="email"
@@ -384,16 +384,16 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
                       bg-transparent
                       p-0
                       text-[13px]
-                      text-[#111c2c]
+                      text-auth-heading
                       outline-none
-                      placeholder:text-[#98a5b8]
+                      placeholder:text-auth-muted
                     "
                   />
                 </div>
 
                 {/* Phone */}
-                <label htmlFor="phone" className="mt-1.5 text-[12px] text-[#91a0b6]">
-                  Phone <span className="text-[#a6b1c1]">(optional)</span>
+                <label htmlFor="phone" className="mt-1.5 text-[12px] text-auth-label">
+                  Phone <span className="text-auth-icon">(optional)</span>
                 </label>
 
                 <div
@@ -404,15 +404,15 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
                     gap-2
                     rounded-[8px]
                     border
-                    border-[#d9e3f2]
-                    bg-[#eaf2ff]
+                    border-auth-field-border
+                    bg-auth-field
                     px-2.5
-                    focus-within:border-[#f47813]
+                    focus-within:border-auth-accent-strong
                     focus-within:ring-2
-                    focus-within:ring-[#f47813]/10
+                    focus-within:ring-auth-accent-strong/10
                   "
                 >
-                  <Phone className="h-4 w-4 text-[#a6b1c1]" />
+                  <Phone className="h-4 w-4 text-auth-icon" />
 
                   <input
                     id="phone"
@@ -429,15 +429,15 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
                       bg-transparent
                       p-0
                       text-[13px]
-                      text-[#111c2c]
+                      text-auth-heading
                       outline-none
-                      placeholder:text-[#98a5b8]
+                      placeholder:text-auth-muted
                     "
                   />
                 </div>
 
                 {/* Password */}
-                <label htmlFor="password" className="mt-1.5 text-[12px] text-[#91a0b6]">
+                <label htmlFor="password" className="mt-1.5 text-[12px] text-auth-label">
                   Password
                 </label>
 
@@ -449,15 +449,15 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
                     gap-2
                     rounded-[8px]
                     border
-                    border-[#d9e3f2]
-                    bg-[#eaf2ff]
+                    border-auth-field-border
+                    bg-auth-field
                     px-2.5
-                    focus-within:border-[#f47813]
+                    focus-within:border-auth-accent-strong
                     focus-within:ring-2
-                    focus-within:ring-[#f47813]/10
+                    focus-within:ring-auth-accent-strong/10
                   "
                 >
-                  <Lock className="h-4 w-4 text-[#a6b1c1]" />
+                  <Lock className="h-4 w-4 text-auth-icon" />
 
                   <input
                     id="password"
@@ -476,9 +476,9 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
                       bg-transparent
                       p-0
                       text-[13px]
-                      text-[#111c2c]
+                      text-auth-heading
                       outline-none
-                      placeholder:text-[#98a5b8]
+                      placeholder:text-auth-muted
                     "
                   />
 
@@ -495,11 +495,11 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
                       justify-center
                       rounded-[5px]
                       border-0
-                      bg-[#b8c3d2]
+                      bg-auth-toggle
                       p-0
                       text-white
                       transition
-                      hover:bg-[#a8b4c5]
+                      hover:bg-auth-toggle-hover
                     "
                   >
                     {showPassword ? (
@@ -518,13 +518,13 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
                       mt-2
                       rounded-[7px]
                       border
-                      border-red-200
-                      bg-red-50
+                      border-red-400/40
+                      bg-red-500/10
                       px-3
                       py-2
                       text-center
                       text-[12px]
-                      text-red-600
+                      text-red-300 dark:text-red-200
                     "
                   >
                     {error}
@@ -541,14 +541,14 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
                     w-full
                     rounded-[8px]
                     border-0
-                    bg-[#ff851b]
+                    bg-auth-accent
                     px-4
                     text-[13px]
                     font-semibold
                     text-white
                     shadow-[0_5px_12px_rgba(255,133,27,0.18)]
                     transition
-                    hover:bg-[#f47813]
+                    hover:bg-auth-accent-strong
                     active:scale-[0.99]
                     disabled:cursor-not-allowed
                     disabled:opacity-60
@@ -573,9 +573,9 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
                     p-0
                     text-[12px]
                     font-medium
-                    text-[#152642]
+                    text-auth-body
                     transition
-                    hover:text-[#f47813]
+                    hover:text-auth-accent-strong
                     disabled:cursor-not-allowed
                     disabled:opacity-50
                   "
@@ -587,7 +587,7 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
           )}
 
           {/* Sign In */}
-          <p className="mt-4 text-center text-[12px] text-[#98a5b8]">
+          <p className="mt-4 text-center text-[12px] text-auth-muted">
             Already have an account?{" "}
             <button
               type="button"
@@ -597,9 +597,9 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
                 bg-transparent
                 p-0
                 font-semibold
-                text-[#ff851b]
+                text-auth-accent
                 transition
-                hover:text-[#f47813]
+                hover:text-auth-accent-strong
               "
             >
               Sign in

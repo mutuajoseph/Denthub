@@ -32,8 +32,8 @@ import {
 import { useRegion } from "../hooks/useRegion";
 import type { AuthUser } from "../lib/auth";
 import { selectCartCount, useCartStore } from "../store/cartStore";
+import { useCartUiStore } from "../store/cartUiStore";
 import { useThemeStore } from "../store/themeStore";
-import CartDropdown from "./CartDropdown";
 import CountrySelector from "./CountrySelector";
 
 type NavbarProps = {
@@ -42,7 +42,7 @@ type NavbarProps = {
   onLogout: () => void;
 };
 
-const NAV_LINKS = [
+export const NAV_LINKS = [
   { label: "Home", href: "/", icon: Home },
   { label: "About", href: "/about", icon: BookOpen },
   { label: "Find a Dentist", href: "/dentists", icon: Stethoscope },
@@ -64,14 +64,13 @@ const SUPPLIER_DASHBOARD_PATH = getDashboardPath(ROLE.SUPPLIER);
 export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [cartOpen, setCartOpen] = useState(false);
 
   const userMenuRef = useRef<HTMLDivElement>(null);
-  const cartRef = useRef<HTMLDivElement>(null);
 
   const theme = useThemeStore((s) => s.theme);
   const toggleTheme = useThemeStore((s) => s.toggleTheme);
   const cartCount = useCartStore((s) => selectCartCount(s.items));
+  const openCartDrawer = useCartUiStore((s) => s.openCartDrawer);
   const { brandName } = useRegion();
 
   const hubIndex = brandName.indexOf("Hub");
@@ -85,9 +84,6 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
     const handleClickOutside = (event: MouseEvent) => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setUserMenuOpen(false);
-      }
-      if (cartRef.current && !cartRef.current.contains(event.target as Node)) {
-        setCartOpen(false);
       }
     };
 
@@ -122,7 +118,6 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
   const handleMobileNavigation = () => {
     setMobileOpen(false);
     setUserMenuOpen(false);
-    setCartOpen(false);
   };
 
   return (
@@ -304,59 +299,54 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
 
           {/* =================================================
               SHOPPING CART
-          ================================================== */}
-          <div ref={cartRef} className="relative z-[100]">
-            <button
-              type="button"
-              aria-label="Shopping cart"
-              aria-expanded={cartOpen}
-              onClick={() => setCartOpen((open) => !open)}
-              className="
-                relative
-                flex
-                h-10
-                w-10
-                shrink-0
-                items-center
-                justify-center
-                border-0
-                bg-transparent
-                text-[#172b4d]
-                transition
-                hover:text-orange-500
-                dark:text-slate-200
-                dark:hover:text-gold-400
-              "
-            >
-              <ShoppingCart className="h-[21px] w-[21px]" strokeWidth={1.7} />
+          ================================================= */}
+          <button
+            type="button"
+            aria-label="Shopping cart"
+            onClick={openCartDrawer}
+            className="
+              relative
+              flex
+              h-10
+              w-10
+              shrink-0
+              items-center
+              justify-center
+              border-0
+              bg-transparent
+              text-[#172b4d]
+              transition
+              hover:text-orange-500
+              dark:text-slate-200
+              dark:hover:text-gold-400
+            "
+          >
+            <ShoppingCart className="h-[21px] w-[21px]" strokeWidth={1.7} aria-hidden="true" />
 
-              {cartCount > 0 && (
-                <span
-                  className="
-                    absolute
-                    right-0
-                    top-[-2px]
-                    flex
-                    h-[20px]
-                    min-w-[20px]
-                    items-center
-                    justify-center
-                    rounded-full
-                    bg-orange-500
-                    px-1
-                    text-[10px]
-                    font-bold
-                    leading-none
-                    text-white
-                  "
-                >
-                  {cartCount}
-                </span>
-              )}
-            </button>
-
-            {cartOpen && <CartDropdown />}
-          </div>
+            {cartCount > 0 && (
+              <span
+                className="
+                  absolute
+                  right-0
+                  top-[-2px]
+                  flex
+                  h-[20px]
+                  min-w-[20px]
+                  items-center
+                  justify-center
+                  rounded-full
+                  bg-orange-500
+                  px-1
+                  text-[10px]
+                  font-bold
+                  leading-none
+                  text-white
+                "
+              >
+                {cartCount}
+              </span>
+            )}
+          </button>
 
           {/* =================================================
               AUTHENTICATED USER

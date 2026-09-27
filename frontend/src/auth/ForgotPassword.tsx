@@ -7,16 +7,16 @@ type ForgotPasswordProps = {
 export function ForgotPassword({ onBack }: ForgotPasswordProps) {
   return (
     <div className="w-full">
-      <h2 className="text-center text-[18px] font-semibold text-[#11213a]">
+      <h2 className="text-center text-[18px] font-semibold text-auth-heading">
         Forgot your password?
       </h2>
 
-      <p className="mb-5 mt-2 text-center text-[13px] leading-5 text-[#98a5b8]">
+      <p className="mb-5 mt-2 text-center text-[13px] leading-5 text-auth-muted">
         Enter your email address and we'll help you reset your password.
       </p>
 
       <form className="flex flex-col gap-2">
-        <label htmlFor="forgot-email" className="text-[12px] text-[#91a0b6]">
+        <label htmlFor="forgot-email" className="text-[12px] text-auth-label">
           Email
         </label>
 
@@ -24,15 +24,15 @@ export function ForgotPassword({ onBack }: ForgotPasswordProps) {
           className="
             flex min-h-[40px] items-center gap-2
             rounded-[8px]
-            border border-[#d9e3f2]
-            bg-[#eaf2ff]
+            border border-auth-field-border
+            bg-auth-field
             px-2.5
-            focus-within:border-[#f47813]
+            focus-within:border-auth-accent-strong
             focus-within:ring-2
-            focus-within:ring-[#f47813]/10
+            focus-within:ring-auth-accent-strong/10
           "
         >
-          <Mail className="h-4 w-4 text-[#a6b1c1]" strokeWidth={1.7} />
+          <Mail className="h-4 w-4 text-auth-icon" strokeWidth={1.7} />
 
           <input
             id="forgot-email"
@@ -44,9 +44,9 @@ export function ForgotPassword({ onBack }: ForgotPasswordProps) {
               bg-transparent
               p-0
               text-[13px]
-              text-[#111c2c]
+              text-auth-heading
               outline-none
-              placeholder:text-[#98a5b8]
+              placeholder:text-auth-muted
             "
           />
         </div>
@@ -59,14 +59,14 @@ export function ForgotPassword({ onBack }: ForgotPasswordProps) {
             items-center justify-center gap-2
             rounded-[8px]
             border-0
-            bg-[#ff851b]
+            bg-auth-accent
             px-4
             text-[13px]
             font-semibold
             text-white
             shadow-[0_5px_12px_rgba(255,133,27,0.18)]
             transition
-            hover:bg-[#f47813]
+            hover:bg-auth-accent-strong
           "
         >
           Send Reset Link
@@ -85,9 +85,9 @@ export function ForgotPassword({ onBack }: ForgotPasswordProps) {
           p-0
           text-[13px]
           font-semibold
-          text-[#152642]
+          text-auth-body
           transition
-          hover:text-[#f47813]
+          hover:text-auth-accent-strong
         "
       >
         <ArrowLeft className="h-4 w-4" strokeWidth={1.8} />

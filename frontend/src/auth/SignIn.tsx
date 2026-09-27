@@ -61,13 +61,13 @@ export function SignIn({
   return (
     <div className="w-full">
       {/* Welcome */}
-      <p className="mb-4 mt-1 text-center text-[13px] text-[#98a5b8]">
+      <p className="mb-4 mt-1 text-center text-[13px] text-auth-muted">
         Welcome back to DentHub Kenya
       </p>
 
       <form className="flex flex-col gap-1.5" onSubmit={handleSubmit}>
         {/* Email */}
-        <label htmlFor="auth-email" className="text-[12px] text-[#91a0b6]">
+        <label htmlFor="auth-email" className="text-[12px] text-auth-label">
           Email
         </label>
 
@@ -79,16 +79,16 @@ export function SignIn({
             gap-2
             rounded-[8px]
             border
-            border-[#d9e3f2]
-            bg-[#eaf2ff]
+            border-auth-field-border
+            bg-auth-field
             px-2.5
             transition
-            focus-within:border-[#f47813]
+            focus-within:border-auth-accent-strong
             focus-within:ring-2
-            focus-within:ring-[#f47813]/10
+            focus-within:ring-auth-accent-strong/10
           "
         >
-          <Mail className="h-4 w-4 shrink-0 text-[#a6b1c1]" strokeWidth={1.7} />
+          <Mail className="h-4 w-4 shrink-0 text-auth-icon" strokeWidth={1.7} />
 
           <input
             id="auth-email"
@@ -109,15 +109,15 @@ export function SignIn({
               bg-transparent
               p-0
               text-[13px]
-              text-[#111c2c]
+              text-auth-heading
               outline-none
-              placeholder:text-[#98a5b8]
+              placeholder:text-auth-muted
             "
           />
         </div>
 
         {/* Password */}
-        <label htmlFor="auth-password" className="mt-1.5 text-[12px] text-[#91a0b6]">
+        <label htmlFor="auth-password" className="mt-1.5 text-[12px] text-auth-label">
           Password
         </label>
 
@@ -129,16 +129,16 @@ export function SignIn({
             gap-2
             rounded-[8px]
             border
-            border-[#d9e3f2]
-            bg-[#eaf2ff]
+            border-auth-field-border
+            bg-auth-field
             px-2.5
             transition
-            focus-within:border-[#f47813]
+            focus-within:border-auth-accent-strong
             focus-within:ring-2
-            focus-within:ring-[#f47813]/10
+            focus-within:ring-auth-accent-strong/10
           "
         >
-          <Lock className="h-4 w-4 shrink-0 text-[#a6b1c1]" strokeWidth={1.7} />
+          <Lock className="h-4 w-4 shrink-0 text-auth-icon" strokeWidth={1.7} />
 
           <input
             id="auth-password"
@@ -159,9 +159,9 @@ export function SignIn({
               bg-transparent
               p-0
               text-[13px]
-              text-[#111c2c]
+              text-auth-heading
               outline-none
-              placeholder:text-[#98a5b8]
+              placeholder:text-auth-muted
             "
           />
 
@@ -178,11 +178,11 @@ export function SignIn({
               justify-center
               rounded-[5px]
               border-0
-              bg-[#b8c3d2]
+              bg-auth-toggle
               p-0
               text-white
               transition
-              hover:bg-[#a8b4c5]
+              hover:bg-auth-toggle-hover
             "
           >
             {showPassword ? (
@@ -201,13 +201,13 @@ export function SignIn({
               mt-2
               rounded-[7px]
               border
-              border-red-200
-              bg-red-50
+              border-red-400/40
+              bg-red-500/10
               px-3
               py-2
               text-center
               text-[12px]
-              text-red-600
+              text-red-300 dark:text-red-200
             "
           >
             {error}
@@ -228,14 +228,14 @@ export function SignIn({
             gap-1.5
             rounded-[8px]
             border-0
-            bg-[#ff851b]
+            bg-auth-accent
             px-4
             text-[13px]
             font-semibold
             text-white
             shadow-[0_5px_12px_rgba(255,133,27,0.18)]
             transition
-            hover:bg-[#f47813]
+            hover:bg-auth-accent-strong
             active:scale-[0.99]
             disabled:cursor-not-allowed
             disabled:opacity-60
@@ -259,14 +259,14 @@ export function SignIn({
             gap-2
             rounded-[8px]
             border-2
-            border-[#ff851b]
-            bg-white
+            border-auth-accent
+            bg-auth-surface
             px-4
             text-[13px]
             font-semibold
-            text-[#ff851b]
+            text-auth-accent
             transition
-            hover:bg-orange-50
+            hover:bg-orange-500/10
             disabled:cursor-not-allowed
             disabled:opacity-60
           "
@@ -292,9 +292,9 @@ export function SignIn({
             p-0
             text-[13px]
             font-semibold
-            text-[#152642]
+            text-auth-body
             transition
-            hover:text-[#f47813]
+            hover:text-auth-accent-strong
             disabled:cursor-not-allowed
             disabled:opacity-60
           "
@@ -318,9 +318,9 @@ export function SignIn({
           p-0
           text-[13px]
           font-medium
-          text-[#ff851b]
+          text-auth-accent
           transition
-          hover:text-[#f47813]
+          hover:text-auth-accent-strong
           disabled:cursor-not-allowed
           disabled:opacity-60
         "
@@ -329,7 +329,7 @@ export function SignIn({
       </button>
 
       {/* Register */}
-      <p className="mt-2 text-center text-[12px] text-[#98a5b8]">
+      <p className="mt-2 text-center text-[12px] text-auth-muted">
         Don't have an account?{" "}
         <button
           type="button"
@@ -340,9 +340,9 @@ export function SignIn({
             bg-transparent
             p-0
             font-semibold
-            text-[#ff851b]
+            text-auth-accent
             transition
-            hover:text-[#f47813]
+            hover:text-auth-accent-strong
             disabled:cursor-not-allowed
             disabled:opacity-60
           "

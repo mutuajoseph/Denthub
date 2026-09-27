@@ -34,3 +34,22 @@ export function formatMoneyAs(amount: number, locale: string, currency: string):
     maximumFractionDigits: 0,
   }).format(amount);
 }
+
+/**
+ * Formats a catalog price in the currency the API resolved it to.
+ *
+ * Unlike {@link formatMoneyAs} this keeps cents when there are any, because the
+ * backend returns exact `NUMERIC(12,2)` money and a derived wholesale price is
+ * not necessarily a whole unit (`350 * 0.75` is `262.50`). Whole amounts still
+ * render without decimals, so `350` reads as "350" rather than "350.00".
+ */
+export function formatPrice(amount: number, currency: string, locale?: string): string {
+  const hasCents = Math.round(amount * 100) % 100 !== 0;
+
+  return new Intl.NumberFormat(locale || undefined, {
+    style: "currency",
+    currency: currency || "KES",
+    minimumFractionDigits: hasCents ? 2 : 0,
+    maximumFractionDigits: hasCents ? 2 : 0,
+  }).format(amount);
+}
