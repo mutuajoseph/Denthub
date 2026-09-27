@@ -121,9 +121,11 @@ jobs:
           VERSION: ${{ needs.tag.outputs.version }}
         run: |
           set -euo pipefail
-          if [ -z "${VERCEL_TOKEN}" ]; then
-            echo "::warning::VERCEL_TOKEN not set — skipping frontend deploy. See docs/RELEASE.md for setup."
-            exit 0
+          if [ -z "${VERCEL_TOKEN}" ] || [ -z "${VERCEL_ORG_ID}" ] || [ -z "${VERCEL_PROJECT_ID}" ]; then
+            echo "::error::Vercel secrets missing (need VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID)."
+            echo "::error::Tag $VERSION was cut but the frontend was NOT deployed — production is now behind main."
+            echo "See docs/RELEASE.md for setup."
+            exit 1
           fi
           npm install -g vercel@latest
           vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
@@ -144,8 +146,10 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "${RENDER_DEPLOY_HOOK_URL}" ]; then
-            echo "::warning::RENDER_DEPLOY_HOOK_URL not set — skipping backend deploy. See docs/RELEASE.md for setup."
-            exit 0
+            echo "::error::RENDER_DEPLOY_HOOK_URL not set."
+            echo "::error::Tag $VERSION was cut but the backend was NOT deployed — production is now behind main."
+            echo "See docs/RELEASE.md for setup."
+            exit 1
           fi
           # Deploy hook URLs already carry "?key=..."; append the tag ref so
           # Render deploys this exact tag (falls back to the tracked branch HEAD

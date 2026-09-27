@@ -68,15 +68,34 @@ In production, [`frontend/vercel.json`](../frontend/vercel.json) **rewrites**
 
 ## One-time setup
 
-The workflow is safe to commit before this is done — the deploy jobs **skip with a
-warning** until their secrets exist (the tag + Release are still created).
+> **The deploy jobs fail the workflow when their secrets are missing.** They used to
+> skip with a warning, which meant every release went green while deploying nothing
+> — so a merged PR looked like it was live when it wasn't. Now a missing secret is a
+> red `::error::` and a non-zero exit. If Release goes red on a deploy job, the tag
+> exists but **production is behind `main`** — fix the secret and re-run the workflow
+> (`workflow_dispatch`) to deploy the same version.
+
+The tag + GitHub Release are still created even when a deploy fails, so version
+history stays intact. Re-running with `bump: patch` would cut a *new* tag, so prefer
+re-running the failed run from the Actions UI.
 
 ### 1. Render (backend)
 
-1. New → **Blueprint**, point it at this repo — it reads [`render.yaml`](../render.yaml)
+1. Provision a **Postgres** database first (Render → *New → Postgres*). The free web
+   plan's filesystem is **ephemeral**: a SQLite file on it is wiped on every deploy.
+   Production must use a real Postgres URL.
+2. New → **Blueprint**, point it at this repo — it reads [`render.yaml`](../render.yaml)
    and creates the `denthub-backend` web service (`autoDeploy: false`).
-2. Service → **Settings → Deploy Hook** → copy the URL.
-3. Confirm the health check is `/api/v1/health`.
+3. Service → **Environment** → add `DATABASE_URL` = the Postgres connection string
+   (use the *internal* URL, e.g. `postgresql+asyncpg://…`, so traffic stays on
+   Render's private network). It is declared `sync: false` in `render.yaml` and must
+   never be committed.
+4. Service → **Settings → Deploy Hook** → copy the URL.
+5. Confirm the health check is `/api/v1/health`.
+
+> The blueprint sets `preDeployCommand: uv run alembic upgrade head`, so migrations
+> apply before the new build goes live. If you change the database URL after the first
+> deploy, run `alembic upgrade head` against it once by hand.
 
 ### 2. Vercel (frontend)
 
@@ -106,6 +125,23 @@ Repo → **Settings → Branches** → protect `main`:
 - Require a PR before merging (≥ 1 approval).
 - Require status checks: **Python Quality**, **TypeScript Quality**, **Database Quality**.
 - Require branches up to date before merging.
+
+---
+
+## Verifying a release actually shipped
+
+A green Release run no longer proves production is serving. After the one-time setup,
+spot-check the deployed app:
+
+```bash
+curl -fsS https://denthub-backend.onrender.com/api/v1/health   # expect {"status":"ok",…}
+curl -fsS https://<your-vercel-domain>/api/v1/health          # same, via the rewrite
+```
+
+A **404** from the Render URL means the service was never created or the name in
+`frontend/vercel.json` doesn't match it. A **health 200 but `/api/v1/products` 500**
+means migrations didn't run — check the deploy log for the `preDeployCommand` step.
+
 
 ---
 

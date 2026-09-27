@@ -6,6 +6,12 @@
 #
 # uv manages the Python toolchain: `pip install uv` bootstraps it, then
 # `uv sync` provisions Python 3.12+ (per backend/pyproject.toml) and the deps.
+#
+# preDeployCommand runs migrations *before* the new build goes live, so a
+# release that adds a migration can never serve code that expects a table the
+# database doesn't have. Migrations are forward-only here: pair every schema
+# change with a deploy step that tolerates the old shape (or use
+# `expand -> migrate -> contract` across two releases).
 services:
   - type: web
     name: denthub-backend
@@ -16,6 +22,7 @@ services:
     branch: main
     autoDeploy: false
     buildCommand: pip install uv && uv sync --frozen
+    preDeployCommand: uv run alembic upgrade head
     startCommand: uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/v1/health
     envVars:
@@ -28,4 +35,10 @@ services:
       # isn't triggered. Set to your Vercel domain otherwise. Managed in the
       # Render dashboard, not committed here.
       - key: CORS_ORIGINS
+        sync: false
+      # Set this in the Render dashboard (sync: false) — do NOT commit a
+      # connection string. It must be a real Postgres URL, not SQLite: the free
+      # plan's filesystem is ephemeral, so a local .db file is wiped on every
+      # deploy and re-seeding would be required each time. See docs/RELEASE.md.
+      - key: DATABASE_URL
         sync: false
