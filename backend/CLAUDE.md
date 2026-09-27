@@ -18,19 +18,16 @@ HTTP request
   → Middleware        app/middleware/         cross-cutting: request-id + logging
   → Route handler     app/routes/v1/          thin HTTP adapter — no business logic
   → Logic             app/logic/v1/           business rules, orchestration
-  → (Repository)      app/repositories/       persistence + external I/O  [planned]
-  → data source                               DB / external API           [planned]
+  → Repository        app/repositories/       persistence + external I/O
+  → data source                               DB / external API
 ```
-
-Today there is no database, so the chain is **Route → Logic**. When persistence
-lands, introduce a **Repository** layer (constructed by the logic function, à la
-Faro) rather than putting I/O in routes or logic. Keep the direction intact.
 
 **Hard rules**
 - Routes never contain business logic — they pull `AppState`, call one logic
   function, return its typed result.
 - Logic never reads `request`/HTTP concerns — it takes plain args + `AppState`.
-- No raw DB access above the repository layer (once it exists).
+- No raw DB access above the repository layer. Repositories own the SQL; logic
+  owns the rules.
 
 ## Module map (`app/`)
 
@@ -40,12 +37,14 @@ Faro) rather than putting I/O in routes or logic. Keep the direction intact.
 | `config.py` | `Settings` (frozen dataclass) read once from env via `Settings.from_env()`. Add new config here; never call `os.getenv` deep in the stack. |
 | `dependencies.py` | FastAPI `Depends()` factories. `get_app_state()` is the one seam handlers use to reach singletons. |
 | `exceptions.py` | Exception hierarchy (`BaseApiException` → `NotFoundException`, `InvalidRequestError`, `ConflictError`, …), the `OpenApiErrorResponse` envelope, and the global handlers. |
-| `utils/state.py` | `AppState` dataclass — the typed container of app singletons. Grows one field per singleton (logger, and later db engines, external clients). |
+| `utils/state.py` | `AppState` dataclass — the typed container of app singletons (settings, logger, `db_session_maker`). Grows one field per singleton (external clients, …). |
 | `utils/logger.py` | structlog config: console renderer in dev, JSON otherwise. |
 | `utils/openapi_helpers.py` | `standard_error_responses()` — attach the shared error codes to a route's OpenAPI. |
 | `middleware/logging.py` | Binds a per-request `request_id` into structlog contextvars, logs one `request.handled` line with method/status/latency. |
 | `routes/v1/` | Route modules. `__init__.py` aggregates them into `v1_router`. |
 | `logic/v1/` | Business layer, one module per domain area. |
+| `repositories/` | SQLAlchemy models + query objects. `database.py` holds `Base`; one module per domain. |
+| `scripts/` | Standalone operational entrypoints (seeding). Not imported by the app. |
 
 ## Request lifecycle
 
@@ -86,17 +85,19 @@ Say you're adding `patients` (a real PRD entity):
 
    router = APIRouter(prefix="/patients", tags=["patients"])
 
-   @router.get("/{patient_id}", response_model=Patient,
-               responses=standard_error_responses())
-   async def read_patient(patient_id: str,
-                          state: AppState = Depends(get_app_state)) -> Patient:
+
+   @router.get("/{patient_id}", response_model=Patient, responses=standard_error_responses())
+   async def read_patient(patient_id: str, state: AppState = Depends(get_app_state)) -> Patient:
        return get_patient(state, patient_id=patient_id)
    ```
 3. **Register** it in `app/routes/v1/__init__.py`:
    `v1_router.include_router(patients.router)`.
-4. When persistence exists: add `app/repositories/patients.py`, construct it inside
-   the logic function, and move all DB access there.
-5. Raise the right exception on failure (`NotFoundException(...)`) — the handler does
+4. **Repository** — `app/repositories/patients.py`: SQLAlchemy models + a query
+   object. Logic constructs it and calls it; it never builds HTTP concerns.
+5. **Migration** — `alembic revision --autogenerate -m "..."`, then import any new
+   models in `migrations/env.py`. Review the generated file; never call
+   `create_all` outside tests.
+6. Raise the right exception on failure (`NotFoundException(...)`) — the handler does
    the HTTP mapping.
 
 ## Adding a singleton (db engine, external client)
@@ -109,10 +110,26 @@ Say you're adding `patients` (a real PRD entity):
 
 ```bash
 uv run uvicorn app.main:app --reload --port 8000   # dev server
-uv run ruff check .                                 # lint
-uv run ruff format .                                # format
-uv run mypy app                                     # type-check (strict)
+uv run alembic upgrade head                        # apply migrations
+uv run python -m app.scripts.seed_products         # seed the demo catalog
+uv run ruff check .                                # lint
+uv run ruff format .                               # format
+uv run mypy app                                    # type-check (strict)
+uv run pytest -q                                   # tests
 ```
+
+## Testing
+
+- `tests/conftest.py` wires an **in-memory** SQLite database seeded from
+  `tests/factories.py`, plus an `AsyncClient` bound to `create_app()` with
+  `get_app_state` overridden. No test touches a real database file.
+- `pytest.ini` sets `asyncio_mode = auto`, so async tests and async fixtures need
+  no decorator. Note the `[pytest]` header — this file is `pytest.ini`, not
+  `pyproject.toml`, so `[tool.pytest.ini_options]` would be silently ignored.
+- `asyncio_default_fixture_loop_scope = function` keeps each test on a fresh
+  event loop; without it pytest-asyncio warns and leaks connections.
+- Assert exact `Decimal` amounts. Pricing is the part of this service most likely
+  to regress silently, so pin the boundaries (threshold − 1, threshold, 1).
 
 ## Gotchas
 
@@ -121,3 +138,12 @@ uv run mypy app                                     # type-check (strict)
   `app` resolves on the path.
 - `Settings.from_env()` is called in `create_app()` (for title/CORS) and the heavy
   init is in the lifespan closure — keep env reads pure and cheap.
+- **Money is `Decimal` / `NUMERIC(12,2)`, never float.** SQLAlchemy hands back
+  `Decimal` even for SQLite. Quantize at the logic boundary before returning a
+  Pydantic model, or the JSON will carry float noise like `337.5`.
+- **Alembic owns the schema.** `create_all` emits `CREATE TABLE` without recording
+  a revision, which leaves the database stamped behind and makes the next
+  `alembic upgrade` fail on existing tables. Tests may use `create_all` against
+  in-memory SQLite; the seed script and the app must not.
+- When you add a model, import it in `migrations/env.py` or autogenerate will not
+  see it and will generate a no-op migration.
