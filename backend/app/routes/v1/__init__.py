@@ -8,8 +8,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.routes.v1 import auth, health
+from app.routes.v1 import auth, health, products
 
 v1_router = APIRouter()
 v1_router.include_router(health.router)
 v1_router.include_router(auth.router, prefix="/auth")
+v1_router.include_router(products.router)
