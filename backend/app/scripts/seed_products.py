@@ -1,7 +1,7 @@
 """Seed the oral-care catalog with demo suppliers and products.
 
 Idempotent: re-running updates the same rows keyed by supplier slug, so it is
-safe to call on every local boot. Run with:
+safe to call more than once. Run with:
 
     uv run python -m app.scripts.seed_products
 """
@@ -12,8 +12,12 @@ import asyncio
 from decimal import Decimal
 
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from structlog.typing import FilteringBoundLogger
 
+from app.config import Settings
 from app.repositories.product import Product, Supplier
+from app.utils.logger import configure_logging
 from app.utils.state import AppState
 
 SUPPLIERS: list[dict[str, object]] = [
@@ -279,22 +283,29 @@ def run_migrations() -> None:
     command.upgrade(Config(str(ini_path)), "head")
 
 
-async def main() -> None:
-    """Bring the schema to head, then seed."""
-    import os
+def describe_url(url: str) -> str:
+    """Render a database URL with its password masked, for logging.
 
-    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+    A production ``DATABASE_URL`` embeds credentials, so it must never reach a log
+    sink verbatim.
+    """
+    from sqlalchemy.engine import make_url
 
-    from app.config import Settings
-    from app.utils.logger import configure_logging
+    parsed = make_url(url)
 
-    settings = Settings.from_env()
-    logger = configure_logging(dev_mode=settings.dev_mode, log_level=settings.log_level)
+    if parsed.password is None:
+        return parsed.render_as_string(hide_password=False)
 
-    # Alembic owns the schema. Do not call create_all here: it would emit
-    # CREATE TABLE without recording a revision, leaving the DB stamped behind.
-    run_migrations()
+    return parsed.render_as_string(hide_password=True)
 
+
+async def seed_database(settings: Settings, logger: FilteringBoundLogger) -> None:
+    """Insert or update the demo catalog, upgrading the schema first.
+
+    Must be called from a *running* event loop. `migrations/env.py` calls
+    `asyncio.run()` internally, so the migration itself has to happen from a
+    synchronous entrypoint — see `main()`.
+    """
     engine = create_async_engine(settings.database_url, echo=settings.dev_mode)
 
     state = AppState(
@@ -303,10 +314,25 @@ async def main() -> None:
         db_session_maker=async_sessionmaker(bind=engine, expire_on_commit=False),
     )
 
-    await seed(state)
-    await engine.dispose()
-    logger.info("seed.done", url=os.getenv("DATABASE_URL", settings.database_url))
+    try:
+        await seed(state)
+    finally:
+        await engine.dispose()
+
+
+def main() -> None:
+    """Migrate, then seed."""
+    settings = Settings.from_env()
+    logger = configure_logging(dev_mode=settings.dev_mode, log_level=settings.log_level)
+
+    # Alembic owns the schema. Do not call create_all here: it would emit
+    # CREATE TABLE without recording a revision, leaving the DB stamped behind.
+    # Runs outside the event loop because migrations/env.py calls asyncio.run().
+    run_migrations()
+
+    asyncio.run(seed_database(settings, logger))
+    logger.info("seed.done", url=describe_url(settings.database_url))
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

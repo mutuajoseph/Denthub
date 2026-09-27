@@ -1,0 +1,27 @@
+# Normalize line endings in the repository and in every checkout.
+#
+# Without this, `core.autocrlf=true` (the Windows default) rewrites LF to CRLF
+# on checkout. Biome then wants to reformat every touched file, so `pnpm lint`
+# fails locally for reasons that have nothing to do with the code — and only on
+# Windows, while CI on Linux stays green. Pinning eol=lf makes the working tree
+# match the repository and makes the gate portable.
+* text=auto eol=lf
+
+# Windows scripts must keep CRLF: cmd.exe won't run a LF shebang.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Keep diffs quiet for files git should never touch.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
+*.zip binary
+*.sqlite binary
+*.db binary

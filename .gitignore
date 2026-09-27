@@ -8,6 +8,11 @@ __pycache__/
 node_modules/
 frontend/dist/
 
+# This is a pnpm workspace — pnpm-lock.yaml is the only lockfile. Ignore npm's
+# so a stray `npm install` in the repo root can't be committed by accident.
+package-lock.json
+npm-debug.log*
+
 # Env
 .env
 .env.local
