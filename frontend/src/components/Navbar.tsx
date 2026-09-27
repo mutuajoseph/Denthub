@@ -21,6 +21,14 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { NavLink } from "react-router-dom";
 
+import {
+  ROLE,
+  canAccessFacility,
+  getDashboardPath,
+  isStaffUser,
+  isSupplierUser,
+  isTrainingProviderUser,
+} from "../auth/roles";
 import { useRegion } from "../hooks/useRegion";
 import type { AuthUser } from "../lib/auth";
 import { selectCartCount, useCartStore } from "../store/cartStore";
@@ -44,35 +52,10 @@ const NAV_LINKS = [
   { label: "Magazine", href: "/magazine", icon: Newspaper },
 ];
 
-/* =========================================================
-   ROLE HELPERS
-========================================================= */
-
-function normalizeRole(role: string | undefined) {
-  return role?.trim().toLowerCase();
-}
-
-function isSupplierUser(user: AuthUser | null) {
-  return normalizeRole(user?.role) === "supplier";
-}
-
-function isTrainingProviderUser(user: AuthUser | null) {
-  const role = normalizeRole(user?.role);
-
-  return role === "training_provider" || role === "training provider" || role === "trainer";
-}
-
-function canAccessFacility(user: AuthUser | null) {
-  const role = normalizeRole(user?.role);
-
-  return role === "facility" || role === "facility_admin" || role === "facility admin";
-}
-
-function isStaffUser(user: AuthUser | null) {
-  const role = normalizeRole(user?.role);
-
-  return role === "staff" || role === "admin";
-}
+const PUBLIC_DASHBOARD_PATH = getDashboardPath(ROLE.PATIENT);
+const FACILITY_DASHBOARD_PATH = getDashboardPath(ROLE.FACILITY_OWNER);
+const TRAINING_DASHBOARD_PATH = getDashboardPath(ROLE.TRAINING_PROVIDER);
+const SUPPLIER_DASHBOARD_PATH = getDashboardPath(ROLE.SUPPLIER);
 
 /* =========================================================
    NAVBAR
@@ -521,7 +504,7 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
 
                   {/* Dashboard */}
                   <a
-                    href="/dashboard"
+                    href={PUBLIC_DASHBOARD_PATH}
                     role="menuitem"
                     onClick={() => setUserMenuOpen(false)}
                     className="
@@ -554,7 +537,7 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
                   {/* Facility */}
                   {canAccessFacility(user) && (
                     <a
-                      href="/dashboard/facility"
+                      href={FACILITY_DASHBOARD_PATH}
                       role="menuitem"
                       onClick={() => setUserMenuOpen(false)}
                       className="
@@ -588,7 +571,7 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
                   {/* Training */}
                   {isTrainingProviderUser(user) && (
                     <a
-                      href="/dashboard/training"
+                      href={TRAINING_DASHBOARD_PATH}
                       role="menuitem"
                       onClick={() => setUserMenuOpen(false)}
                       className="
@@ -622,7 +605,7 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
                   {/* My Store */}
                   {isSupplierUser(user) && (
                     <a
-                      href="/dashboard/supplier"
+                      href={SUPPLIER_DASHBOARD_PATH}
                       role="menuitem"
                       onClick={() => setUserMenuOpen(false)}
                       className="
@@ -934,7 +917,7 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
 
                   {/* Dashboard */}
                   <a
-                    href="/dashboard"
+                    href={PUBLIC_DASHBOARD_PATH}
                     onClick={handleMobileNavigation}
                     className="
                       flex
@@ -963,7 +946,7 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
                   {/* Facility */}
                   {canAccessFacility(user) && (
                     <a
-                      href="/dashboard/facility"
+                      href={FACILITY_DASHBOARD_PATH}
                       onClick={handleMobileNavigation}
                       className="
                         flex
@@ -996,7 +979,7 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
                   {/* Training */}
                   {isTrainingProviderUser(user) && (
                     <a
-                      href="/dashboard/training"
+                      href={TRAINING_DASHBOARD_PATH}
                       onClick={handleMobileNavigation}
                       className="
                         flex
@@ -1029,7 +1012,7 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
                   {/* My Store */}
                   {isSupplierUser(user) && (
                     <a
-                      href="/dashboard/supplier"
+                      href={SUPPLIER_DASHBOARD_PATH}
                       onClick={handleMobileNavigation}
                       className="
                         flex

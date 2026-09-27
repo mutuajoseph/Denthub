@@ -1,9 +1,10 @@
+import { type Role, normalizeRole } from "../auth/roles";
 import { API_BASE } from "./api";
 
 export interface AuthUser {
   id: string;
   email: string;
-  role: string;
+  role: Role;
   full_name: string;
 }
 
@@ -23,100 +24,187 @@ export interface RegisterRequest {
   email: string;
   phone?: string;
   password: string;
-  account_type: string;
+  role: Role;
 }
 
-const AUTH_STORAGE_KEY = "denthub_auth";
+export const AUTH_STORAGE_KEY = "denthub_auth";
 
-/**
- * Login
- */
-export async function login(credentials: LoginRequest): Promise<AuthResponse> {
-  const res = await fetch(`${API_BASE}/auth/login`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(credentials),
-  });
+type UnknownRecord = Record<string, unknown>;
 
-  const data = await res.json();
+function isRecord(value: unknown): value is UnknownRecord {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 
-  if (!res.ok) {
-    throw new Error(data?.message || data?.detail || `Login failed: ${res.status}`);
+function parseAuthResponse(value: unknown): AuthResponse {
+  if (
+    !isRecord(value) ||
+    typeof value.access_token !== "string" ||
+    typeof value.token_type !== "string" ||
+    !isRecord(value.user)
+  ) {
+    throw new Error("Invalid authentication response");
   }
 
-  const authResponse = data as AuthResponse;
+  const user = value.user;
+  const role = normalizeRole(user.role);
 
-  // Save authentication session
-  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authResponse));
-
-  return authResponse;
-}
-
-/**
- * Register
- */
-export async function register(data: RegisterRequest): Promise<AuthResponse> {
-  const res = await fetch(`${API_BASE}/auth/register`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(data),
-  });
-
-  const responseData = await res.json();
-
-  if (!res.ok) {
-    throw new Error(
-      responseData?.message || responseData?.detail || `Registration failed: ${res.status}`,
-    );
+  if (
+    typeof user.id !== "string" ||
+    typeof user.email !== "string" ||
+    typeof user.full_name !== "string" ||
+    !role
+  ) {
+    throw new Error("Invalid authentication response");
   }
 
-  const authResponse = responseData as AuthResponse;
-
-  // Save authentication session
-  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authResponse));
-
-  return authResponse;
+  return {
+    access_token: value.access_token,
+    token_type: value.token_type,
+    user: {
+      id: user.id,
+      email: user.email,
+      full_name: user.full_name,
+      role,
+    },
+  };
 }
 
-/**
- * Get saved authentication session
- */
-export function getStoredAuth(): AuthResponse | null {
+function getStorage(): Storage | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
   try {
-    const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+function saveStoredAuth(auth: AuthResponse): void {
+  const storage = getStorage();
+
+  if (!storage) {
+    return;
+  }
+
+  try {
+    storage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth));
+  } catch {
+    return;
+  }
+}
+
+function getErrorMessage(value: unknown, fallback: string): string {
+  if (!isRecord(value)) {
+    return fallback;
+  }
+
+  if (typeof value.message === "string" && value.message) {
+    return value.message;
+  }
+
+  if (typeof value.detail === "string" && value.detail) {
+    return value.detail;
+  }
+
+  return fallback;
+}
+
+async function postAuth(
+  path: string,
+  body: UnknownRecord,
+  fallbackError: string,
+): Promise<AuthResponse> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  const data: unknown = await res.json();
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(data, `${fallbackError}: ${res.status}`));
+  }
+
+  const authResponse = parseAuthResponse(data);
+  saveStoredAuth(authResponse);
+  return authResponse;
+}
+
+export async function login(credentials: LoginRequest): Promise<AuthResponse> {
+  return postAuth(
+    "/auth/login",
+    {
+      email: credentials.email,
+      password: credentials.password,
+    },
+    "Login failed",
+  );
+}
+
+export async function register(data: RegisterRequest): Promise<AuthResponse> {
+  const role = normalizeRole(data.role);
+
+  if (!role) {
+    throw new Error("Invalid registration role");
+  }
+
+  return postAuth(
+    "/auth/register",
+    {
+      full_name: data.full_name,
+      email: data.email,
+      password: data.password,
+      role,
+      ...(data.phone === undefined ? {} : { phone: data.phone }),
+    },
+    "Registration failed",
+  );
+}
+
+export function getStoredAuth(): AuthResponse | null {
+  const storage = getStorage();
+
+  if (!storage) {
+    return null;
+  }
+
+  try {
+    const stored = storage.getItem(AUTH_STORAGE_KEY);
 
     if (!stored) {
       return null;
     }
 
-    return JSON.parse(stored) as AuthResponse;
+    return parseAuthResponse(JSON.parse(stored) as unknown);
   } catch {
-    localStorage.removeItem(AUTH_STORAGE_KEY);
+    clearStoredAuth();
     return null;
   }
 }
 
-/**
- * Get saved user
- */
 export function getStoredUser(): AuthUser | null {
   return getStoredAuth()?.user ?? null;
 }
 
-/**
- * Get saved access token
- */
 export function getStoredToken(): string | null {
   return getStoredAuth()?.access_token ?? null;
 }
 
-/**
- * Clear authentication session
- */
 export function clearStoredAuth(): void {
-  localStorage.removeItem(AUTH_STORAGE_KEY);
+  const storage = getStorage();
+
+  if (!storage) {
+    return;
+  }
+
+  try {
+    storage.removeItem(AUTH_STORAGE_KEY);
+  } catch {
+    return;
+  }
 }
