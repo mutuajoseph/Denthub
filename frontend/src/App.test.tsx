@@ -4,6 +4,8 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 
 import App from "./App";
+import { NAV_LINKS } from "./components/Navbar";
+import { getPageMeta } from "./hooks/usePageMeta";
 
 function renderApp(path: string) {
   const queryClient = new QueryClient({
@@ -58,5 +60,25 @@ describe("App routes", () => {
     renderApp("/definitely-not-a-page");
 
     expect(screen.getByRole("heading", { name: /page not found/i })).toBeInTheDocument();
+  });
+
+  // Regression guard: every public navbar link used to fall through to NotFound.
+  it.each(NAV_LINKS.map((link) => [link.label, link.href] as const))(
+    "routes the %s nav link (%s) to a real page",
+    (_label, href) => {
+      renderApp(href);
+
+      expect(screen.queryByRole("heading", { name: /page not found/i })).toBeNull();
+    },
+  );
+
+  it("keeps dedicated page metadata for every non-home nav route", () => {
+    // "/" intentionally reuses the home metadata, so it is excluded here.
+    const nonHome = NAV_LINKS.filter((link) => link.href !== "/");
+    expect(nonHome.length).toBeGreaterThan(0);
+
+    for (const link of nonHome) {
+      expect(getPageMeta(link.href, "DentHub").title).not.toMatch(/Complete Dental Platform/);
+    }
   });
 });

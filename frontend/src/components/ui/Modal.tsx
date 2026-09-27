@@ -11,6 +11,8 @@ interface ModalProps {
   children: ReactNode;
   className?: string;
   size?: Size;
+  /** Accessible name for the dialog, e.g. the item being viewed. */
+  ariaLabel?: string;
 }
 
 const sizes: Record<Size, string> = {
@@ -20,7 +22,14 @@ const sizes: Record<Size, string> = {
   xl: "max-w-4xl",
 };
 
-export default function Modal({ isOpen, onClose, children, className, size = "md" }: ModalProps) {
+export default function Modal({
+  isOpen,
+  onClose,
+  children,
+  className,
+  size = "md",
+  ariaLabel,
+}: ModalProps) {
   useEffect(() => {
     if (!isOpen) return;
 
@@ -54,6 +63,7 @@ export default function Modal({ isOpen, onClose, children, className, size = "md
           >
             <dialog
               open
+              aria-label={ariaLabel}
               className={cn(
                 "pointer-events-auto relative max-h-[92dvh] w-full overflow-y-auto overscroll-contain rounded-t-2xl border border-slate-200 bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] text-[#172b4d] shadow-2xl outline-none sm:rounded-2xl sm:p-6 sm:pb-6 dark:border-gold-400/30 dark:bg-navy-900 dark:text-white dark:shadow-gold-lg",
                 sizes[size],

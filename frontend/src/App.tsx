@@ -7,13 +7,17 @@ import { AppShell } from "./components/layout/AppShell";
 import { usePageMeta } from "./hooks/usePageMeta";
 import { clearStoredAuth, getStoredAuth } from "./lib/auth";
 import type { AuthResponse } from "./lib/auth";
+import { About } from "./pages/About";
 import { DentistProfile } from "./pages/DentistProfile";
 import { Emergency } from "./pages/Emergency";
 import { FindDentist } from "./pages/FindDentist";
 import Home from "./pages/Home";
 import { International } from "./pages/International";
+import { JobsBoard } from "./pages/JobsBoard";
+import { Magazine } from "./pages/Magazine";
 import NotFound from "./pages/NotFound";
 import OralCareShopPage from "./pages/OralCareShopPage";
+import { Training } from "./pages/Training";
 
 const App = () => {
   usePageMeta();
@@ -44,6 +48,10 @@ const App = () => {
           <Route path="/dentists/:id" element={<DentistProfile />} />
           <Route path="/international" element={<International />} />
           <Route path="/emergency" element={<Emergency />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/jobs" element={<JobsBoard />} />
+          <Route path="/training" element={<Training />} />
+          <Route path="/magazine" element={<Magazine />} />
           <Route path="/shop" element={<OralCareShopPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
