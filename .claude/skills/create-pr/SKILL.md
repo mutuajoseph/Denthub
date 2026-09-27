@@ -85,8 +85,12 @@ uv run --directory backend mypy app
 pnpm --filter frontend lint
 pnpm --filter frontend build
 
-# Database (sqlfluff, postgres) — only if the PR touches SQL; no-op otherwise
-sql=$(git diff --name-only origin/main...HEAD -- '*.sql'); [ -n "$sql" ] && uvx --from 'sqlfluff>=3,<4' sqlfluff lint $sql
+# Tests (CI does not run these yet, so this is the only gate)
+uv run --directory backend pytest -q
+pnpm --filter frontend test
+
+# Migrations: exactly one Alembic head after merging main
+uv run --directory backend alembic heads
 ```
 
 Run narrower checks while iterating, but finish with the full set before opening the PR.
@@ -140,7 +144,7 @@ the frontend conventions). If there's no visual change, write "Not applicable" a
 Invoke the vendored **`grill-with-docs`** skill (`.claude/skills/grill-with-docs/`) and
 run it as a live session in this chat:
 
-- Read nearby docs first: root/`backend`/`frontend` `CLAUDE.md`, `docs/PRD.md`, any ADRs.
+- Read nearby docs first: root/`backend`/`frontend` `AGENTS.md`, `CONTEXT.md`, `docs/PRD.md`, `docs/adr/`.
 - Challenge changed terminology, domain assumptions, and design decisions against the
   PRD and code. The PRD has explicit open questions (§8–9) — surface any the PR touches.
 - Ask one question at a time, include your recommended answer, wait for each reply.
