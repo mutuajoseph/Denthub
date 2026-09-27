@@ -3,6 +3,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
+import AppToaster from "./components/AppToaster";
 import { useRegionStore } from "./store/regionStore";
 import { useThemeStore } from "./store/themeStore";
 import "./global.css";
@@ -30,6 +31,7 @@ createRoot(root).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <App />
+        <AppToaster />
       </BrowserRouter>
     </QueryClientProvider>
   </StrictMode>,

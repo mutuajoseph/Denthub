@@ -13,6 +13,7 @@ import { FindDentist } from "./pages/FindDentist";
 import Home from "./pages/Home";
 import { International } from "./pages/International";
 import NotFound from "./pages/NotFound";
+import OralCareShopPage from "./pages/OralCareShopPage";
 
 const App = () => {
   usePageMeta();
@@ -43,6 +44,7 @@ const App = () => {
           <Route path="/dentists/:id" element={<DentistProfile />} />
           <Route path="/international" element={<International />} />
           <Route path="/emergency" element={<Emergency />} />
+          <Route path="/shop" element={<OralCareShopPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </AppShell>
