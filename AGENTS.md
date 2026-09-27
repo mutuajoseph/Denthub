@@ -6,7 +6,8 @@ design. This repo holds the FastAPI backend (`backend/`) and the React/Vite
 client (`frontend/`); each has its own `AGENTS.md` with that side's rules. Read
 the relevant one before editing there.
 
-`CLAUDE.md` in each directory is a symlink to its `AGENTS.md`. Edit `AGENTS.md`.
+`CLAUDE.md` in each directory is a one-line `@AGENTS.md` import (a plain file, so it
+works on Windows too). Edit `AGENTS.md`.
 
 The product spec is [`docs/PRD.md`](docs/PRD.md). Read it before any domain
 modelling, new entity, or role/permission work. It defines the roles, entities,
@@ -149,7 +150,9 @@ If a change edits dependencies, commit the regenerated lockfile (`uv.lock` or
   signup creates only the public account types (PRD §2); staff roles are granted
   by staff.
 - **New routes default to role-gated.** Ask the user which roles may call a new
-  route; never pick the roles yourself.
+  route; never pick the roles yourself. The one exception: read-only routes for
+  the modules PRD §2 opens to everyone (oral-care shop, magazine, jobs board)
+  default to public. Any write route is role-gated and gets the question.
 - Secrets come from the environment. Production refuses to start without them
   rather than falling back to a dev default. Add each new secret to
   `render.yaml` (`sync: false`) and `docs/RELEASE.md`.

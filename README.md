@@ -12,7 +12,7 @@ Denthub/
 ├── backend/     # FastAPI service (uv): routes → logic → repositories, Alembic migrations
 ├── frontend/    # React 19 + Vite + TypeScript client
 ├── docs/        # PRD, release guide, ADRs, agent config
-├── AGENTS.md    # engineering rules for humans and coding agents (CLAUDE.md → symlink)
+├── AGENTS.md    # engineering rules for humans and coding agents (CLAUDE.md imports it)
 └── CONTEXT.md   # domain glossary
 ```
 

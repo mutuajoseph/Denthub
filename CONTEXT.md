@@ -5,6 +5,10 @@ suppliers, training providers, and job seekers, Kenya-first and multi-country.
 Seeded from `docs/PRD.md` §2–4; sharpen entries with the `domain-modeling` skill
 as terms get settled.
 
+The terms and _Avoid_ lists govern code, data, API fields, issues, and tests.
+User-facing copy uses the words patients use (a Facility can be a "clinic" on
+screen).
+
 ## Language
 
 ### People and accounts
@@ -26,7 +30,7 @@ _Avoid_: Doctor, practitioner
 **Facility**:
 The account type for a dental clinic or practice that employs Facility Staff.
 The other professional account type chosen at signup.
-_Avoid_: Clinic, practice (in code and data)
+_Avoid_: Clinic, practice
 
 **Branch**:
 One physical location of a Facility; a Facility has one or more.
