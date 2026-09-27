@@ -10,9 +10,9 @@ function formatPrice(value: number) {
 
 export default function CartDropdown() {
   const items = useCartStore((s) => s.items);
-  const updateQty = useCartStore((s) => s.updateQty);
+  const updateQuantity = useCartStore((s) => s.updateQuantity);
   const removeItem = useCartStore((s) => s.removeItem);
-  const clear = useCartStore((s) => s.clear);
+  const clearCart = useCartStore((s) => s.clearCart);
   const count = selectCartCount(items);
   const subtotal = selectCartSubtotal(items);
   const { currencySymbol } = useRegion();
@@ -44,7 +44,7 @@ export default function CartDropdown() {
         {count > 0 && (
           <button
             type="button"
-            onClick={clear}
+            onClick={clearCart}
             className="text-xs font-medium text-slate-400 transition hover:text-red-500"
           >
             Clear
@@ -67,7 +67,7 @@ export default function CartDropdown() {
         <>
           <ul className="max-h-[300px] divide-y divide-slate-100 overflow-y-auto dark:divide-navy-600">
             {items.map((item) => (
-              <li key={item.id} className="flex items-center gap-3 px-4 py-3">
+              <li key={item.cartLineId} className="flex items-center gap-3 px-4 py-3">
                 {item.image ? (
                   <img
                     src={item.image}
@@ -86,25 +86,30 @@ export default function CartDropdown() {
                   </p>
                   <p className="text-sm text-slate-500 dark:text-gray-400">
                     {currencySymbol}
-                    {formatPrice(item.price * item.qty)}
+                    {formatPrice(item.unitPrice * item.quantity)}
                   </p>
+                  {item.purchaseMode === "wholesale" && (
+                    <span className="mt-0.5 inline-block rounded bg-gold-400/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gold-600 dark:text-gold-300">
+                      Wholesale
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
-                    onClick={() => updateQty(item.id, item.qty - 1)}
+                    onClick={() => updateQuantity(item.cartLineId, item.quantity - 1)}
                     aria-label={`Decrease quantity of ${item.name}`}
                     className="flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:border-orange-500 hover:text-orange-500 dark:border-navy-600 dark:text-gray-300"
                   >
                     <Minus className="h-3.5 w-3.5" aria-hidden="true" />
                   </button>
                   <span className="w-6 text-center text-sm font-semibold text-[#172b4d] dark:text-white">
-                    {item.qty}
+                    {item.quantity}
                   </span>
                   <button
                     type="button"
-                    onClick={() => updateQty(item.id, item.qty + 1)}
+                    onClick={() => updateQuantity(item.cartLineId, item.quantity + 1)}
                     aria-label={`Increase quantity of ${item.name}`}
                     className="flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:border-orange-500 hover:text-orange-500 dark:border-navy-600 dark:text-gray-300"
                   >
@@ -114,7 +119,7 @@ export default function CartDropdown() {
 
                 <button
                   type="button"
-                  onClick={() => removeItem(item.id)}
+                  onClick={() => removeItem(item.cartLineId)}
                   aria-label={`Remove ${item.name}`}
                   className="flex h-8 w-8 items-center justify-center rounded-md text-slate-400 transition hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10"
                 >
