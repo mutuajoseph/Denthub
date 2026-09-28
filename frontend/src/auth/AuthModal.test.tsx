@@ -38,7 +38,7 @@ function blockOf(css: string, header: string): string {
   return match?.[1] ?? "";
 }
 
-describe("AuthModal dark mode", () => {
+describe("AuthModal theming", () => {
   it("renders every auth view with theme tokens instead of hardcoded colours", async () => {
     const user = userEvent.setup();
     const { container } = render(<AuthModal onClose={vi.fn()} />);
@@ -78,24 +78,18 @@ describe("AuthModal dark mode", () => {
     expect(container.firstElementChild?.className).toContain("bg-auth-scrim");
   });
 
-  it("defines every auth token in both the light and dark blocks", () => {
+  it("defines every auth token once, as a light-theme colour", () => {
     const css = readGlobalCss();
     const theme = blockOf(css, "@theme");
-    const light = blockOf(css, ":root");
-    const dark = blockOf(css, ".dark");
 
-    const declared = [...theme.matchAll(/--color-auth-([a-z-]+):/g)].map((match) => match[1]);
+    const declared = [...theme.matchAll(/--color-auth-([a-z-]+):\s*([^;]+);/g)];
 
     expect(declared.length).toBeGreaterThan(0);
-
-    for (const token of declared) {
-      expect(light, `light block is missing --auth-${token}`).toMatch(
-        new RegExp(`--auth-${token}:\\s*(#[0-9a-f]{3,8})`, "i"),
-      );
-      expect(dark, `dark block is missing --auth-${token}`).toMatch(
-        new RegExp(`--auth-${token}:\\s*(#[0-9a-f]{3,8})`, "i"),
-      );
+    for (const [, token, value] of declared) {
+      expect(value, `--color-auth-${token} is not a hex colour`).toMatch(/^#[0-9a-f]{3,8}$/i);
     }
+    // Light-only (docs/design/DESIGN.md): no dark palette to fall out of sync.
+    expect(css).not.toMatch(/^\.dark\s*\{/m);
   });
 
   it("closes on Escape", async () => {

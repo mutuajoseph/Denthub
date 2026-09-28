@@ -43,7 +43,7 @@ export function AppShell({
     <div className="flex min-h-screen w-full flex-col overflow-x-hidden">
       <a
         href="#main-content"
-        className="sr-only z-[100] rounded-lg bg-gold-400 px-4 py-2 font-semibold text-navy-900 focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
+        className="sr-only z-[100] rounded-button bg-ink px-4 py-2 text-sm font-medium text-paper focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
       >
         Skip to main content
       </a>
@@ -51,11 +51,7 @@ export function AppShell({
         <AnnouncementBar />
         <Navbar onSignIn={onSignIn} user={user} onLogout={onLogout} />
       </div>
-      <main
-        id="main-content"
-        tabIndex={-1}
-        className="min-w-0 flex-1 pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] focus:outline-none md:pb-0"
-      >
+      <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 focus:outline-none">
         {children ?? <Outlet />}
       </main>
       <Footer />

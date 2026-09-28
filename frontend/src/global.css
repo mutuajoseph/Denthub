@@ -1,114 +1,134 @@
 @import "tailwindcss";
 
+/*
+ * Light-only (docs/design/DESIGN.md). Nothing sets `.dark` any more, so the
+ * `dark:` utilities still left in not-yet-revamped screens never apply. Keep
+ * this binding until the last revamp phase removes them: without it Tailwind
+ * would fall back to prefers-color-scheme and switch them back on.
+ */
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --color-navy-950: var(--navy-950);
-  --color-navy-900: var(--navy-900);
-  --color-navy-800: var(--navy-800);
-  --color-navy-700: var(--navy-700);
-  --color-navy-600: var(--navy-600);
-
-  --color-gold-300: var(--gold-300);
-  --color-gold-400: var(--gold-400);
-  --color-gold-500: var(--gold-500);
-
-  --color-orange-500: var(--orange-500);
-
-  --font-display: "Playfair Display", serif;
-  --font-heading: "Sora", sans-serif;
-  --font-body: "DM Sans", sans-serif;
-  --font-mono: "JetBrains Mono", monospace;
-
-  --shadow-gold: 0 0 20px rgba(245, 166, 35, 0.2);
-  --shadow-gold-lg: 0 0 30px rgba(245, 166, 35, 0.35);
+  /* Design system colours (docs/design/DESIGN.md). */
+  --color-paper: #ffffff;
+  --color-ink: #18181b;
+  --color-graphite: #27272a;
+  --color-cloud: #f4f4f5;
+  --color-steel: #d4d4d8;
+  --color-slate: #71717a;
+  --color-charcoal: #3f3f46;
+  --color-aqua-relay: #94faf0;
+  /* Hover state of the aqua conversion button (derived, not in DESIGN.md). */
+  --color-aqua-relay-deep: #6bf0e3;
+  --color-lime-notice: #d4f796;
+  --color-volt-lime: #bff660;
+  --color-signal-sweep: #07cddf;
+  --color-signal-sweep-end: #9eed15;
 
   /*
-   * Auth modal surfaces. Declared as roles rather than raw hexes so light and
-   * dark are defined once each and every consumer flips automatically.
+   * The design's neutrals are Tailwind's zinc scale, so slate and gray resolve
+   * to it: every neutral in the app lands on the design palette.
    */
-  --color-auth-surface: var(--auth-surface);
-  --color-auth-heading: var(--auth-heading);
-  --color-auth-body: var(--auth-body);
-  --color-auth-muted: var(--auth-muted);
-  --color-auth-label: var(--auth-label);
-  --color-auth-icon: var(--auth-icon);
-  --color-auth-field: var(--auth-field);
-  --color-auth-field-border: var(--auth-field-border);
-  --color-auth-card: var(--auth-card);
-  --color-auth-card-hover: var(--auth-card-hover);
-  --color-auth-chip-hover: var(--auth-chip-hover);
-  --color-auth-toggle: var(--auth-toggle);
-  --color-auth-toggle-hover: var(--auth-toggle-hover);
-  --color-auth-accent: var(--auth-accent);
-  --color-auth-accent-strong: var(--auth-accent-strong);
-  --color-auth-scrim: var(--auth-scrim);
-}
+  --color-slate-50: var(--color-zinc-50);
+  --color-slate-100: var(--color-zinc-100);
+  --color-slate-200: var(--color-zinc-200);
+  --color-slate-300: var(--color-zinc-300);
+  --color-slate-400: var(--color-zinc-400);
+  --color-slate-500: var(--color-zinc-500);
+  --color-slate-600: var(--color-zinc-600);
+  --color-slate-700: var(--color-zinc-700);
+  --color-slate-800: var(--color-zinc-800);
+  --color-slate-900: var(--color-zinc-900);
+  --color-slate-950: var(--color-zinc-950);
+  --color-gray-50: var(--color-zinc-50);
+  --color-gray-100: var(--color-zinc-100);
+  --color-gray-200: var(--color-zinc-200);
+  --color-gray-300: var(--color-zinc-300);
+  --color-gray-400: var(--color-zinc-400);
+  --color-gray-500: var(--color-zinc-500);
+  --color-gray-600: var(--color-zinc-600);
+  --color-gray-700: var(--color-zinc-700);
+  --color-gray-800: var(--color-zinc-800);
+  --color-gray-900: var(--color-zinc-900);
+  --color-gray-950: var(--color-zinc-950);
 
-:root {
-  --navy-950: #f8fafc;
-  --navy-900: #ffffff;
-  --navy-800: #fff7ed;
-  --navy-700: #fef3e2;
-  --navy-600: #e2e8f0;
-  --gold-400: #ff8a1f;
-  --gold-500: #ea6a00;
-  --gold-300: #ffb36a;
-  --orange-500: #ff8a1f;
-  --white: #ffffff;
-  --gray-300: #64748b;
-  --gray-400: #475569;
-  --success: #22c55e;
-  --danger: #ef4444;
+  /*
+   * Revamp shim: screens not yet revamped still use the old orange/gold/navy
+   * names. They resolve to graphite and ink (an orange button becomes the
+   * design's graphite button), never to aqua, which is placed deliberately.
+   * Remove with the last revamp phase.
+   */
+  --color-orange-50: #f4f4f5;
+  --color-orange-100: #e4e4e7;
+  --color-orange-200: #d4d4d8;
+  --color-orange-300: #a1a1aa;
+  --color-orange-400: #3f3f46;
+  --color-orange-500: #27272a;
+  --color-orange-600: #18181b;
+  --color-orange-700: #09090b;
+  --color-gold-300: #3f3f46;
+  --color-gold-400: #27272a;
+  --color-gold-500: #18181b;
+  --color-navy-950: #ffffff;
+  --color-navy-900: #ffffff;
+  --color-navy-800: #f4f4f5;
+  --color-navy-700: #f4f4f5;
+  --color-navy-600: #d4d4d8;
 
-  --auth-surface: #ffffff;
-  --auth-heading: #111c2c;
-  --auth-body: #152642;
-  --auth-muted: #98a5b8;
-  --auth-label: #91a0b6;
-  --auth-icon: #a6b1c1;
-  --auth-field: #eaf2ff;
-  --auth-field-border: #d9e3f2;
-  --auth-card: #f8fbff;
-  --auth-card-hover: #fff7f0;
-  --auth-chip-hover: #fff0e3;
-  --auth-toggle: #b8c3d2;
-  --auth-toggle-hover: #a8b4c5;
-  --auth-accent: #ff851b;
-  --auth-accent-strong: #f47813;
-  --auth-scrim: #161b23;
-}
+  /* Type. Inter Tight stands in for Neo Grotesk (commercial). */
+  --font-display: "Inter Tight", "Helvetica Neue", Arial, sans-serif;
+  --font-heading: "Inter Tight", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Chivo Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
-.dark {
-  --navy-950: #050d1a;
-  --navy-900: #0a1628;
-  --navy-800: #0f2040;
-  --navy-700: #162d58;
-  --navy-600: #1e3d70;
-  --gold-400: #f5a623;
-  --gold-500: #e8920f;
-  --gold-300: #fbbf5a;
-  --orange-500: #f97316;
-  --white: #ffffff;
-  --gray-300: #cbd5e1;
-  --gray-400: #a8b4c7;
+  --text-display-hero: 5rem;
+  --text-display-hero--line-height: 0.9;
+  --text-display-hero--letter-spacing: -0.04em;
+  --text-display-section: 3.5rem;
+  --text-display-section--line-height: 1;
+  --text-display-section--letter-spacing: -0.04em;
+  --text-feature-heading: 2rem;
+  --text-feature-heading--line-height: 1.2;
+  --text-feature-heading--letter-spacing: -0.03em;
+  --text-testimonial: 2rem;
+  --text-testimonial--line-height: 1.3;
+  --text-testimonial--letter-spacing: -0.04em;
 
-  --auth-surface: #0a1628;
-  --auth-heading: #f8fafc;
-  --auth-body: #e2e8f0;
-  --auth-muted: #94a3b8;
-  --auth-label: #a3b1c6;
-  --auth-icon: #7f8ea6;
-  --auth-field: #0f2040;
-  --auth-field-border: #1e3d70;
-  --auth-card: #0f2040;
-  --auth-card-hover: #1a2f52;
-  --auth-chip-hover: #22375c;
-  --auth-toggle: #1e3d70;
-  --auth-toggle-hover: #2b4f8a;
-  --auth-accent: #ff851b;
-  --auth-accent-strong: #f47813;
-  --auth-scrim: #020617;
+  /* Radii: links 4px, compact buttons 12px, cards and large buttons 16px. */
+  --radius-link: 4px;
+  --radius-button: 12px;
+  --radius-card: 16px;
+
+  /* Elevation (DESIGN.md "Elevation"). */
+  --shadow-card-cloud:
+    0 0 0 1px rgba(0, 0, 0, 0.08), 0 0.6px 2.29px -1.25px rgba(0, 0, 0, 0.18),
+    0 2.29px 8.7px -2.5px rgba(0, 0, 0, 0.16), 0 10px 38px -3.75px rgba(0, 0, 0, 0.06);
+  --shadow-card-graphite: 0 0.6px 2.53px -1.25px rgba(0, 0, 0, 0.18), 0 2.29px 9.61px -2.5px
+    rgba(0, 0, 0, 0.16), 0 10px 42px -3.75px rgba(0, 0, 0, 0.06);
+  --shadow-card-white: 0 2.77px 2.21px rgba(0, 0, 0, 0.02), 0 6.65px 5.32px rgba(0, 0, 0, 0.03);
+  --shadow-edge: inset 0 0 0 2px rgba(255, 255, 255, 0.13);
+  /* Old name still used by screens not yet revamped. */
+  --shadow-gold: var(--shadow-card-white);
+  --shadow-gold-lg: var(--shadow-card-cloud);
+
+  /* Auth modal roles (revamped in phase 4; mapped to the palette meanwhile). */
+  --color-auth-surface: #ffffff;
+  --color-auth-heading: #18181b;
+  --color-auth-body: #3f3f46;
+  --color-auth-muted: #71717a;
+  --color-auth-label: #71717a;
+  --color-auth-icon: #71717a;
+  --color-auth-field: #f4f4f5;
+  --color-auth-field-border: #d4d4d8;
+  --color-auth-card: #f4f4f5;
+  --color-auth-card-hover: #e4e4e7;
+  --color-auth-chip-hover: #e4e4e7;
+  --color-auth-toggle: #d4d4d8;
+  --color-auth-toggle-hover: #a1a1aa;
+  --color-auth-accent: #27272a;
+  --color-auth-accent-strong: #18181b;
+  --color-auth-scrim: #18181b;
 }
 
 @layer base {
@@ -116,6 +136,8 @@
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
+    color-scheme: light;
+    scrollbar-color: var(--color-steel) var(--color-paper);
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -134,14 +156,19 @@
 
   body {
     font-family: var(--font-body);
+    font-weight: 500;
+    font-feature-settings: "cv11", "ss01", "ss03";
+    letter-spacing: -0.007em;
     -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
-    background-color: var(--navy-950);
-    color: #0f172a;
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    caret-color: var(--color-ink);
   }
 
-  .dark body {
-    color: var(--white);
+  ::selection {
+    background-color: var(--color-aqua-relay);
+    color: var(--color-ink);
   }
 
   img,
@@ -155,11 +182,43 @@
   h3,
   h4 {
     font-family: var(--font-heading);
+    text-wrap: balance;
   }
 
+  a {
+    text-underline-offset: 3px;
+  }
+
+  /*
+   * Two-tone focus ring: an ink outline framed by a paper halo, so focus stays
+   * visible on Paper and on Ink/Graphite surfaces alike (WCAG technique C40).
+   * Elements with their own shadow utility (buttons) set a surface-appropriate
+   * outline colour instead.
+   */
   :focus-visible {
-    outline: 2px solid var(--gold-400);
+    outline: 2px solid var(--color-ink);
     outline-offset: 2px;
+    border-radius: var(--radius-link);
+    box-shadow: 0 0 0 6px var(--color-paper);
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--color-paper);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-steel);
+    border: 2px solid var(--color-paper);
+    border-radius: 1000px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-slate);
   }
 }
 
@@ -186,6 +245,10 @@
     clip: auto;
     white-space: normal;
   }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
 }
 
 @layer components {
@@ -193,92 +256,44 @@
     @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
   }
 
-  .app-section {
-    @apply py-8 sm:py-10 md:py-12 lg:py-16;
-  }
-
-  .touch-target {
-    @apply min-h-[44px] min-w-[44px];
-  }
-
-  .scroll-touch {
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
+  /* Faint drafting grid: the "technical paper" the design sits on. */
+  .construction-grid,
+  .tooth-pattern {
+    background-image: linear-gradient(
+        to right,
+        color-mix(in srgb, var(--color-steel) 45%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        to bottom,
+        color-mix(in srgb, var(--color-steel) 45%, transparent) 1px,
+        transparent 1px
+      );
+    background-size: 48px 48px;
   }
 
   .card-hover {
-    transition-property: all;
-    transition-duration: 250ms;
-    transition-timing-function: ease-out;
+    transition: transform 250ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 250ms
+      cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   @media (hover: hover) and (pointer: fine) {
     .card-hover:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 0 20px rgba(245, 166, 35, 0.2);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-card-cloud);
     }
-  }
-
-  .gold-gradient-text {
-    @apply bg-gradient-to-r from-gold-300 to-gold-400 bg-clip-text text-transparent;
-  }
-
-  .tooth-pattern {
-    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 8c-4 0-7 3-8 6-1 4 0 9 3 13 1 3 4 5 5 5s4-2 5-5c3-4 4-9 3-13-1-3-4-6-8-6z' fill='%23e7edf5' fill-opacity='0.6'/%3E%3C/svg%3E");
-    background-size: 80px 80px;
-  }
-
-  .hero-bg {
-    background-color: var(--navy-900);
-    background-image: linear-gradient(135deg, #ffffff 0%, #fff7ed 100%);
-  }
-
-  .dark .hero-bg {
-    background-color: var(--navy-950);
-    background-image: linear-gradient(135deg, #0a1628 0%, #0f2040 100%);
-  }
-
-  .dark .tooth-pattern {
-    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 8c-4 0-7 3-8 6-1 4 0 9 3 13 1 3 4 5 5 5s4-2 5-5c3-4 4-9 3-13-1-3-4-6-8-6z' fill='%23f5a623' fill-opacity='0.03'/%3E%3C/svg%3E");
-  }
-
-  .emergency-pulse {
-    animation: emergency-pulse 2s ease-in-out infinite;
   }
 
   .pb-safe-bottom {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
-}
 
-@keyframes emergency-pulse {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 1;
+  /* Old helpers still used by screens not yet revamped. */
+  .hero-bg {
+    background-color: var(--color-paper);
   }
-  50% {
-    transform: scale(1.08);
-    opacity: 0.85;
+
+  .gold-gradient-text {
+    color: var(--color-ink);
   }
-}
-
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--navy-900);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--navy-600);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--gold-500);
 }

@@ -22,7 +22,7 @@ export function MobileNav() {
   return (
     <nav
       aria-label="Mobile navigation"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-navy-600 bg-navy-900/95 pb-safe-bottom backdrop-blur-md md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-steel bg-paper pb-safe-bottom md:hidden"
     >
       <ul className="flex min-h-[4.25rem] items-stretch justify-around px-1 py-1">
         {mobileNavItems.map(({ label, to, icon: Icon }) => (
@@ -32,16 +32,20 @@ export function MobileNav() {
               end={to === "/"}
               className={({ isActive }) =>
                 cn(
-                  "flex min-h-[3.5rem] w-full max-w-[5.5rem] flex-col items-center justify-center gap-1 rounded-lg px-1.5 py-1.5 text-[10px] font-semibold transition-colors",
-                  isActive
-                    ? "bg-navy-800 text-gold-400"
-                    : "text-slate-300 hover:bg-navy-800 hover:text-gold-300",
+                  "relative flex min-h-[3.5rem] w-full max-w-[5.5rem] flex-col items-center justify-center gap-1 rounded-button px-1.5 py-1.5 text-[11px] font-medium transition-colors",
+                  isActive ? "bg-cloud text-ink" : "text-slate hover:bg-cloud hover:text-ink",
                 )
               }
             >
               {({ isActive }) => (
                 <>
-                  <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+                  {isActive && (
+                    <span
+                      className="absolute top-1.5 right-[calc(50%-14px)] h-1.5 w-1.5 rounded-[1px] bg-aqua-relay ring-1 ring-ink/20"
+                      aria-hidden="true"
+                    />
+                  )}
+                  <Icon className="h-5 w-5 shrink-0" strokeWidth={1.7} aria-hidden="true" />
                   <span className="w-full truncate text-center">{label}</span>
                   {isActive && <span className="sr-only">(current page)</span>}
                 </>

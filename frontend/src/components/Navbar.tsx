@@ -1,3 +1,4 @@
+import type { LucideIcon } from "lucide-react";
 import {
   ArrowRight,
   BookOpen,
@@ -10,12 +11,10 @@ import {
   LogOut,
   Menu,
   MessageCircle,
-  Moon,
   Newspaper,
   ShoppingBag,
   ShoppingCart,
   Stethoscope,
-  Sun,
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -33,8 +32,9 @@ import { useRegion } from "../hooks/useRegion";
 import type { AuthUser } from "../lib/auth";
 import { selectCartCount, useCartStore } from "../store/cartStore";
 import { useCartUiStore } from "../store/cartUiStore";
-import { useThemeStore } from "../store/themeStore";
+import { cn } from "../utils/cn";
 import CountrySelector from "./CountrySelector";
+import Button from "./ui/Button";
 
 type NavbarProps = {
   onSignIn: () => void;
@@ -52,694 +52,241 @@ export const NAV_LINKS = [
   { label: "Magazine", href: "/magazine", icon: Newspaper },
 ];
 
-const PUBLIC_DASHBOARD_PATH = getDashboardPath(ROLE.PATIENT);
-const FACILITY_DASHBOARD_PATH = getDashboardPath(ROLE.FACILITY_OWNER);
-const TRAINING_DASHBOARD_PATH = getDashboardPath(ROLE.TRAINING_PROVIDER);
-const SUPPLIER_DASHBOARD_PATH = getDashboardPath(ROLE.SUPPLIER);
+type AccountLink = { label: string; href: string; icon: LucideIcon };
 
-/* =========================================================
-   NAVBAR
-========================================================= */
+/** Account destinations the signed-in user may open, in menu order. */
+function accountLinksFor(user: AuthUser): AccountLink[] {
+  const links: AccountLink[] = [
+    { label: "Dashboard", href: getDashboardPath(ROLE.PATIENT), icon: LayoutDashboard },
+  ];
+  if (canAccessFacility(user)) {
+    links.push({
+      label: "Facility",
+      href: getDashboardPath(ROLE.FACILITY_OWNER),
+      icon: Building2,
+    });
+  }
+  if (isTrainingProviderUser(user)) {
+    links.push({
+      label: "Training",
+      href: getDashboardPath(ROLE.TRAINING_PROVIDER),
+      icon: GraduationCap,
+    });
+  }
+  if (isSupplierUser(user)) {
+    links.push({ label: "My store", href: getDashboardPath(ROLE.SUPPLIER), icon: ShoppingBag });
+  }
+  if (!isStaffUser(user)) {
+    links.push({ label: "Messages", href: "/messages", icon: MessageCircle });
+  }
+  return links;
+}
+
+/** Splits "DentHub USA" into the wordmark and its Country suffix. */
+function splitBrand(brandName: string): { mark: string; suffix: string } {
+  const end = brandName.indexOf("Hub");
+  if (end < 0) return { mark: brandName, suffix: "" };
+  return {
+    mark: brandName.slice(0, end + 3),
+    suffix: brandName.slice(end + 3).trim(),
+  };
+}
+
+function Avatar({ name }: { name: string }) {
+  return (
+    <span
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-button bg-graphite text-sm font-semibold text-paper"
+      aria-hidden="true"
+    >
+      {name.charAt(0).toUpperCase()}
+    </span>
+  );
+}
 
 export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-
   const userMenuRef = useRef<HTMLDivElement>(null);
 
-  const theme = useThemeStore((s) => s.theme);
-  const toggleTheme = useThemeStore((s) => s.toggleTheme);
   const cartCount = useCartStore((s) => selectCartCount(s.items));
   const openCartDrawer = useCartUiStore((s) => s.openCartDrawer);
   const { brandName } = useRegion();
+  const { mark, suffix } = splitBrand(brandName);
+  const accountLinks = user ? accountLinksFor(user) : [];
 
-  const hubIndex = brandName.indexOf("Hub");
-  const brandPrefix = hubIndex > 0 ? brandName.slice(0, hubIndex) : brandName;
-  const brandAccent = hubIndex >= 0 ? brandName.slice(hubIndex) : "";
-
-  /* =========================================================
-     CLOSE USER DROPDOWN WHEN CLICKING OUTSIDE
-  ========================================================= */
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setUserMenuOpen(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  /* =========================================================
-     CLOSE USER MENU WHEN LOGGED OUT
-  ========================================================= */
   useEffect(() => {
-    if (!user) {
-      setUserMenuOpen(false);
-    }
+    if (!user) setUserMenuOpen(false);
   }, [user]);
 
-  /* =========================================================
-     LOGOUT
-  ========================================================= */
   const handleLogout = () => {
     setUserMenuOpen(false);
     setMobileOpen(false);
     onLogout();
   };
 
-  /* =========================================================
-     CLOSE MOBILE MENU AFTER NAVIGATION
-  ========================================================= */
-  const handleMobileNavigation = () => {
+  const closeMenus = () => {
     setMobileOpen(false);
     setUserMenuOpen(false);
   };
 
   return (
-    <header
-      className="
-        relative
-        z-50
-        w-full
-        border-t-2
-        border-orange-500
-        border-b
-        border-slate-200
-        bg-white
-        text-slate-900
-        dark:border-navy-600
-        dark:bg-navy-900
-        dark:text-white
-      "
-    >
+    <header className="relative z-50 w-full border-b border-steel bg-paper text-ink">
       <nav
-        className="
-          mx-auto
-          grid
-          w-full
-          max-w-[1440px]
-          grid-cols-[auto_minmax(0,1fr)_auto]
-          items-center
-          gap-x-4
-          px-4
-          py-3
-          sm:px-6
-          lg:px-10
-          xl:gap-x-6
-        "
+        className="mx-auto grid w-full max-w-[1440px] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 px-4 py-3 sm:px-6 lg:px-10 xl:gap-x-6"
         aria-label="Main navigation"
       >
-        {/* =====================================================
-            BRAND
-        ====================================================== */}
         <a
           href="/"
           aria-label={`${brandName} home`}
-          className="
-            min-w-0
-            whitespace-nowrap
-            text-[20px]
-            font-bold
-            tracking-tight
-            text-[#11213a]
-            dark:text-white
-            sm:text-[24px]
-          "
+          className="flex min-w-0 items-center gap-2 whitespace-nowrap rounded-link"
         >
-          {brandPrefix}
-          <span className="text-orange-500">{brandAccent}</span>
+          <span
+            className="relative flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] bg-graphite shadow-edge"
+            aria-hidden="true"
+          >
+            <span className="h-2 w-2 rounded-[2px] bg-aqua-relay" />
+          </span>
+          <span className="font-display text-[19px] font-semibold tracking-[-0.03em] text-ink sm:text-[21px]">
+            {mark}
+          </span>
+          {suffix && (
+            <span className="font-mono text-[11px] font-normal uppercase tracking-[0.06em] text-slate">
+              {suffix}
+            </span>
+          )}
         </a>
 
-        {/* =====================================================
-            DESKTOP NAVIGATION
-        ====================================================== */}
-        <div
-          className="
-            hidden
-            min-w-0
-            items-center
-            justify-center
-            xl:flex
-          "
-        >
-          <div
-            className="
-              flex
-              max-w-full
-              items-center
-              gap-1
-            "
-          >
-            {NAV_LINKS.map(({ label, href, icon: Icon }) => (
-              <NavLink
-                key={label}
-                to={href}
-                end={href === "/"}
-                className={({ isActive }) => `
-                  relative
-                  flex
-                  items-center
-                  gap-1.5
-                  whitespace-nowrap
-                  rounded-lg
-                  px-2
-                  py-2.5
-                  text-[14px]
-                  font-medium
-                  transition-colors
-                  ${isActive ? "text-orange-500 dark:text-gold-400" : "text-[#172b4d] hover:text-orange-500 dark:text-slate-200 dark:hover:text-gold-400"}
-                `}
-              >
-                {({ isActive }) => (
-                  <>
-                    <Icon className="h-[18px] w-[18px]" strokeWidth={1.7} aria-hidden="true" />
-
-                    {label}
-
-                    {isActive && (
-                      <span
-                        className="
-                          absolute
-                          bottom-0
-                          left-2
-                          right-2
-                          h-0.5
-                          rounded-full
-                          bg-orange-500
-                          dark:bg-gold-400
-                        "
-                      />
-                    )}
-                  </>
-                )}
-              </NavLink>
+        <div className="hidden min-w-0 items-center justify-center xl:flex">
+          <ul className="flex max-w-full items-center gap-6">
+            {NAV_LINKS.map(({ label, href }) => (
+              <li key={label}>
+                <NavLink
+                  to={href}
+                  end={href === "/"}
+                  className={({ isActive }) =>
+                    cn(
+                      "flex items-center gap-2 whitespace-nowrap rounded-link py-2 text-sm font-medium leading-none transition-colors",
+                      isActive ? "text-ink" : "text-slate hover:text-ink",
+                    )
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      {isActive && (
+                        <span
+                          className="h-1.5 w-1.5 rounded-[1px] bg-aqua-relay ring-1 ring-ink/20"
+                          aria-hidden="true"
+                        />
+                      )}
+                      {label}
+                    </>
+                  )}
+                </NavLink>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
 
-        {/* =====================================================
-            RIGHT SIDE
-        ====================================================== */}
-        <div
-          className="
-            flex
-            min-w-0
-            shrink-0
-            items-center
-            justify-end
-            gap-2
-            sm:gap-3
-          "
-        >
-          {/* =================================================
-              COUNTRY SELECTOR
-          ================================================== */}
-          <CountrySelector onNavigate={handleMobileNavigation} />
+        <div className="flex min-w-0 shrink-0 items-center justify-end gap-2 sm:gap-4">
+          <CountrySelector onNavigate={closeMenus} />
 
-          {/* =================================================
-              THEME
-          ================================================== */}
-          <button
-            type="button"
-            onClick={toggleTheme}
-            aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
-            className="
-              hidden
-              h-10
-              w-10
-              items-center
-              justify-center
-              rounded-full
-              border
-              border-slate-300
-              bg-white
-              text-[#172b4d]
-              transition
-              hover:border-orange-500
-              hover:text-orange-500
-              dark:border-navy-600
-              dark:bg-navy-800
-              dark:text-slate-200
-              dark:hover:border-gold-400
-              dark:hover:text-gold-400
-              md:flex
-            "
-          >
-            {theme === "dark" ? (
-              <Sun className="h-[18px] w-[18px]" strokeWidth={1.7} />
-            ) : (
-              <Moon className="h-[18px] w-[18px]" strokeWidth={1.7} />
-            )}
-          </button>
-
-          {/* =================================================
-              SHOPPING CART
-          ================================================= */}
           <button
             type="button"
             aria-label="Shopping cart"
             onClick={openCartDrawer}
-            className="
-              relative
-              flex
-              h-10
-              w-10
-              shrink-0
-              items-center
-              justify-center
-              border-0
-              bg-transparent
-              text-[#172b4d]
-              transition
-              hover:text-orange-500
-              dark:text-slate-200
-              dark:hover:text-gold-400
-            "
+            className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-button text-ink transition-colors hover:bg-cloud"
           >
-            <ShoppingCart className="h-[21px] w-[21px]" strokeWidth={1.7} aria-hidden="true" />
-
+            <ShoppingCart className="h-5 w-5" strokeWidth={1.7} aria-hidden="true" />
             {cartCount > 0 && (
-              <span
-                className="
-                  absolute
-                  right-0
-                  top-[-2px]
-                  flex
-                  h-[20px]
-                  min-w-[20px]
-                  items-center
-                  justify-center
-                  rounded-full
-                  bg-orange-500
-                  px-1
-                  text-[10px]
-                  font-bold
-                  leading-none
-                  text-white
-                "
-              >
+              <span className="tabular absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-ink px-1 text-[10px] font-semibold leading-none text-paper">
                 {cartCount}
               </span>
             )}
           </button>
 
-          {/* =================================================
-              AUTHENTICATED USER
-          ================================================== */}
           {user ? (
-            <div
-              ref={userMenuRef}
-              className="
-                relative
-                z-[100]
-              "
-            >
-              {/* =================================================
-                  USER BUTTON
-              ================================================== */}
+            <div ref={userMenuRef} className="relative z-[100]">
               <button
                 type="button"
                 onClick={() => setUserMenuOpen((open) => !open)}
                 aria-expanded={userMenuOpen}
                 aria-haspopup="menu"
                 aria-label={`Account menu for ${user.full_name}`}
-                className="
-                  flex
-                  h-[54px]
-                  max-w-[280px]
-                  items-center
-                  gap-2.5
-                  rounded-[10px]
-                  border
-                  border-slate-200
-                  bg-[#f8fbff]
-                  px-3
-                  transition-all
-                  hover:border-orange-300
-                  hover:bg-orange-50
-                  dark:border-navy-600
-                  dark:bg-navy-800
-                  dark:hover:border-gold-400/40
-                  dark:hover:bg-navy-700
-                "
+                className="flex h-10 max-w-[260px] items-center gap-2 rounded-button py-1 pl-1 pr-2 transition-colors hover:bg-cloud"
               >
-                {/* Avatar */}
-                <span
-                  className="
-                    flex
-                    h-9
-                    w-9
-                    shrink-0
-                    items-center
-                    justify-center
-                    rounded-full
-                    bg-orange-500
-                    text-sm
-                    font-bold
-                    text-white
-                  "
-                  aria-hidden="true"
-                >
-                  {user.full_name?.charAt(0).toUpperCase()}
-                </span>
-
-                {/* NAME */}
-                <span
-                  className="
-                    hidden
-                    min-w-0
-                    max-w-[175px]
-                    truncate
-                    text-[14px]
-                    font-semibold
-                    text-[#172b4d]
-                    dark:text-white
-                    lg:inline
-                  "
-                >
+                <Avatar name={user.full_name ?? ""} />
+                <span className="hidden min-w-0 max-w-[160px] truncate text-sm font-medium text-ink lg:inline">
                   {user.full_name}
                 </span>
-
-                {/* Chevron */}
                 <ChevronDown
-                  className={`
-                    h-[17px]
-                    w-[17px]
-                    shrink-0
-                    text-[#52627a]
-                    dark:text-gray-400
-                    transition-transform
-                    duration-200
-                    ${userMenuOpen ? "rotate-180" : ""}
-                  `}
+                  className={cn(
+                    "h-4 w-4 shrink-0 text-slate transition-transform duration-200",
+                    userMenuOpen && "rotate-180",
+                  )}
                   strokeWidth={1.8}
                   aria-hidden="true"
                 />
               </button>
 
-              {/* =================================================
-                  USER DROPDOWN
-              ================================================== */}
               {userMenuOpen && (
                 <div
                   role="menu"
                   aria-label="Account menu"
-                  className="
-                    absolute
-                    right-0
-                    top-full
-                    z-[99999]
-                    mt-2
-                    w-[250px]
-                    overflow-hidden
-                    rounded-xl
-                    border
-                    border-slate-200
-                    bg-white
-                    shadow-2xl
-                    dark:border-navy-600
-                    dark:bg-navy-800
-                  "
+                  className="absolute right-0 top-full z-[99999] mt-2 w-[248px] overflow-hidden rounded-card bg-paper p-1.5 shadow-card-cloud"
                 >
-                  {/* User information */}
-                  <div
-                    className="
-                      border-b
-                      border-slate-100
-                      px-4
-                      py-3
-                      dark:border-navy-600
-                    "
-                  >
-                    <p className="text-xs text-slate-400 dark:text-gray-400">Signed in as</p>
-
-                    <p
-                      className="
-                        mt-1
-                        truncate
-                        text-sm
-                        font-semibold
-                        text-[#172b4d]
-                        dark:text-white
-                      "
-                    >
-                      {user.full_name}
-                    </p>
+                  <div className="px-3 pb-2 pt-2.5">
+                    <p className="text-xs font-medium text-slate">Signed in as</p>
+                    <p className="mt-1 truncate text-sm font-medium text-ink">{user.full_name}</p>
                   </div>
-
-                  {/* Dashboard */}
-                  <a
-                    href={PUBLIC_DASHBOARD_PATH}
-                    role="menuitem"
-                    onClick={() => setUserMenuOpen(false)}
-                    className="
-                      flex
-                      w-full
-                      items-center
-                      gap-3
-                      px-4
-                      py-3
-                      text-sm
-                      font-medium
-                      text-[#172b4d]
-                      transition
-                      hover:bg-orange-50
-                      hover:text-orange-500
-                      dark:text-slate-200
-                      dark:hover:bg-navy-700
-                      dark:hover:text-gold-400
-                    "
-                  >
-                    <LayoutDashboard
-                      className="h-[18px] w-[18px]"
-                      strokeWidth={1.7}
-                      aria-hidden="true"
-                    />
-
-                    <span>Dashboard</span>
-                  </a>
-
-                  {/* Facility */}
-                  {canAccessFacility(user) && (
+                  {accountLinks.map(({ label, href, icon: Icon }) => (
                     <a
-                      href={FACILITY_DASHBOARD_PATH}
+                      key={label}
+                      href={href}
                       role="menuitem"
                       onClick={() => setUserMenuOpen(false)}
-                      className="
-                        flex
-                        w-full
-                        items-center
-                        gap-3
-                        px-4
-                        py-3
-                        text-sm
-                        font-medium
-                        text-[#172b4d]
-                        transition
-                        hover:bg-orange-50
-                        hover:text-orange-500
-                        dark:text-slate-200
-                        dark:hover:bg-navy-700
-                        dark:hover:text-gold-400
-                      "
+                      className="flex w-full items-center gap-3 rounded-button px-3 py-2.5 text-sm font-medium text-charcoal transition-colors hover:bg-cloud hover:text-ink"
                     >
-                      <Building2
-                        className="h-[18px] w-[18px]"
-                        strokeWidth={1.7}
-                        aria-hidden="true"
-                      />
-
-                      <span>Facility</span>
+                      <Icon className="h-4 w-4" strokeWidth={1.7} aria-hidden="true" />
+                      {label}
                     </a>
-                  )}
-
-                  {/* Training */}
-                  {isTrainingProviderUser(user) && (
-                    <a
-                      href={TRAINING_DASHBOARD_PATH}
-                      role="menuitem"
-                      onClick={() => setUserMenuOpen(false)}
-                      className="
-                        flex
-                        w-full
-                        items-center
-                        gap-3
-                        px-4
-                        py-3
-                        text-sm
-                        font-medium
-                        text-[#172b4d]
-                        transition
-                        hover:bg-orange-50
-                        hover:text-orange-500
-                        dark:text-slate-200
-                        dark:hover:bg-navy-700
-                        dark:hover:text-gold-400
-                      "
-                    >
-                      <GraduationCap
-                        className="h-[18px] w-[18px]"
-                        strokeWidth={1.7}
-                        aria-hidden="true"
-                      />
-
-                      <span>Training</span>
-                    </a>
-                  )}
-
-                  {/* My Store */}
-                  {isSupplierUser(user) && (
-                    <a
-                      href={SUPPLIER_DASHBOARD_PATH}
-                      role="menuitem"
-                      onClick={() => setUserMenuOpen(false)}
-                      className="
-                        flex
-                        w-full
-                        items-center
-                        gap-3
-                        px-4
-                        py-3
-                        text-sm
-                        font-medium
-                        text-[#172b4d]
-                        transition
-                        hover:bg-orange-50
-                        hover:text-orange-500
-                        dark:text-slate-200
-                        dark:hover:bg-navy-700
-                        dark:hover:text-gold-400
-                      "
-                    >
-                      <ShoppingBag
-                        className="h-[18px] w-[18px]"
-                        strokeWidth={1.7}
-                        aria-hidden="true"
-                      />
-
-                      <span>My store</span>
-                    </a>
-                  )}
-
-                  {/* Messages */}
-                  {!isStaffUser(user) && (
-                    <a
-                      href="/messages"
-                      role="menuitem"
-                      onClick={() => setUserMenuOpen(false)}
-                      className="
-                        flex
-                        w-full
-                        items-center
-                        gap-3
-                        px-4
-                        py-3
-                        text-sm
-                        font-medium
-                        text-[#172b4d]
-                        transition
-                        hover:bg-orange-50
-                        hover:text-orange-500
-                        dark:text-slate-200
-                        dark:hover:bg-navy-700
-                        dark:hover:text-gold-400
-                      "
-                    >
-                      <MessageCircle
-                        className="h-[18px] w-[18px]"
-                        strokeWidth={1.7}
-                        aria-hidden="true"
-                      />
-
-                      <span>Messages</span>
-                    </a>
-                  )}
-
-                  {/* Logout */}
+                  ))}
+                  <div className="my-1 h-px bg-steel" aria-hidden="true" />
                   <button
                     type="button"
                     role="menuitem"
                     onClick={handleLogout}
-                    className="
-                      flex
-                      w-full
-                      items-center
-                      gap-3
-                      border-t
-                      border-slate-100
-                      px-4
-                      py-3
-                      text-left
-                      text-sm
-                      font-medium
-                      text-red-500
-                      transition
-                      hover:bg-red-50
-                    "
+                    className="flex w-full items-center gap-3 rounded-button px-3 py-2.5 text-left text-sm font-medium text-red-700 transition-colors hover:bg-red-50"
                   >
-                    <LogOut className="h-[18px] w-[18px]" strokeWidth={1.7} aria-hidden="true" />
-
-                    <span>Log out</span>
+                    <LogOut className="h-4 w-4" strokeWidth={1.7} aria-hidden="true" />
+                    Log out
                   </button>
                 </div>
               )}
             </div>
           ) : (
-            /* =================================================
-               SIGN IN
-            ================================================== */
-            <button
-              type="button"
+            <Button
+              variant="graphite"
+              trailingIcon={ArrowRight}
               onClick={onSignIn}
-              className="
-                hidden
-                items-center
-                gap-1.5
-                rounded-[9px]
-                border
-                border-orange-500
-                bg-white
-                px-4
-                py-2
-                text-[15px]
-                font-semibold
-                text-orange-500
-                transition
-                hover:bg-orange-500
-                hover:text-white
-                sm:inline-flex
-              "
+              className="hidden sm:inline-flex"
             >
               Sign in
-              <ArrowRight className="h-4 w-4" strokeWidth={1.8} />
-            </button>
+            </Button>
           )}
 
-          {/* =================================================
-              MOBILE MENU BUTTON
-          ================================================== */}
           <button
             type="button"
-            className="
-              flex
-              h-10
-              w-10
-              shrink-0
-              items-center
-              justify-center
-              rounded-lg
-              border-0
-              bg-transparent
-              text-slate-700
-              transition
-              hover:text-orange-500
-              xl:hidden
-            "
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-button text-ink transition-colors hover:bg-cloud xl:hidden"
             onClick={() => setMobileOpen((open) => !open)}
             aria-expanded={mobileOpen}
             aria-controls="mobile-navigation"
@@ -754,374 +301,74 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
         </div>
       </nav>
 
-      {/* =======================================================
-          MOBILE NAVIGATION
-      ======================================================== */}
       {mobileOpen && (
-        <div
-          id="mobile-navigation"
-          className="
-            border-t
-            border-slate-200
-            bg-white
-            px-5
-            py-4
-            dark:border-navy-600
-            dark:bg-navy-900
-            xl:hidden
-          "
-        >
-          <div className="space-y-1">
-            {/* Navigation links */}
+        <div id="mobile-navigation" className="border-t border-steel bg-paper px-4 py-3 xl:hidden">
+          <ul className="space-y-0.5">
             {NAV_LINKS.map(({ label, href, icon: Icon }) => (
-              <NavLink
-                key={label}
-                to={href}
-                end={href === "/"}
-                onClick={handleMobileNavigation}
-                className={({ isActive }) => `
-                  flex
-                  items-center
-                  gap-3
-                  rounded-lg
-                  px-3
-                  py-2.5
-                  text-[15px]
-                  font-medium
-                  ${
-                    isActive
-                      ? "bg-orange-50 text-orange-500 dark:bg-navy-700 dark:text-gold-400"
-                      : "text-slate-700 hover:bg-orange-50 hover:text-orange-500 dark:text-slate-200 dark:hover:bg-navy-700 dark:hover:text-gold-400"
+              <li key={label}>
+                <NavLink
+                  to={href}
+                  end={href === "/"}
+                  onClick={closeMenus}
+                  className={({ isActive }) =>
+                    cn(
+                      "flex min-h-11 items-center gap-3 rounded-button px-3 text-[15px] font-medium transition-colors",
+                      isActive
+                        ? "bg-cloud text-ink"
+                        : "text-charcoal hover:bg-cloud hover:text-ink",
+                    )
                   }
-                `}
-              >
-                <Icon className="h-[18px] w-[18px]" strokeWidth={1.7} aria-hidden="true" />
-
-                {label}
-              </NavLink>
+                >
+                  <Icon className="h-[18px] w-[18px]" strokeWidth={1.7} aria-hidden="true" />
+                  {label}
+                </NavLink>
+              </li>
             ))}
+          </ul>
 
-            {/* =================================================
-                MOBILE COUNTRY + THEME
-            ================================================== */}
-            <div className="mt-2 flex items-center justify-between gap-3 border-t border-slate-200 pt-3 dark:border-navy-600">
-              <CountrySelector onNavigate={handleMobileNavigation} />
-              <button
-                type="button"
-                onClick={toggleTheme}
-                aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
-                className="
-                  flex
-                  h-10
-                  items-center
-                  gap-2
-                  rounded-full
-                  border
-                  border-slate-300
-                  bg-white
-                  px-4
-                  text-sm
-                  font-medium
-                  text-[#172b4d]
-                  transition
-                  hover:border-orange-500
-                  hover:text-orange-500
-                  dark:border-navy-600
-                  dark:bg-navy-800
-                  dark:text-slate-200
-                  dark:hover:border-gold-400
-                  dark:hover:text-gold-400
-                "
-              >
-                {theme === "dark" ? (
-                  <Sun className="h-[18px] w-[18px]" strokeWidth={1.7} />
-                ) : (
-                  <Moon className="h-[18px] w-[18px]" strokeWidth={1.7} />
-                )}
-                {theme === "dark" ? "Light" : "Dark"}
-              </button>
-            </div>
-
-            {/* =================================================
-                MOBILE AUTHENTICATION
-            ================================================== */}
-            <div
-              className="
-                mt-3
-                border-t
-                border-slate-200
-                pt-3
-              "
-            >
-              {user ? (
-                <div className="space-y-1">
-                  {/* Mobile user */}
-                  <div
-                    className="
-                      mb-2
-                      flex
-                      items-center
-                      gap-3
-                      rounded-[9px]
-                      bg-[#f8fbff]
-                      px-4
-                      py-3
-                      dark:bg-navy-800
-                    "
-                  >
-                    <span
-                      className="
-                        flex
-                        h-9
-                        w-9
-                        shrink-0
-                        items-center
-                        justify-center
-                        rounded-full
-                        bg-orange-500
-                        text-sm
-                        font-bold
-                        text-white
-                      "
-                      aria-hidden="true"
-                    >
-                      {user.full_name?.charAt(0).toUpperCase()}
-                    </span>
-
-                    <div className="min-w-0">
-                      <p className="text-xs text-slate-400 dark:text-gray-400">Signed in as</p>
-
-                      <p
-                        className="
-                          truncate
-                          text-sm
-                          font-medium
-                          text-[#172b4d]
-                          dark:text-white
-                        "
-                      >
-                        {user.full_name}
-                      </p>
-                    </div>
+          <div className="mt-3 border-t border-steel pt-3">
+            {user ? (
+              <div className="space-y-0.5">
+                <div className="mb-2 flex items-center gap-3 rounded-button bg-cloud px-3 py-2.5">
+                  <Avatar name={user.full_name ?? ""} />
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-charcoal">Signed in as</p>
+                    <p className="truncate text-sm font-medium text-ink">{user.full_name}</p>
                   </div>
-
-                  {/* Dashboard */}
-                  <a
-                    href={PUBLIC_DASHBOARD_PATH}
-                    onClick={handleMobileNavigation}
-                    className="
-                      flex
-                      w-full
-                      items-center
-                      gap-3
-                      rounded-lg
-                      px-4
-                      py-3
-                      text-sm
-                      font-medium
-                      text-[#172b4d]
-                      transition
-                      hover:bg-orange-50
-                      hover:text-orange-500
-                    "
-                  >
-                    <LayoutDashboard
-                      className="h-[18px] w-[18px]"
-                      strokeWidth={1.7}
-                      aria-hidden="true"
-                    />
-                    Dashboard
-                  </a>
-
-                  {/* Facility */}
-                  {canAccessFacility(user) && (
-                    <a
-                      href={FACILITY_DASHBOARD_PATH}
-                      onClick={handleMobileNavigation}
-                      className="
-                        flex
-                        w-full
-                        items-center
-                        gap-3
-                        rounded-lg
-                        px-4
-                        py-3
-                        text-sm
-                        font-medium
-                        text-[#172b4d]
-                        transition
-                        hover:bg-orange-50
-                        hover:text-orange-500
-                        dark:text-slate-200
-                        dark:hover:bg-navy-700
-                        dark:hover:text-gold-400
-                      "
-                    >
-                      <Building2
-                        className="h-[18px] w-[18px]"
-                        strokeWidth={1.7}
-                        aria-hidden="true"
-                      />
-                      Facility
-                    </a>
-                  )}
-
-                  {/* Training */}
-                  {isTrainingProviderUser(user) && (
-                    <a
-                      href={TRAINING_DASHBOARD_PATH}
-                      onClick={handleMobileNavigation}
-                      className="
-                        flex
-                        w-full
-                        items-center
-                        gap-3
-                        rounded-lg
-                        px-4
-                        py-3
-                        text-sm
-                        font-medium
-                        text-[#172b4d]
-                        transition
-                        hover:bg-orange-50
-                        hover:text-orange-500
-                        dark:text-slate-200
-                        dark:hover:bg-navy-700
-                        dark:hover:text-gold-400
-                      "
-                    >
-                      <GraduationCap
-                        className="h-[18px] w-[18px]"
-                        strokeWidth={1.7}
-                        aria-hidden="true"
-                      />
-                      Training
-                    </a>
-                  )}
-
-                  {/* My Store */}
-                  {isSupplierUser(user) && (
-                    <a
-                      href={SUPPLIER_DASHBOARD_PATH}
-                      onClick={handleMobileNavigation}
-                      className="
-                        flex
-                        w-full
-                        items-center
-                        gap-3
-                        rounded-lg
-                        px-4
-                        py-3
-                        text-sm
-                        font-medium
-                        text-[#172b4d]
-                        transition
-                        hover:bg-orange-50
-                        hover:text-orange-500
-                        dark:text-slate-200
-                        dark:hover:bg-navy-700
-                        dark:hover:text-gold-400
-                      "
-                    >
-                      <ShoppingBag
-                        className="h-[18px] w-[18px]"
-                        strokeWidth={1.7}
-                        aria-hidden="true"
-                      />
-                      My store
-                    </a>
-                  )}
-
-                  {/* Messages */}
-                  {!isStaffUser(user) && (
-                    <a
-                      href="/messages"
-                      onClick={handleMobileNavigation}
-                      className="
-                        flex
-                        w-full
-                        items-center
-                        gap-3
-                        rounded-lg
-                        px-4
-                        py-3
-                        text-sm
-                        font-medium
-                        text-[#172b4d]
-                        transition
-                        hover:bg-orange-50
-                        hover:text-orange-500
-                        dark:text-slate-200
-                        dark:hover:bg-navy-700
-                        dark:hover:text-gold-400
-                      "
-                    >
-                      <MessageCircle
-                        className="h-[18px] w-[18px]"
-                        strokeWidth={1.7}
-                        aria-hidden="true"
-                      />
-                      Messages
-                    </a>
-                  )}
-
-                  {/* Logout */}
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="
-                      flex
-                      w-full
-                      items-center
-                      gap-3
-                      rounded-lg
-                      px-4
-                      py-3
-                      text-left
-                      text-sm
-                      font-medium
-                      text-red-500
-                      transition
-                      hover:bg-red-50
-                    "
-                  >
-                    <LogOut className="h-[18px] w-[18px]" strokeWidth={1.7} aria-hidden="true" />
-                    Log out
-                  </button>
                 </div>
-              ) : (
-                /* Mobile sign in */
+                {accountLinks.map(({ label, href, icon: Icon }) => (
+                  <a
+                    key={label}
+                    href={href}
+                    onClick={closeMenus}
+                    className="flex min-h-11 w-full items-center gap-3 rounded-button px-3 text-sm font-medium text-charcoal transition-colors hover:bg-cloud hover:text-ink"
+                  >
+                    <Icon className="h-[18px] w-[18px]" strokeWidth={1.7} aria-hidden="true" />
+                    {label}
+                  </a>
+                ))}
                 <button
                   type="button"
-                  onClick={() => {
-                    setMobileOpen(false);
-                    onSignIn();
-                  }}
-                  className="
-                    flex
-                    w-full
-                    items-center
-                    justify-center
-                    gap-2
-                    rounded-[9px]
-                    border
-                    border-orange-500
-                    bg-white
-                    px-4
-                    py-2.5
-                    text-[15px]
-                    font-semibold
-                    text-orange-500
-                    transition
-                    hover:bg-orange-500
-                    hover:text-white
-                  "
+                  onClick={handleLogout}
+                  className="flex min-h-11 w-full items-center gap-3 rounded-button px-3 text-left text-sm font-medium text-red-700 transition-colors hover:bg-red-50"
                 >
-                  Sign in
-                  <ArrowRight className="h-4 w-4" strokeWidth={1.8} />
+                  <LogOut className="h-[18px] w-[18px]" strokeWidth={1.7} aria-hidden="true" />
+                  Log out
                 </button>
-              )}
-            </div>
+              </div>
+            ) : (
+              <Button
+                variant="graphite"
+                trailingIcon={ArrowRight}
+                className="min-h-11 w-full"
+                onClick={() => {
+                  setMobileOpen(false);
+                  onSignIn();
+                }}
+              >
+                Sign in
+              </Button>
+            )}
           </div>
         </div>
       )}
