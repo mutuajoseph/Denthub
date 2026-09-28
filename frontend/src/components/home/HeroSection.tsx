@@ -7,6 +7,7 @@ import portraitPng from "../../assets/home/dentist-portrait.png";
 import { useCountryConfig } from "../../hooks/useCountryConfig";
 import { useRegion } from "../../hooks/useRegion";
 import { type HeroCard, useSiteContentStore } from "../../store/siteContentStore";
+import { initialsOf } from "../../utils/initials";
 import Button from "../ui/Button";
 import StarRating from "../ui/StarRating";
 
@@ -34,12 +35,7 @@ function CapabilityRow({ items }: { items: Capability[] }) {
 
 /** The example dentist from the Site CMS, drawn as the Graphite tile. */
 function MatchTile({ card, onBook }: { card: HeroCard; onBook: () => void }) {
-  const initials = card.name
-    .replace(/^Dr\.?\s+/i, "")
-    .split(/\s+/)
-    .map((part) => part.charAt(0))
-    .join("")
-    .slice(0, 2);
+  const initials = initialsOf(card.name);
 
   return (
     <div className="rounded-card bg-graphite p-4 text-paper shadow-card-graphite">
@@ -56,9 +52,7 @@ function MatchTile({ card, onBook }: { card: HeroCard; onBook: () => void }) {
             <p className="mt-1 line-clamp-2 text-sm text-paper/60">{card.clinicLine}</p>
           </div>
         </div>
-        <span className="shrink-0 font-mono text-[11px] uppercase tracking-[0.08em] text-paper/60">
-          Example
-        </span>
+        <span className="shrink-0 text-xs font-medium text-paper/60">Example</span>
       </div>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <StarRating rating={card.rating} tone="inverse" />
@@ -66,7 +60,7 @@ function MatchTile({ card, onBook }: { card: HeroCard; onBook: () => void }) {
           {card.specialties.map((spec) => (
             <li
               key={spec}
-              className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-medium text-paper shadow-edge"
+              className="rounded-link bg-white/10 px-2 py-1 text-xs font-medium text-paper shadow-edge"
             >
               {spec}
             </li>
@@ -99,7 +93,6 @@ function Portrait({ className }: { className: string }) {
         alt=""
         width={533}
         height={960}
-        loading="lazy"
         decoding="async"
         className={`pointer-events-none w-auto select-none ${className}`}
       />
@@ -229,9 +222,7 @@ export default function HeroSection() {
 
   const capabilities: Capability[] = [
     { icon: MapPin, label: `Search by ${areaLabel.toLowerCase()} & specialty` },
-    insurer
-      ? { icon: ShieldCheck, label: `Filter by ${insurer}` }
-      : { icon: ShieldCheck, label: "Compare ratings & reviews" },
+    { icon: ShieldCheck, label: insurer ? `Filter by ${insurer}` : "Compare ratings & reviews" },
     { icon: ShoppingBag, label: "Retail & wholesale oral care" },
   ];
 

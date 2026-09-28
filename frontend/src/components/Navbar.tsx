@@ -34,6 +34,7 @@ import { selectCartCount, useCartStore } from "../store/cartStore";
 import { useCartUiStore } from "../store/cartUiStore";
 import { cn } from "../utils/cn";
 import CountrySelector from "./CountrySelector";
+import Button from "./ui/Button";
 
 type NavbarProps = {
   onSignIn: () => void;
@@ -244,9 +245,7 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
                   className="absolute right-0 top-full z-[99999] mt-2 w-[248px] overflow-hidden rounded-card bg-paper p-1.5 shadow-card-cloud"
                 >
                   <div className="px-3 pb-2 pt-2.5">
-                    <p className="font-mono text-[11px] uppercase tracking-[0.06em] text-slate">
-                      Signed in as
-                    </p>
+                    <p className="text-xs font-medium text-slate">Signed in as</p>
                     <p className="mt-1 truncate text-sm font-medium text-ink">{user.full_name}</p>
                   </div>
                   {accountLinks.map(({ label, href, icon: Icon }) => (
@@ -275,14 +274,14 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
               )}
             </div>
           ) : (
-            <button
-              type="button"
+            <Button
+              variant="graphite"
+              trailingIcon={ArrowRight}
               onClick={onSignIn}
-              className="hidden min-h-10 items-center gap-2 rounded-button bg-graphite px-4 py-2 text-sm font-medium leading-none text-paper shadow-edge transition-colors hover:bg-ink sm:inline-flex"
+              className="hidden sm:inline-flex"
             >
               Sign in
-              <ArrowRight className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
-            </button>
+            </Button>
           )}
 
           <button
@@ -333,9 +332,7 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
                 <div className="mb-2 flex items-center gap-3 rounded-button bg-cloud px-3 py-2.5">
                   <Avatar name={user.full_name ?? ""} />
                   <div className="min-w-0">
-                    <p className="font-mono text-[11px] uppercase tracking-[0.06em] text-slate">
-                      Signed in as
-                    </p>
+                    <p className="text-xs font-medium text-charcoal">Signed in as</p>
                     <p className="truncate text-sm font-medium text-ink">{user.full_name}</p>
                   </div>
                 </div>
@@ -360,17 +357,17 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
                 </button>
               </div>
             ) : (
-              <button
-                type="button"
+              <Button
+                variant="graphite"
+                trailingIcon={ArrowRight}
+                className="min-h-11 w-full"
                 onClick={() => {
                   setMobileOpen(false);
                   onSignIn();
                 }}
-                className="flex min-h-11 w-full items-center justify-center gap-2 rounded-button bg-graphite px-4 text-sm font-medium text-paper shadow-edge transition-colors hover:bg-ink"
               >
                 Sign in
-                <ArrowRight className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
-              </button>
+              </Button>
             )}
           </div>
         </div>

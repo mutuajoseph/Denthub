@@ -30,8 +30,7 @@ The chain is: component → `hooks/` (TanStack Query) → typed client in `lib/`
 
 ## Client state
 
-Zustand stores in `store/` hold client-only state (theme, region, cart, UI
-toggles), persisted where the store says so. Anything that comes from the
+Zustand stores in `store/` hold client-only state (region, cart, UI toggles), persisted where the store says so. Anything that comes from the
 backend belongs in a query, not a store.
 
 - The cart holds prices exactly as the API returned them (decimal strings) and
@@ -65,9 +64,11 @@ for design work is [`PRODUCT.md`](PRODUCT.md). The UI is **light-only**.
   A colour that doesn't exist yet becomes a token, never an inline hex.
 - Surfaces step Paper → Cloud → Graphite → Ink. Fonts: Inter Tight for display
   headings (tracking -0.04em), Inter 500 for UI, Chivo Mono only for technical
-  data (codes, IDs, prices), never as decoration.
-- **Aqua is the conversion signal**: filled primary buttons and selected
-  markers only, never a page or section fill and never text on white. Lime is
+  data: codes, IDs, prices, and the field labels of diagram sheets. Ordinary
+  labels ("Signed in as", "Example") are Inter.
+- **Aqua is the conversion signal**: filled primary buttons, selected markers,
+  and tiny diagram highlights (a route node, the logo tile's dot) only; never a
+  page or section fill, never text or icon colour. Lime is
   the announcement strip. One aqua conversion button per view.
 - Reuse the primitives in `components/ui/` (`Button` variants primary /
   secondary / graphite / translucent, `Card` tones white / cloud / graphite).

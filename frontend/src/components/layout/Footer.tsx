@@ -43,7 +43,7 @@ export function Footer() {
               `${region.countryName}'s complete dental platform for finding care, oral care, jobs, and training.`}
           </p>
           <p className="mt-4 inline-flex items-center gap-2 rounded-button bg-graphite px-3 py-2 text-sm text-paper shadow-edge">
-            <RegionIcon className="h-4 w-4 text-aqua-relay" strokeWidth={1.8} aria-hidden="true" />
+            <RegionIcon className="h-4 w-4 text-paper" strokeWidth={1.8} aria-hidden="true" />
             {region.countryName}
           </p>
         </section>

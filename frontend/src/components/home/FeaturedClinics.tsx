@@ -4,6 +4,7 @@ import { useCountryConfig } from "../../hooks/useCountryConfig";
 import { useDentistSearch } from "../../hooks/useDentistSearch";
 import type { DentistCard, PracticeCard } from "../../lib/searchApi";
 import { useSiteContentStore } from "../../store/siteContentStore";
+import { initialsOf } from "../../utils/initials";
 import Badge from "../ui/Badge";
 import StarRating from "../ui/StarRating";
 
@@ -11,16 +12,6 @@ type FeaturedListing = (DentistCard | PracticeCard) & {
   operatingAreas?: string[];
   clinic?: string;
 };
-
-function initialsOf(name: string): string {
-  return name
-    .replace(/^Dr\.?\s+/i, "")
-    .split(/\s+/)
-    .map((part) => part.charAt(0))
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-}
 
 export default function FeaturedClinics() {
   const heading = useSiteContentStore((s) => s.home.featuredClinicsTitle);
@@ -72,7 +63,7 @@ export default function FeaturedClinics() {
                     >
                       {initialsOf(d.name)}
                     </span>
-                    <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-slate">
+                    <span className="text-xs font-medium text-charcoal">
                       {isPractice ? "Practice" : "Specialist"}
                     </span>
                   </div>
@@ -97,7 +88,7 @@ export default function FeaturedClinics() {
 
                   <div className="mt-auto flex items-center justify-between gap-3 pt-4">
                     <StarRating rating={d.rating} />
-                    {d.nhif && <Badge variant="navy">{insuranceSchemeLabel}</Badge>}
+                    {d.nhif && <Badge variant="neutral">{insuranceSchemeLabel}</Badge>}
                   </div>
                 </Link>
               </li>

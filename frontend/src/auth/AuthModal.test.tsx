@@ -38,7 +38,7 @@ function blockOf(css: string, header: string): string {
   return match?.[1] ?? "";
 }
 
-describe("AuthModal dark mode", () => {
+describe("AuthModal theming", () => {
   it("renders every auth view with theme tokens instead of hardcoded colours", async () => {
     const user = userEvent.setup();
     const { container } = render(<AuthModal onClose={vi.fn()} />);

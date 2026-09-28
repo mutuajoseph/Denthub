@@ -252,8 +252,16 @@
   /* Faint drafting grid: the "technical paper" the design sits on. */
   .construction-grid,
   .tooth-pattern {
-    background-image: linear-gradient(to right, rgb(212 212 216 / 0.45) 1px, transparent 1px),
-      linear-gradient(to bottom, rgb(212 212 216 / 0.45) 1px, transparent 1px);
+    background-image: linear-gradient(
+        to right,
+        color-mix(in srgb, var(--color-steel) 45%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        to bottom,
+        color-mix(in srgb, var(--color-steel) 45%, transparent) 1px,
+        transparent 1px
+      );
     background-size: 48px 48px;
   }
 
