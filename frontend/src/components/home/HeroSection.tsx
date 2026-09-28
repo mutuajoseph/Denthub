@@ -89,6 +89,46 @@ function SheetRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+/** Cut-out dentist portrait (see assets/home/CREDITS.md). Decorative. */
+function Portrait({ className }: { className: string }) {
+  return (
+    <picture>
+      <source srcSet={portraitAvif} type="image/avif" />
+      <img
+        src={portraitPng}
+        alt=""
+        width={533}
+        height={960}
+        loading="lazy"
+        decoding="async"
+        className={`pointer-events-none w-auto select-none ${className}`}
+      />
+    </picture>
+  );
+}
+
+/**
+ * Phone version of the diagram: the portrait on its drafting panel, with the
+ * match tile overlapping the panel's foot so the photo's straight crop never
+ * shows.
+ */
+function MobileStage({ card, onBook }: { card: HeroCard; onBook: () => void }) {
+  return (
+    <div className="mx-auto mt-12 max-w-md lg:hidden">
+      <div className="relative h-[280px]">
+        <div
+          className="construction-grid absolute inset-x-0 bottom-0 top-16 rounded-card bg-cloud ring-1 ring-inset ring-steel"
+          aria-hidden="true"
+        />
+        <Portrait className="absolute bottom-0 right-[14%] h-[280px]" />
+      </div>
+      <div className="relative z-10 -mt-24 px-3">
+        <MatchTile card={card} onBook={onBook} />
+      </div>
+    </div>
+  );
+}
+
 /**
  * Layered drafting diagram (DESIGN.md "Layered Payment Diagram"), retold for
  * care: a search sheet routes, along a signal line, to a matched dentist.
@@ -121,18 +161,7 @@ function RoutingDiagram({
         className="absolute bottom-16 right-0 top-[110px] w-[300px] rounded-card bg-cloud ring-1 ring-inset ring-steel"
         aria-hidden="true"
       />
-      <picture>
-        <source srcSet={portraitAvif} type="image/avif" />
-        <img
-          src={portraitPng}
-          alt=""
-          width={533}
-          height={960}
-          loading="lazy"
-          decoding="async"
-          className="pointer-events-none absolute bottom-16 right-5 h-[470px] w-auto select-none"
-        />
-      </picture>
+      <Portrait className="absolute bottom-16 right-5 h-[470px]" />
 
       {/* Search sheet. */}
       <div className="absolute left-0 top-10 z-10 w-[280px] rounded-card bg-paper p-4 shadow-card-cloud">
@@ -236,9 +265,7 @@ export default function HeroSection() {
             </Button>
           </div>
 
-          <div className="mt-10 max-w-md lg:hidden">
-            <MatchTile card={heroCard} onBook={goToDentists} />
-          </div>
+          <MobileStage card={heroCard} onBook={goToDentists} />
         </div>
 
         <div className="hidden lg:block">
