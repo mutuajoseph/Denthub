@@ -189,10 +189,17 @@
     text-underline-offset: 3px;
   }
 
+  /*
+   * Two-tone focus ring: an ink outline framed by a paper halo, so focus stays
+   * visible on Paper and on Ink/Graphite surfaces alike (WCAG technique C40).
+   * Elements with their own shadow utility (buttons) set a surface-appropriate
+   * outline colour instead.
+   */
   :focus-visible {
     outline: 2px solid var(--color-ink);
     outline-offset: 2px;
     border-radius: var(--radius-link);
+    box-shadow: 0 0 0 6px var(--color-paper);
   }
 
   ::-webkit-scrollbar {

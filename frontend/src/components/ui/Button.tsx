@@ -14,7 +14,7 @@ const variants = {
   primary: "bg-aqua-relay text-ink hover:bg-aqua-relay-deep",
   secondary: "bg-paper text-ink ring-1 ring-inset ring-steel hover:bg-cloud hover:ring-slate",
   graphite: "bg-graphite text-paper shadow-edge hover:bg-ink",
-  translucent: "bg-white/10 text-paper shadow-edge hover:bg-white/15",
+  translucent: "bg-white/10 text-paper shadow-edge hover:bg-white/15 focus-visible:outline-paper",
   ghost: "text-charcoal hover:bg-cloud hover:text-ink",
   danger: "bg-red-700 text-paper hover:bg-red-800",
 } as const;
