@@ -15,15 +15,15 @@ export function AnnouncementBar() {
   return (
     <aside
       aria-label="Site announcement"
-      className="relative bg-orange-500 px-10 py-2 text-center text-sm leading-snug text-white"
+      className="relative bg-lime-notice px-11 py-2 text-center text-sm font-medium leading-[1.5] text-ink/80"
     >
       <div className="mx-auto flex max-w-5xl items-center justify-center gap-1.5">
-        <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+        <Icon className="h-4 w-4 shrink-0 text-ink" strokeWidth={1.8} aria-hidden="true" />
         <p>
           {region.announcement}{" "}
           <Link
             to="/dentists"
-            className="font-semibold text-white underline underline-offset-2 hover:text-orange-100"
+            className="rounded-link font-semibold text-ink underline decoration-ink/40 underline-offset-[3px] transition-colors hover:decoration-ink"
           >
             Find a dentist near you
           </Link>
@@ -32,7 +32,7 @@ export function AnnouncementBar() {
       <button
         type="button"
         onClick={dismiss}
-        className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-white transition-colors hover:bg-white/20"
+        className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-link text-ink/70 transition-colors hover:bg-ink/10 hover:text-ink"
         aria-label="Dismiss announcement"
       >
         <X className="h-4 w-4" aria-hidden="true" />

@@ -9,19 +9,24 @@ interface BadgeProps {
   className?: string;
 }
 
+/*
+ * Status chips are the one place the pill shape stays (DESIGN.md keeps 1000px
+ * radii off controls and cards). Variant names are the historical ones:
+ * gold = emphasis (ink), orange = featured (graphite), navy = neutral.
+ */
 const variants: Record<Variant, string> = {
-  gold: "bg-gold-400/15 text-gold-300 border-gold-400/30",
-  orange: "bg-orange-500/15 text-orange-400 border-orange-500/30",
-  green: "bg-green-500/15 text-green-400 border-green-500/30",
-  red: "bg-red-500/15 text-red-400 border-red-500/30",
-  navy: "bg-navy-700 text-gray-300 border-navy-600",
+  gold: "bg-ink text-paper ring-ink",
+  orange: "bg-graphite text-paper ring-graphite",
+  green: "bg-emerald-50 text-emerald-800 ring-emerald-200",
+  red: "bg-red-50 text-red-800 ring-red-200",
+  navy: "bg-cloud text-charcoal ring-steel",
 };
 
 export default function Badge({ children, variant = "gold", className }: BadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium font-mono",
+        "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium leading-none ring-1 ring-inset",
         variants[variant],
         className,
       )}

@@ -48,20 +48,37 @@ backend belongs in a query, not a store.
   the catch-all renders `NotFound`. Role-gated screens wrap in
   `auth/RouteGuard`, with roles from `auth/roles.ts`.
 - Add a screen in this order: typed client function in `lib/`, a hook in
-  `hooks/`, then the component. It is done when it renders in light and dark
-  themes, and at phone width, with a test covering its states.
+  `hooks/`, then the component. It is done when it matches `docs/design/DESIGN.md` at
+  desktop and phone width (375px), with a test covering its states.
 
 ## Styling
 
-- Tailwind v4. Design tokens (navy/gold palette, fonts, shadows) live in the
-  `@theme` block of `global.css`, and utilities like `bg-navy-900` resolve to
-  them. Style with tokens; a colour that doesn't exist yet is added as a token
-  to **both** the light `:root` and `.dark` blocks, never as an inline hex.
-- Dark mode is the `.dark` class on `<html>`, driven by `store/themeStore.ts`.
-  The theme follows the OS preference until the user picks one; only an
-  explicit choice is persisted.
+The design system is [`docs/design/DESIGN.md`](../docs/design/DESIGN.md) (tokens
+in `theme.css` / `variables.css` / `tokens.json` beside it); product context
+for design work is [`PRODUCT.md`](PRODUCT.md). The UI is **light-only**.
+
+- Tokens live in the `@theme` block of `src/global.css`: `paper`, `ink`,
+  `graphite`, `cloud`, `steel`, `slate`, `charcoal`, `aqua-relay`,
+  `lime-notice`; radii `rounded-link` (4px), `rounded-button` (12px),
+  `rounded-card` (16px); shadows `shadow-card-white|cloud|graphite`,
+  `shadow-edge`; type `text-display-hero|display-section|feature-heading`.
+  A colour that doesn't exist yet becomes a token, never an inline hex.
+- Surfaces step Paper → Cloud → Graphite → Ink. Fonts: Inter Tight for display
+  headings (tracking -0.04em), Inter 500 for UI, Chivo Mono only for technical
+  data (codes, IDs, prices), never as decoration.
+- **Aqua is the conversion signal**: filled primary buttons and selected
+  markers only, never a page or section fill and never text on white. Lime is
+  the announcement strip. One aqua conversion button per view.
+- Reuse the primitives in `components/ui/` (`Button` variants primary /
+  secondary / graphite / translucent, `Card` tones white / cloud / graphite).
+  Pills (`rounded-full`) are for status chips only.
+- Headings carry their own weight: no eyebrow or kicker labels above them.
+- `src/global.css` holds a **revamp shim** that maps the old `orange-*`,
+  `gold-*` and `navy-*` names to graphite/ink while screens are revamped phase
+  by phase (#11). New code uses the design tokens; a revamped file contains no
+  `orange-*`/`gold-*`/`navy-*` classes and no `dark:` variants.
 - Animations keep the `prefers-reduced-motion: reduce` kill-switch in
-  `global.css`.
+  `global.css`; one authored motion moment per surface.
 
 ## Testing
 

@@ -5,11 +5,16 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import AppToaster from "./components/AppToaster";
 import { useRegionStore } from "./store/regionStore";
-import { useThemeStore } from "./store/themeStore";
 import "./global.css";
 
 useRegionStore.getState().initRegion();
-useThemeStore.getState().initTheme();
+
+// Light-only since the design revamp: drop the retired theme preference.
+try {
+  localStorage.removeItem("denthub-theme");
+} catch {
+  // Storage can be unavailable (private mode); nothing to clean up then.
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {

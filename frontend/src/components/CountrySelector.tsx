@@ -40,41 +40,12 @@ export default function CountrySelector({ onNavigate }: CountrySelectorProps) {
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-label={`Current country: ${current.countryName}`}
-        className="
-          flex
-          h-10
-          items-center
-          gap-1.5
-          rounded-full
-          border
-          border-slate-300
-          bg-white
-          px-3
-          text-sm
-          font-medium
-          text-[#172b4d]
-          transition
-          hover:border-orange-500
-          hover:text-orange-500
-          dark:border-navy-600
-          dark:bg-navy-800
-          dark:text-white
-          dark:hover:border-gold-400
-          dark:hover:text-gold-400
-        "
+        className="flex h-10 items-center gap-1.5 rounded-button px-2.5 text-sm font-medium text-charcoal ring-1 ring-inset ring-steel transition-colors hover:bg-cloud hover:text-ink"
       >
         <Globe className="h-[18px] w-[18px] shrink-0" strokeWidth={1.7} aria-hidden="true" />
         <span className="hidden sm:inline">{current.countryName}</span>
         <ChevronDown
-          className={`
-            h-4
-            w-4
-            text-slate-400
-            transition-transform
-            duration-200
-            dark:text-gray-400
-            ${open ? "rotate-180" : ""}
-          `}
+          className={`h-4 w-4 text-slate transition-transform duration-200 ${open ? "rotate-180" : ""}`}
           aria-hidden="true"
         />
       </button>
@@ -83,24 +54,7 @@ export default function CountrySelector({ onNavigate }: CountrySelectorProps) {
         <div
           role="menu"
           aria-label="Choose your country"
-          className="
-            absolute
-            right-0
-            top-full
-            z-[99999]
-            mt-2
-            max-h-[360px]
-            w-[230px]
-            overflow-y-auto
-            rounded-xl
-            border
-            border-slate-200
-            bg-white
-            py-1
-            shadow-2xl
-            dark:border-navy-600
-            dark:bg-navy-800
-          "
+          className="absolute right-0 top-full z-[99999] mt-2 max-h-[360px] w-[232px] overflow-y-auto rounded-card bg-paper p-1.5 shadow-card-cloud"
         >
           {REGION_LIST.map((region) => {
             const selected = region.code === regionCode;
@@ -111,25 +65,16 @@ export default function CountrySelector({ onNavigate }: CountrySelectorProps) {
                 role="menuitem"
                 aria-selected={selected}
                 onClick={() => handleSelect(region.code)}
-                className={`
-                  flex
-                  w-full
-                  items-center
-                  gap-3
-                  px-4
-                  py-2.5
-                  text-left
-                  text-sm
-                  transition
-                  ${
-                    selected
-                      ? "bg-orange-50 text-orange-600 dark:bg-navy-700 dark:text-gold-300"
-                      : "text-[#172b4d] hover:bg-orange-50 hover:text-orange-600 dark:text-white dark:hover:bg-navy-700 dark:hover:text-gold-300"
-                  }
-                `}
+                className={`flex w-full items-center gap-2.5 rounded-button px-3 py-2.5 text-left text-sm font-medium transition-colors ${
+                  selected ? "bg-cloud text-ink" : "text-charcoal hover:bg-cloud hover:text-ink"
+                }`}
               >
+                <span
+                  className={`h-1.5 w-1.5 shrink-0 rounded-[1px] ${selected ? "bg-aqua-relay ring-1 ring-ink/20" : "bg-transparent"}`}
+                  aria-hidden="true"
+                />
                 <span className="flex-1 truncate">{region.countryName}</span>
-                {selected && <Check className="h-4 w-4 shrink-0" aria-hidden="true" />}
+                {selected && <Check className="h-4 w-4 shrink-0 text-ink" aria-hidden="true" />}
               </button>
             );
           })}

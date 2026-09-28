@@ -7,25 +7,42 @@ interface StarRatingProps {
   rating: number;
   size?: Size;
   showValue?: boolean;
+  /** `inverse` for Graphite and Ink surfaces. */
+  tone?: "default" | "inverse";
 }
 
-export default function StarRating({ rating, size = "sm", showValue = true }: StarRatingProps) {
-  const sizes: Record<Size, string> = { sm: "w-3.5 h-3.5", md: "w-4 h-4", lg: "w-5 h-5" };
+const sizes: Record<Size, string> = { sm: "h-3.5 w-3.5", md: "h-4 w-4", lg: "h-5 w-5" };
+
+const tones = {
+  default: { on: "fill-ink text-ink", off: "fill-steel text-steel", value: "text-ink" },
+  inverse: { on: "fill-paper text-paper", off: "fill-white/20 text-white/20", value: "text-paper" },
+} as const;
+
+export default function StarRating({
+  rating,
+  size = "sm",
+  showValue = true,
+  tone = "default",
+}: StarRatingProps) {
+  const colours = tones[tone];
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-0.5" role="img" aria-label={`Rated ${rating} out of 5`}>
       {[1, 2, 3, 4, 5].map((star) => (
         <Star
           key={star}
-          className={cn(
-            sizes[size],
-            star <= Math.round(rating)
-              ? "fill-gold-400 text-gold-400"
-              : "fill-navy-600 text-navy-600",
-          )}
+          aria-hidden="true"
+          className={cn(sizes[size], star <= Math.round(rating) ? colours.on : colours.off)}
         />
       ))}
-      {showValue && <span className="ml-1 text-sm text-gold-400 font-medium">{rating}</span>}
+      {showValue && (
+        <span
+          className={cn("tabular ml-1.5 text-sm font-medium", colours.value)}
+          aria-hidden="true"
+        >
+          {rating}
+        </span>
+      )}
     </div>
   );
 }

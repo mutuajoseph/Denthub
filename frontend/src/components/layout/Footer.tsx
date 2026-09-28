@@ -1,4 +1,4 @@
-import { ArrowUpRight, Flag, Globe, Mail, Phone, ShieldCheck } from "lucide-react";
+import { ArrowUpRight, Flag, Globe, Mail } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useRegion } from "../../hooks/useRegion";
 
@@ -16,46 +16,46 @@ const professionalLinks = [
   { label: "Dentist Dashboard", to: "/dashboard" },
 ];
 
+const linkClass =
+  "flex w-fit items-center gap-2 rounded-link text-paper/70 transition-colors hover:text-paper";
+const headingClass = "text-sm font-medium text-paper/60";
+
 export function Footer() {
   const { region, brandName } = useRegion();
   const email = `hello@${region.domain}`;
-  const phoneLabel = `${region.phonePrefix} 700 000 000`;
   const RegionIcon = region.code === "GLOBAL" ? Globe : Flag;
 
   return (
-    <footer className="mt-auto border-t border-slate-200 bg-slate-50 dark:border-navy-600 dark:bg-navy-950">
-      <div className="mx-auto grid w-full max-w-7xl gap-10 px-4 py-12 sm:grid-cols-2 lg:grid-cols-4 lg:px-6">
-        <section aria-labelledby="footer-about-heading">
-          <Link to="/" className="font-heading text-xl font-bold text-[#11213a] dark:text-white">
+    <footer className="mt-auto border-t border-white/10 bg-ink pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))] text-paper md:pb-0">
+      <div className="mx-auto grid w-full max-w-7xl gap-10 px-4 pb-12 pt-14 sm:grid-cols-2 sm:px-6 lg:grid-cols-[1.4fr_1fr_1fr_1fr] lg:px-8">
+        <section aria-labelledby="footer-about-heading" className="max-w-sm">
+          <Link
+            to="/"
+            className="rounded-link font-display text-feature-heading font-medium text-paper"
+          >
             {brandName}
           </Link>
           <h2 id="footer-about-heading" className="sr-only">
             About {brandName}
           </h2>
-          <p className="mt-4 text-sm leading-relaxed text-slate-600 dark:text-gray-300">
+          <p className="mt-4 text-sm leading-[1.5] text-paper/70">
             {region.footerAbout ||
               `${region.countryName}'s complete dental platform for finding care, oral care, jobs, and training.`}
           </p>
-          <p className="mt-3 flex items-center gap-2 text-sm text-slate-500 dark:text-gray-400">
-            <RegionIcon className="h-4 w-4 text-orange-500 dark:text-gold-400" aria-hidden="true" />
+          <p className="mt-4 inline-flex items-center gap-2 rounded-button bg-graphite px-3 py-2 text-sm text-paper shadow-edge">
+            <RegionIcon className="h-4 w-4 text-aqua-relay" strokeWidth={1.8} aria-hidden="true" />
             {region.countryName}
           </p>
         </section>
 
         <section aria-labelledby="footer-quick-links-heading">
-          <h2
-            id="footer-quick-links-heading"
-            className="font-heading text-base font-semibold text-slate-900 dark:text-white"
-          >
+          <h2 id="footer-quick-links-heading" className={headingClass}>
             Quick Links
           </h2>
-          <ul className="mt-4 space-y-2 text-sm text-slate-600 dark:text-gray-300">
+          <ul className="mt-5 space-y-3 text-sm">
             {quickLinks.map((link) => (
               <li key={link.to}>
-                <Link
-                  to={link.to}
-                  className="transition-colors hover:text-orange-500 dark:hover:text-gold-400"
-                >
+                <Link to={link.to} className={linkClass}>
                   {link.label}
                 </Link>
               </li>
@@ -64,19 +64,13 @@ export function Footer() {
         </section>
 
         <section aria-labelledby="footer-professional-links-heading">
-          <h2
-            id="footer-professional-links-heading"
-            className="font-heading text-base font-semibold text-slate-900 dark:text-white"
-          >
+          <h2 id="footer-professional-links-heading" className={headingClass}>
             For Dentists
           </h2>
-          <ul className="mt-4 space-y-2 text-sm text-slate-600 dark:text-gray-300">
+          <ul className="mt-5 space-y-3 text-sm">
             {professionalLinks.map((link) => (
               <li key={link.to}>
-                <Link
-                  to={link.to}
-                  className="transition-colors hover:text-orange-500 dark:hover:text-gold-400"
-                >
+                <Link to={link.to} className={linkClass}>
                   {link.label}
                 </Link>
               </li>
@@ -85,48 +79,28 @@ export function Footer() {
         </section>
 
         <section aria-labelledby="footer-contact-heading">
-          <h2
-            id="footer-contact-heading"
-            className="font-heading text-base font-semibold text-slate-900 dark:text-white"
-          >
+          <h2 id="footer-contact-heading" className={headingClass}>
             Contact
           </h2>
-          <address className="mt-4 space-y-3 text-sm not-italic text-slate-600 dark:text-gray-300">
-            <a
-              href={`mailto:${email}`}
-              className="flex items-center gap-2 transition-colors hover:text-orange-500 dark:hover:text-gold-400"
-            >
-              <Mail className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <address className="mt-5 space-y-3 text-sm not-italic">
+            <a href={`mailto:${email}`} className={linkClass}>
+              <Mail className="h-4 w-4 shrink-0" strokeWidth={1.7} aria-hidden="true" />
               {email}
-            </a>
-            <a
-              href={`tel:${region.phonePrefix}700000000`}
-              className="flex items-center gap-2 transition-colors hover:text-orange-500 dark:hover:text-gold-400"
-            >
-              <Phone className="h-4 w-4 shrink-0" aria-hidden="true" />
-              {phoneLabel}
             </a>
             <a
               href={`https://${region.domain}`}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-2 transition-colors hover:text-orange-500 dark:hover:text-gold-400"
+              className={linkClass}
             >
-              <ArrowUpRight className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <ArrowUpRight className="h-4 w-4 shrink-0" strokeWidth={1.7} aria-hidden="true" />
               {region.domain}
             </a>
           </address>
-          <p className="mt-5 flex items-center gap-2 text-xs text-slate-500 dark:text-gray-400">
-            <ShieldCheck
-              className="h-4 w-4 text-green-600 dark:text-green-400"
-              aria-hidden="true"
-            />
-            All clinics are reviewed for your safety.
-          </p>
         </section>
       </div>
 
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-2 border-t border-slate-200 px-4 py-5 text-xs text-slate-500 dark:border-navy-600 dark:text-gray-400 sm:flex-row sm:items-center sm:justify-between lg:px-6">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-2 border-t border-white/10 px-4 py-5 text-xs text-paper/50 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
         <p>
           © {new Date().getFullYear()} {brandName}
         </p>
