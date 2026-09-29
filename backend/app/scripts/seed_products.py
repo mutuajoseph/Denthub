@@ -19,6 +19,7 @@ from app.config import Settings
 from app.repositories.product import Product, Supplier
 from app.utils.logger import configure_logging
 from app.utils.state import AppState
+from app.utils.urls import describe_url
 
 SUPPLIERS: list[dict[str, object]] = [
     {
@@ -281,22 +282,6 @@ def run_migrations() -> None:
 
     ini_path = Path(__file__).resolve().parents[2] / "alembic.ini"
     command.upgrade(Config(str(ini_path)), "head")
-
-
-def describe_url(url: str) -> str:
-    """Render a database URL with its password masked, for logging.
-
-    A production ``DATABASE_URL`` embeds credentials, so it must never reach a log
-    sink verbatim.
-    """
-    from sqlalchemy.engine import make_url
-
-    parsed = make_url(url)
-
-    if parsed.password is None:
-        return parsed.render_as_string(hide_password=False)
-
-    return parsed.render_as_string(hide_password=True)
 
 
 async def seed_database(settings: Settings, logger: FilteringBoundLogger) -> None:

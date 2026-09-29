@@ -120,6 +120,12 @@ The administrative area below Country (county in Kenya, state or province
 elsewhere).
 _Avoid_: County (as a generic term), area
 
+**Opening Hours**:
+A Branch's per-day open and close times, stored per weekday rather than as a
+summary string, so "open now" is computed in the Branch's Country at read time
+rather than stored as a flag that goes stale.
+_Avoid_: Business hours string, availability
+
 ### Content and careers
 
 **CPD**:
