@@ -1,14 +1,21 @@
-"""Test catalog factory.
+"""Test data factories.
 
 Prices and wholesale thresholds are fixed here so pricing tests can assert
-exact amounts. Each entry is `(name, retail, wholesale_or_None, min_qty,
-category, in_stock)`.
+exact amounts. Each product entry is `(name, retail, wholesale_or_None,
+min_qty, category, in_stock)`.
 """
 
 from __future__ import annotations
 
 from decimal import Decimal
 
+from app.repositories.country import (
+    Country,
+    CountryFeature,
+    InsuranceProvider,
+    Specialty,
+    Subdivision,
+)
 from app.repositories.product import Product, Supplier
 
 LOCAL_SUPPLIER = {
@@ -59,6 +66,137 @@ def build_products() -> list[tuple[Supplier, list[Product]]]:
     ]
 
 
+# --- Country reference data -------------------------------------------------
+#
+# Two countries, because the multi-country contract is only testable with more
+# than one: KE (the default) and NG, whose currency, subdivision label, and
+# national insurance scheme all differ. That difference is what the
+# country-config tests assert against.
+
+KENYA = {
+    "code": "KE",
+    "name": "Kenya",
+    "brand_suffix": "Kenya",
+    "currency": "KES",
+    "currency_symbol": "KSh",
+    "locale": "en-KE",
+    "default_locale": "en",
+    "domain": "denthub.co.ke",
+    "phone_prefix": "+254",
+    "subdivision_label": "County",
+    "subdivision_label_plural": "Counties",
+    "city_label": "Town",
+    "timezone": "Africa/Nairobi",
+}
+
+NIGERIA = {
+    "code": "NG",
+    "name": "Nigeria",
+    "brand_suffix": "Nigeria",
+    "currency": "NGN",
+    "currency_symbol": "₦",
+    "locale": "en-NG",
+    "default_locale": "en",
+    "domain": "denthub.ng",
+    "phone_prefix": "+234",
+    "subdivision_label": "State",
+    "subdivision_label_plural": "States",
+    "city_label": "City",
+    "timezone": "Africa/Lagos",
+}
+
+#: (country_code, name, code)
+SUBDIVISIONS: list[tuple[str, str, str]] = [
+    ("KE", "Nairobi", "NAIROBI"),
+    ("KE", "Mombasa", "MOMBASA"),
+    ("NG", "Lagos", "LAGOS"),
+    ("NG", "Abuja", "ABUJA"),
+]
+
+#: (country_code, feature, is_enabled, primary_scheme). The feature keys are the
+#: ones the client already asks about via `useCountryConfig`. These mirror
+#: `seed_countries.COUNTRY_FEATURES` exactly: a configured market has a row for
+#: every key, and "off" is `is_enabled=False` rather than an absent row. Test
+#: data that disagreed with the seed would let a contract pass here and fail in
+#: the demo environment.
+COUNTRY_FEATURES: list[tuple[str, str, bool, str | None]] = [
+    ("KE", "DENTAL_INSURANCE", True, "NHIF"),
+    ("KE", "ORAL_CARE_SHOP", True, None),
+    ("KE", "JOBS_BOARD", True, None),
+    ("KE", "CPD_TRAINING", True, None),
+    ("NG", "DENTAL_INSURANCE", True, "NHIS"),
+    ("NG", "ORAL_CARE_SHOP", True, None),
+    ("NG", "JOBS_BOARD", True, None),
+    # Nigeria does not offer CPD training, and says so explicitly.
+    ("NG", "CPD_TRAINING", False, None),
+]
+
+#: (country_code, name, is_national)
+INSURANCE_PROVIDERS: list[tuple[str, str, bool]] = [
+    ("KE", "NHIF", True),
+    ("KE", "Britam", False),
+    ("NG", "NHIS", True),
+]
+
+#: (code, name, display_order)
+SPECIALTIES: list[tuple[str, str, str, int]] = [
+    (
+        "general-dentistry",
+        "General Dentistry",
+        "Check-ups, fillings, extractions, and the ongoing care most visits start with.",
+        10,
+    ),
+    ("orthodontics", "Orthodontics", "Braces and aligners at any age.", 20),
+    (
+        "paediatric-dentistry",
+        "Paediatric Dentistry",
+        "Dental care for children, including a first visit that is uneventful.",
+        30,
+    ),
+]
+
+
+def build_countries() -> list[Country]:
+    """Return the seeded Countries with their subdivisions, flags, and providers."""
+    countries = [Country(**KENYA), Country(**NIGERIA)]
+
+    subdivisions_by_country: dict[str, list[Subdivision]] = {}
+    features_by_country: dict[str, list[CountryFeature]] = {}
+    providers_by_country: dict[str, list[InsuranceProvider]] = {}
+
+    for country_code, name, code in SUBDIVISIONS:
+        subdivision = Subdivision(country_code=country_code, name=name, code=code)
+        subdivisions_by_country.setdefault(country_code, []).append(subdivision)
+
+    for country_code, feature, is_enabled, primary_scheme in COUNTRY_FEATURES:
+        flag = CountryFeature(
+            country_code=country_code,
+            feature=feature,
+            is_enabled=is_enabled,
+            primary_scheme=primary_scheme,
+        )
+        features_by_country.setdefault(country_code, []).append(flag)
+
+    for country_code, name, is_national in INSURANCE_PROVIDERS:
+        provider = InsuranceProvider(country_code=country_code, name=name, is_national=is_national)
+        providers_by_country.setdefault(country_code, []).append(provider)
+
+    for country in countries:
+        country.subdivisions = subdivisions_by_country.get(country.code, [])
+        country.features = features_by_country.get(country.code, [])
+        country.insurance_providers = providers_by_country.get(country.code, [])
+
+    return countries
+
+
+def build_specialties() -> list[Specialty]:
+    """Return the seeded specialties in display order."""
+    return [
+        Specialty(code=code, name=name, description=description, display_order=display_order)
+        for code, name, description, display_order in SPECIALTIES
+    ]
+
+
 def _product(row: tuple[str, str | None, str, str | None, int, str, bool]) -> Product:
     name, brand, retail, wholesale, min_qty, category, in_stock = row
 
@@ -76,4 +214,10 @@ def _product(row: tuple[str, str | None, str, str | None, int, str, bool]) -> Pr
     )
 
 
-__all__ = ["INTERNATIONAL_PRODUCTS", "LOCAL_PRODUCTS", "build_products"]
+__all__ = [
+    "INTERNATIONAL_PRODUCTS",
+    "LOCAL_PRODUCTS",
+    "build_countries",
+    "build_products",
+    "build_specialties",
+]

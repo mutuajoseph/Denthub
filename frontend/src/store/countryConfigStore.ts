@@ -5,40 +5,14 @@ import {
   getStaticSubdivisions,
   mergeSubdivisionLists,
 } from "../config/subdivisions";
-import {
-  fetchCountryAdaptation,
-  fetchCountryConfig,
-  fetchCountryRegions,
-} from "../lib/countryConfigApi";
+import { type CountryConfig, fetchCountryConfig, fetchSubdivisions } from "../lib/countryConfigApi";
 import { USE_API } from "../lib/searchApi";
 import { getSubdivisionPlural } from "../utils/subdivisionCopy";
 
-export interface CountryConfig {
-  code?: string;
-  currency?: string;
-  currencySymbol?: string;
-  locale?: string;
-  geography?: {
-    subdivisionLabel?: string;
-    subdivisionPlural?: string;
-    cityLabel?: string;
-  };
-  features?: Record<string, boolean>;
-  featureConfigs?: Record<string, { primaryScheme?: string }>;
-  featureContexts?: Record<string, { insuranceProviders?: string[] }>;
-  regions?: { id: string; name: string; code?: string }[];
-  insuranceProviders?: string[];
-}
+export type { CountryConfig };
 
 interface CountryConfigState {
   config: CountryConfig | null;
-  adaptation: {
-    subdivisionLabel?: string;
-    subdivisionPlural?: string;
-    regions?: unknown[];
-    insuranceProviders?: string[];
-    featureContexts?: Record<string, unknown>;
-  } | null;
   regions: Subdivision[];
   loading: boolean;
   regionsLoading: boolean;
@@ -51,27 +25,35 @@ interface CountryConfigState {
   clear: () => void;
 }
 
+/**
+ * The last-resort config when the API is unreachable: a country's labels and
+ * currency with no features and no regions, so a page renders with the right
+ * words instead of an error. Every other path reads real data.
+ */
 function minimalConfigForCountry(code: string): CountryConfig {
   const ui = REGIONS[code] || REGIONS.KE;
+  const subdivisionLabel = ui.countiesLabel || "Region";
+
   return {
     code,
     currency: ui.currency,
     currencySymbol: ui.currencySymbol,
     locale: ui.locale,
     geography: {
-      subdivisionLabel: ui.countiesLabel || "Region",
-      subdivisionPlural: getSubdivisionPlural({
-        subdivisionLabel: ui.countiesLabel || "Region",
-      }),
+      subdivisionLabel,
+      subdivisionPlural: getSubdivisionPlural({ subdivisionLabel }),
       cityLabel: "City",
     },
     features: {},
+    featureConfigs: {},
+    featureContexts: {},
+    insuranceProviders: [],
+    regions: [],
   };
 }
 
 export const useCountryConfigStore = create<CountryConfigState>((set, get) => ({
   config: null,
-  adaptation: null,
   regions: [],
   loading: false,
   regionsLoading: false,
@@ -82,17 +64,15 @@ export const useCountryConfigStore = create<CountryConfigState>((set, get) => ({
 
   loadRegionsForCountry: async (code) => {
     set({ regionsLoading: true });
-    let apiRegions: unknown[] = [];
+    let apiRegions: Subdivision[] = [];
+
     try {
-      const data = await fetchCountryRegions(code);
-      apiRegions = Array.isArray(data) ? data : [];
+      apiRegions = await fetchSubdivisions(code);
     } catch {
-      /* use static */
+      /* fall through to the static list */
     }
-    const merged = mergeSubdivisionLists(
-      apiRegions as { id: string; name: string; code?: string; countryCode?: string }[] | undefined,
-      code,
-    );
+
+    const merged = mergeSubdivisionLists(apiRegions, code);
     set({ regions: merged, regionsLoading: false });
     return merged;
   },
@@ -101,11 +81,11 @@ export const useCountryConfigStore = create<CountryConfigState>((set, get) => ({
     if (!countryCode || countryCode === "GLOBAL") {
       set({
         config: null,
-        adaptation: null,
         regions: [],
         lastCountry: countryCode,
         error: null,
         loading: false,
+        regionsLoading: false,
       });
       return;
     }
@@ -116,7 +96,6 @@ export const useCountryConfigStore = create<CountryConfigState>((set, get) => ({
     if (!USE_API) {
       set({
         config: minimalConfigForCountry(code),
-        adaptation: null,
         regions: staticFallback,
         loading: false,
         regionsLoading: false,
@@ -128,47 +107,35 @@ export const useCountryConfigStore = create<CountryConfigState>((set, get) => ({
 
     set({ loading: true, regionsLoading: true, error: null, lastCountry: code });
 
-    let config: CountryConfig | null = null;
-    let adaptation = null;
-    let apiRegions: unknown[] = [];
-
-    const [configResult, regionsResult, adaptationResult] = await Promise.allSettled([
+    // The config already embeds its subdivisions, so a country switch is one
+    // request. The second call is the error path: if the config arrives, a
+    // failure here only costs us nothing.
+    const [configResult, regionsResult] = await Promise.allSettled([
       fetchCountryConfig(code),
-      fetchCountryRegions(code),
-      fetchCountryAdaptation(code),
+      fetchSubdivisions(code),
     ]);
 
-    if (configResult.status === "fulfilled" && configResult.value) {
-      config = configResult.value as CountryConfig;
-      if ((configResult.value as { regions?: unknown[] }).regions?.length) {
-        apiRegions = (configResult.value as { regions?: unknown[] }).regions as unknown[];
-      }
+    if (configResult.status === "rejected") {
+      set({
+        config: minimalConfigForCountry(code),
+        regions: staticFallback,
+        loading: false,
+        regionsLoading: false,
+        error: "Could not load the country configuration.",
+        lastCountry: code,
+      });
+      return;
     }
 
-    if (regionsResult.status === "fulfilled" && Array.isArray(regionsResult.value)) {
-      apiRegions = regionsResult.value;
-    }
-
-    if (adaptationResult.status === "fulfilled" && adaptationResult.value) {
-      adaptation = adaptationResult.value;
-      if ((adaptationResult.value as { regions?: unknown[] }).regions?.length) {
-        apiRegions = (adaptationResult.value as { regions?: unknown[] }).regions as unknown[];
-      }
-    }
-
-    if (!config) {
-      config = minimalConfigForCountry(code);
-    }
-
-    const regions = mergeSubdivisionLists(
-      apiRegions as { id: string; name: string; code?: string; countryCode?: string }[] | undefined,
-      code,
-    );
+    const config = configResult.value;
+    const apiRegions =
+      regionsResult.status === "fulfilled" && regionsResult.value.length > 0
+        ? regionsResult.value
+        : config.regions;
 
     set({
       config,
-      adaptation,
-      regions,
+      regions: mergeSubdivisionLists(apiRegions, code),
       loading: false,
       regionsLoading: false,
       error: null,
@@ -178,7 +145,6 @@ export const useCountryConfigStore = create<CountryConfigState>((set, get) => ({
   clear: () =>
     set({
       config: null,
-      adaptation: null,
       regions: [],
       lastCountry: null,
       error: null,
