@@ -96,4 +96,17 @@ describe("mapCountryConfig", () => {
     // A caller reads a missing key as "not offered here".
     expect(config.features.CPD_TRAINING).toBeUndefined();
   });
+
+  it("withholds the provider list from a market that switched insurance off", () => {
+    const config = mapCountryConfig({
+      ...KENYA,
+      features: [
+        { feature: "DENTAL_INSURANCE", is_enabled: false, primary_scheme: null },
+        { feature: "ORAL_CARE_SHOP", is_enabled: true, primary_scheme: null },
+      ],
+    });
+
+    expect(config.features.DENTAL_INSURANCE).toBe(false);
+    expect(config.featureContexts.DENTAL_INSURANCE).toBeUndefined();
+  });
 });

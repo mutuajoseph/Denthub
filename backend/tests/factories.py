@@ -114,15 +114,20 @@ SUBDIVISIONS: list[tuple[str, str, str]] = [
 ]
 
 #: (country_code, feature, is_enabled, primary_scheme). The feature keys are the
-#: ones the client already asks about via `useCountryConfig`.
+#: ones the client already asks about via `useCountryConfig`. These mirror
+#: `seed_countries.COUNTRY_FEATURES` exactly: a configured market has a row for
+#: every key, and "off" is `is_enabled=False` rather than an absent row. Test
+#: data that disagreed with the seed would let a contract pass here and fail in
+#: the demo environment.
 COUNTRY_FEATURES: list[tuple[str, str, bool, str | None]] = [
     ("KE", "DENTAL_INSURANCE", True, "NHIF"),
     ("KE", "ORAL_CARE_SHOP", True, None),
     ("KE", "JOBS_BOARD", True, None),
-    # Nigeria has no training offering seeded, so the flag is off and the
-    # config endpoint must report it as such rather than omitting it.
+    ("KE", "CPD_TRAINING", True, None),
     ("NG", "DENTAL_INSURANCE", True, "NHIS"),
     ("NG", "ORAL_CARE_SHOP", True, None),
+    ("NG", "JOBS_BOARD", True, None),
+    # Nigeria does not offer CPD training, and says so explicitly.
     ("NG", "CPD_TRAINING", False, None),
 ]
 

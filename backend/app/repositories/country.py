@@ -115,8 +115,12 @@ class Subdivision(Base):
 class CountryFeature(Base):
     """A per-Country feature flag, with the market's primary scheme.
 
-    Rows exist only where a flag is explicitly set, so a missing row and a
-    disabled flag have to be treated alike by callers.
+    A configured market carries a row for every feature key, so "this market
+    does not offer that module" is recorded as ``is_enabled=False`` rather than
+    as an absent row. The two are different facts: a disabled flag says the
+    market was considered and switched off, while a missing row says nobody has
+    configured it yet. Clients read both as off, so a partially configured
+    market degrades to the feature being unavailable rather than erroring.
     """
 
     __tablename__ = "country_features"

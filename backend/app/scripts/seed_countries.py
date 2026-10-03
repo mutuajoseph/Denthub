@@ -204,8 +204,12 @@ SUBDIVISIONS: dict[str, list[str]] = {
 #: Feature keys, matching the names the client already asks about
 #: (``useCountryConfig`` reads DENTAL_INSURANCE, ORAL_CARE_SHOP, JOBS_BOARD).
 #:
-#: (country_code, feature, is_enabled, primary_scheme). A market that does not
-#: offer a module has no row, and callers must treat a missing row as disabled.
+#: (country_code, feature, is_enabled, primary_scheme). Every market carries an
+#: explicit row for all four keys, so "off" is always ``is_enabled=False`` rather
+#: than a missing row: a row records that the market was considered and switched
+#: off, which is a different fact from nobody having configured it yet. Every
+#: insurance feature names its primary scheme, matching the national provider
+#: seeded below it.
 COUNTRY_FEATURES: list[tuple[str, str, bool, str | None]] = [
     ("KE", "DENTAL_INSURANCE", True, "NHIF"),
     ("KE", "ORAL_CARE_SHOP", True, None),
@@ -219,7 +223,7 @@ COUNTRY_FEATURES: list[tuple[str, str, bool, str | None]] = [
     ("GB", "ORAL_CARE_SHOP", True, None),
     ("GB", "JOBS_BOARD", True, None),
     ("GB", "CPD_TRAINING", True, None),
-    ("US", "DENTAL_INSURANCE", True, None),
+    ("US", "DENTAL_INSURANCE", True, "Delta Dental"),
     ("US", "ORAL_CARE_SHOP", True, None),
     ("US", "JOBS_BOARD", True, None),
     ("US", "CPD_TRAINING", True, None),

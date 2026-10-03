@@ -119,9 +119,25 @@ export interface CountryConfig {
     subdivisionPlural: string;
     cityLabel: string;
   };
+  /**
+   * Every feature key the market has a row for, mapped to on/off. A key with no
+   * row is absent, which callers read as off: a market nobody has configured yet
+   * and a market that switched a module off both end up without it.
+   */
   features: Record<string, boolean>;
+  /** Per-feature market detail: the insurance scheme this market runs on. */
   featureConfigs: Record<string, { primaryScheme: string | null }>;
+  /**
+   * The full list a filter offers for a feature, present only where the feature
+   * is enabled. Gated on the flag because a market that has turned insurance off
+   * must not still surface its provider list to a picker.
+   */
   featureContexts: Record<string, { insuranceProviders: string[] }>;
+  /**
+   * The national scheme(s) alone — what a card headlines as "accepts NHIF".
+   * Narrower than `featureContexts.DENTAL_INSURANCE.insuranceProviders`, which is
+   * every provider the market lists.
+   */
   insuranceProviders: string[];
   regions: Subdivision[];
 }
@@ -147,7 +163,11 @@ export function mapCountryConfig(wire: CountryConfigWire): CountryConfig {
     features[row.feature] = row.is_enabled;
     featureConfigs[row.feature] = { primaryScheme: row.primary_scheme };
 
-    if (row.feature === "DENTAL_INSURANCE") {
+    // Only an enabled market offers its providers. A market that switched
+    // insurance off keeps its rows — that is how "off" is recorded — so
+    // keying off the row alone would hand a picker a list for a feature the
+    // market does not sell.
+    if (row.feature === "DENTAL_INSURANCE" && row.is_enabled) {
       providersByFeature[row.feature] = {
         insuranceProviders: wire.insurance_providers.map((p) => p.name),
       };

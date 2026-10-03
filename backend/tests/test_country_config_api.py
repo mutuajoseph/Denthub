@@ -100,16 +100,6 @@ async def test_country_config_reports_a_disabled_flag(client: AsyncClient) -> No
     assert flags["CPD_TRAINING"]["is_enabled"] is False
 
 
-async def test_country_config_omits_a_feature_the_market_does_not_row(
-    client: AsyncClient,
-) -> None:
-    """No row means "not offered here". The client reads a missing key as off."""
-    response = await client.get(f"{BASE}/country", params={"country": "KE"})
-    flags = {row["feature"] for row in response.json()["features"]}
-
-    assert "CPD_TRAINING" not in flags
-
-
 async def test_country_config_reports_insurance_providers(client: AsyncClient) -> None:
     response = await client.get(f"{BASE}/country", params={"country": "KE"})
     providers = {row["name"]: row for row in response.json()["insurance_providers"]}
