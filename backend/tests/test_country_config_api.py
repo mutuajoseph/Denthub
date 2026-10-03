@@ -169,6 +169,30 @@ async def test_specialties_are_listed_in_display_order(client: AsyncClient) -> N
     ]
 
 
+async def test_country_config_reports_locale_and_its_fallback(
+    client: AsyncClient,
+) -> None:
+    """`locale` formats money; `default_locale` is the no-preference fallback.
+
+    They are separate fields because collapsing them either mistranslates prices
+    or leaves a visitor with no language, so the response has to carry both.
+    """
+    response = await client.get(f"{BASE}/country", params={"country": "KE"})
+
+    body = response.json()
+    assert body["locale"] == "en-KE"
+    assert body["default_locale"] == "en"
+    assert body["locale"] != body["default_locale"]
+
+
+async def test_specialties_carry_a_description(client: AsyncClient) -> None:
+    """The filter menu shows one line under the name, so it is served, not null."""
+    response = await client.get(f"{BASE}/specialties")
+
+    general = next(row for row in response.json()["items"] if row["code"] == "general-dentistry")
+    assert general["description"].startswith("Check-ups")
+
+
 async def test_specialties_expose_a_stable_code_for_cache_keys(
     client: AsyncClient,
 ) -> None:

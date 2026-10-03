@@ -33,6 +33,11 @@ from app.utils.urls import describe_url
 #: Fields a country row carries, minus its children. ``timezone`` is the IANA
 #: zone used to compute "open now" for a branch, so a market with several zones
 #: takes the one its capital sits in.
+#:
+#: ``locale`` is the market's formatting locale; ``default_locale`` is the locale
+#: the site falls back to for a visitor who has chosen no language. Every seeded
+#: market falls back to English today, which is why ``default_locale`` never
+#: copies ``locale`` — Turkey is the row that proves the two are separate fields.
 COUNTRIES: list[dict[str, object]] = [
     {
         "code": "KE",
@@ -41,6 +46,7 @@ COUNTRIES: list[dict[str, object]] = [
         "currency": "KES",
         "currency_symbol": "KSh",
         "locale": "en-KE",
+        "default_locale": "en",
         "domain": "denthub.co.ke",
         "phone_prefix": "+254",
         "subdivision_label": "County",
@@ -55,6 +61,7 @@ COUNTRIES: list[dict[str, object]] = [
         "currency": "NGN",
         "currency_symbol": "₦",
         "locale": "en-NG",
+        "default_locale": "en",
         "domain": "denthub.ng",
         "phone_prefix": "+234",
         "subdivision_label": "State",
@@ -69,6 +76,7 @@ COUNTRIES: list[dict[str, object]] = [
         "currency": "GBP",
         "currency_symbol": "£",
         "locale": "en-GB",
+        "default_locale": "en",
         "domain": "denthub.co.uk",
         "phone_prefix": "+44",
         "subdivision_label": "County",
@@ -83,6 +91,7 @@ COUNTRIES: list[dict[str, object]] = [
         "currency": "USD",
         "currency_symbol": "$",
         "locale": "en-US",
+        "default_locale": "en",
         "domain": "denthub.com",
         "phone_prefix": "+1",
         "subdivision_label": "State",
@@ -97,6 +106,7 @@ COUNTRIES: list[dict[str, object]] = [
         "currency": "AED",
         "currency_symbol": "AED",
         "locale": "en-AE",
+        "default_locale": "en",
         "domain": "denthub.ae",
         "phone_prefix": "+971",
         "subdivision_label": "Emirate",
@@ -111,6 +121,7 @@ COUNTRIES: list[dict[str, object]] = [
         "currency": "ZAR",
         "currency_symbol": "R",
         "locale": "en-ZA",
+        "default_locale": "en",
         "domain": "denthub.co.za",
         "phone_prefix": "+27",
         "subdivision_label": "Province",
@@ -125,6 +136,7 @@ COUNTRIES: list[dict[str, object]] = [
         "currency": "INR",
         "currency_symbol": "₹",
         "locale": "en-IN",
+        "default_locale": "en",
         "domain": "denthub.in",
         "phone_prefix": "+91",
         "subdivision_label": "State",
@@ -139,6 +151,7 @@ COUNTRIES: list[dict[str, object]] = [
         "currency": "TRY",
         "currency_symbol": "₺",
         "locale": "tr-TR",
+        "default_locale": "en",
         "domain": "denthub.com.tr",
         "phone_prefix": "+90",
         "subdivision_label": "Province",
@@ -262,23 +275,85 @@ INSURANCE_PROVIDERS: list[tuple[str, str, bool]] = [
     ("TR", "Mapfre", False),
 ]
 
-#: (code, name, display_order). One canonical row per specialty: the fixtures
-#: spelled the same specialty both "Pediatric" and "Paediatric", which broke
-#: exact-match filtering, and "Oral & Maxillofacial Surgery" against "Oral
-#: Surgery". Codes are what query strings and cache keys use.
-SPECIALTIES: list[tuple[str, str, int]] = [
-    ("general-dentistry", "General Dentistry", 10),
-    ("orthodontics", "Orthodontics", 20),
-    ("endodontics", "Endodontics", 30),
-    ("periodontics", "Periodontics", 40),
-    ("oral-surgery", "Oral & Maxillofacial Surgery", 50),
-    ("prosthodontics", "Prosthodontics", 60),
-    ("paediatric-dentistry", "Paediatric Dentistry", 70),
-    ("oral-pathology", "Oral Pathology", 80),
-    ("dental-hygiene", "Dental Hygiene", 90),
-    ("implantology", "Implantology", 100),
-    ("cosmetic-dentistry", "Cosmetic Dentistry", 110),
-    ("digital-dentistry", "Digital Dentistry", 120),
+#: (code, name, description, display_order). One canonical row per specialty:
+#: the fixtures spelled the same specialty both "Pediatric" and "Paediatric",
+#: which broke exact-match filtering, and "Oral & Maxillofacial Surgery" against
+#: "Oral Surgery". Codes are what query strings and cache keys use. The
+#: description is the one line a filter menu shows under the name, so it is
+#: seeded here rather than left null for a reader to discover.
+SPECIALTIES: list[tuple[str, str, str, int]] = [
+    (
+        "general-dentistry",
+        "General Dentistry",
+        "Check-ups, fillings, extractions, and the ongoing care most visits start with.",
+        10,
+    ),
+    (
+        "orthodontics",
+        "Orthodontics",
+        "Braces and aligners for crooked teeth and bite problems, at any age.",
+        20,
+    ),
+    (
+        "endodontics",
+        "Endodontics",
+        "Root canal treatment and the management of tooth pain and infection.",
+        30,
+    ),
+    (
+        "periodontics",
+        "Periodontics",
+        "Gum disease treatment, from bleeding gums to the bone loss behind them.",
+        40,
+    ),
+    (
+        "oral-surgery",
+        "Oral & Maxillofacial Surgery",
+        "Tooth extractions, impacted wisdom teeth, and surgery of the jaw and face.",
+        50,
+    ),
+    (
+        "prosthodontics",
+        "Prosthodontics",
+        "Crowns, bridges, and dentures that replace missing or damaged teeth.",
+        60,
+    ),
+    (
+        "paediatric-dentistry",
+        "Paediatric Dentistry",
+        "Dental care for children, including early visits that make the dentist familiar.",
+        70,
+    ),
+    (
+        "oral-pathology",
+        "Oral Pathology",
+        "Diagnosis of lesions, ulcers, and other conditions found inside the mouth.",
+        80,
+    ),
+    (
+        "dental-hygiene",
+        "Dental Hygiene",
+        "Scale, polish, and gum care to prevent the problems a filling treats later.",
+        90,
+    ),
+    (
+        "implantology",
+        "Implantology",
+        "Dental implants replacing a single tooth or anchoring a full arch.",
+        100,
+    ),
+    (
+        "cosmetic-dentistry",
+        "Cosmetic Dentistry",
+        "Veneers, whitening, and reshaping done for appearance rather than decay.",
+        110,
+    ),
+    (
+        "digital-dentistry",
+        "Digital Dentistry",
+        "CAD/CAM same-day crowns, digital scans, and computer-guided implant placement.",
+        120,
+    ),
 ]
 
 
@@ -352,16 +427,24 @@ async def seed(state: AppState) -> None:
             else:
                 provider_row.is_national = is_national
 
-        for code, name, display_order in SPECIALTIES:
+        for code, name, description, display_order in SPECIALTIES:
             specialty_result = await session.execute(
                 select(Specialty).where(Specialty.code == code)
             )
             specialty_row = specialty_result.scalar_one_or_none()
 
             if specialty_row is None:
-                session.add(Specialty(code=code, name=name, display_order=display_order))
+                session.add(
+                    Specialty(
+                        code=code,
+                        name=name,
+                        description=description,
+                        display_order=display_order,
+                    )
+                )
             else:
                 specialty_row.name = name
+                specialty_row.description = description
                 specialty_row.display_order = display_order
 
         await session.commit()

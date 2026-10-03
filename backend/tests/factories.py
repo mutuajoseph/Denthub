@@ -80,6 +80,7 @@ KENYA = {
     "currency": "KES",
     "currency_symbol": "KSh",
     "locale": "en-KE",
+    "default_locale": "en",
     "domain": "denthub.co.ke",
     "phone_prefix": "+254",
     "subdivision_label": "County",
@@ -95,6 +96,7 @@ NIGERIA = {
     "currency": "NGN",
     "currency_symbol": "₦",
     "locale": "en-NG",
+    "default_locale": "en",
     "domain": "denthub.ng",
     "phone_prefix": "+234",
     "subdivision_label": "State",
@@ -132,10 +134,20 @@ INSURANCE_PROVIDERS: list[tuple[str, str, bool]] = [
 ]
 
 #: (code, name, display_order)
-SPECIALTIES: list[tuple[str, str, int]] = [
-    ("general-dentistry", "General Dentistry", 10),
-    ("orthodontics", "Orthodontics", 20),
-    ("paediatric-dentistry", "Paediatric Dentistry", 30),
+SPECIALTIES: list[tuple[str, str, str, int]] = [
+    (
+        "general-dentistry",
+        "General Dentistry",
+        "Check-ups, fillings, extractions, and the ongoing care most visits start with.",
+        10,
+    ),
+    ("orthodontics", "Orthodontics", "Braces and aligners at any age.", 20),
+    (
+        "paediatric-dentistry",
+        "Paediatric Dentistry",
+        "Dental care for children, including a first visit that is uneventful.",
+        30,
+    ),
 ]
 
 
@@ -161,9 +173,7 @@ def build_countries() -> list[Country]:
         features_by_country.setdefault(country_code, []).append(flag)
 
     for country_code, name, is_national in INSURANCE_PROVIDERS:
-        provider = InsuranceProvider(
-            country_code=country_code, name=name, is_national=is_national
-        )
+        provider = InsuranceProvider(country_code=country_code, name=name, is_national=is_national)
         providers_by_country.setdefault(country_code, []).append(provider)
 
     for country in countries:
@@ -177,8 +187,8 @@ def build_countries() -> list[Country]:
 def build_specialties() -> list[Specialty]:
     """Return the seeded specialties in display order."""
     return [
-        Specialty(code=code, name=name, display_order=display_order)
-        for code, name, display_order in SPECIALTIES
+        Specialty(code=code, name=name, description=description, display_order=display_order)
+        for code, name, description, display_order in SPECIALTIES
     ]
 
 

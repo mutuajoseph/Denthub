@@ -35,11 +35,13 @@ export interface CountryFeatureWire {
 }
 
 export interface InsuranceProviderWire {
+  id: string;
   name: string;
   is_national: boolean;
 }
 
 export interface SubdivisionWire {
+  id: string;
   code: string;
   name: string;
   country_code: string;
@@ -50,28 +52,38 @@ export interface CountryConfigWire {
   name: string;
   currency: string;
   currency_symbol: string;
+  /** The market's formatting locale. Format money with this one. */
   locale: string;
+  /**
+   * The locale to fall back to for a visitor who has chosen no language.
+   *
+   * Carried on the wire because the API owns it, but the UI does not read it
+   * yet: language negotiation is #23's job. Do not collapse it into `locale` —
+   * Turkey's market locale is `tr-TR` and its fallback is `en`.
+   */
+  default_locale: string;
   timezone: string;
   phone_prefix: string;
-  default_locale: string;
   geography: CountryGeographyWire;
   features: CountryFeatureWire[];
   insurance_providers: InsuranceProviderWire[];
   subdivisions: SubdivisionWire[];
 }
 
+/**
+ * The region switcher list. Deliberately narrower than {@link CountryConfigWire}:
+ * the backend strips the child collections and the contact details a switcher
+ * row has no room to render.
+ */
 export interface CountrySummaryWire {
   code: string;
   name: string;
   currency: string;
   currency_symbol: string;
   locale: string;
-  default_locale: string;
   timezone: string;
-  phone_prefix: string;
   subdivision_label: string;
   subdivision_label_plural: string;
-  city_label: string;
 }
 
 export interface CountryListWire {
@@ -85,6 +97,7 @@ export interface SubdivisionListWire {
 }
 
 export interface SpecialtyWire {
+  id: string;
   code: string;
   name: string;
   description: string | null;
@@ -145,7 +158,11 @@ export function mapCountryConfig(wire: CountryConfigWire): CountryConfig {
     code: wire.code,
     currency: wire.currency,
     currencySymbol: wire.currency_symbol,
-    locale: wire.default_locale || wire.locale,
+    // The market's locale, never `default_locale`. This value reaches
+    // `Intl.NumberFormat` and `<html lang>`, and Kenya renders "KSh" in
+    // `en-KE` but "KES" in `en` — preferring the fallback would silently change
+    // how every price on the site reads.
+    locale: wire.locale,
     geography: {
       subdivisionLabel: wire.geography.subdivision_label,
       subdivisionPlural: wire.geography.subdivision_label_plural,
@@ -163,8 +180,11 @@ export function mapCountryConfig(wire: CountryConfigWire): CountryConfig {
  * The config for one country.
  *
  * The API reads the country from the `Accept-Country` header, which `apiClient`
- * already sets from the region store, so no query parameter is needed. Pass
- * `countryCode` to preview another market without switching the region.
+ * already sets from the region store, so no query parameter is needed. Passing
+ * `countryCode` overrides that header for this one request — which is how a
+ * region switcher previews another market without changing the ambient one.
+ * Note this is the header, not the `country` query parameter the endpoint also
+ * accepts; {@link fetchSubdivisions} uses the query parameter instead.
  */
 export async function fetchCountryConfig(countryCode?: string): Promise<CountryConfig> {
   const wire = await getJson<CountryConfigWire>(

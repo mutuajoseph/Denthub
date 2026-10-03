@@ -49,7 +49,19 @@ class Country(Base):
 
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
     currency_symbol: Mapped[str] = mapped_column(String(8), nullable=False)
+
+    #: The locale this market formats money and dates in (``en-KE``, ``tr-TR``).
+    #: It is the market's locale, not the site's: a Turkish market formatting in
+    #: ``tr-TR`` is what makes a price read the way a local expects.
     locale: Mapped[str] = mapped_column(String(16), nullable=False)
+
+    #: The locale the site falls back to when a visitor has expressed no language
+    #: preference. Distinct from :attr:`locale` because they differ exactly where
+    #: it matters: Turkey's market locale is ``tr-TR`` while its fallback is
+    #: ``en``, and collapsing the two would either mistranslate prices or leave a
+    #: new visitor with no language to read.
+    default_locale: Mapped[str] = mapped_column(String(16), nullable=False)
+
     domain: Mapped[str] = mapped_column(String(120), nullable=False)
     phone_prefix: Mapped[str] = mapped_column(String(8), nullable=False)
 

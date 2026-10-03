@@ -82,7 +82,11 @@ class CountryConfig(BaseModel):
     brand_suffix: str | None
     currency: str
     currency_symbol: str
+    #: The market's formatting locale. Clients format money with this one.
     locale: str
+    #: The fallback for a visitor who has chosen no language. Kept apart from
+    #: `locale` because the two differ per Country, not per formatting need.
+    default_locale: str
     domain: str
     phone_prefix: str
     timezone: str
@@ -125,6 +129,7 @@ class SpecialtyResponse(BaseModel):
     id: str
     code: str
     name: str
+    description: str | None
     display_order: int
 
 
@@ -149,6 +154,7 @@ def _serialize_country(country: Country) -> CountryConfig:
         currency=country.currency,
         currency_symbol=country.currency_symbol,
         locale=country.locale,
+        default_locale=country.default_locale,
         domain=country.domain,
         phone_prefix=country.phone_prefix,
         timezone=country.timezone,
@@ -257,7 +263,11 @@ async def list_specialties(state: AppState) -> SpecialtyList:
     return SpecialtyList(
         items=[
             SpecialtyResponse(
-                id=row.id, code=row.code, name=row.name, display_order=row.display_order
+                id=row.id,
+                code=row.code,
+                name=row.name,
+                description=row.description,
+                display_order=row.display_order,
             )
             for row in rows
         ]

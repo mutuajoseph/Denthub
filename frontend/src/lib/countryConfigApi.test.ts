@@ -13,7 +13,7 @@ const KENYA: CountryConfigWire = {
   currency: "KES",
   currency_symbol: "KSh",
   locale: "en-KE",
-  default_locale: "en-KE",
+  default_locale: "en",
   timezone: "Africa/Nairobi",
   phone_prefix: "+254",
   geography: {
@@ -26,16 +26,25 @@ const KENYA: CountryConfigWire = {
     { feature: "ORAL_CARE_SHOP", is_enabled: true, primary_scheme: null },
   ],
   insurance_providers: [
-    { name: "NHIF", is_national: true },
-    { name: "Britam", is_national: false },
+    { id: "p-1", name: "NHIF", is_national: true },
+    { id: "p-2", name: "Britam", is_national: false },
   ],
   subdivisions: [
-    { code: "MOMBASA", name: "Mombasa", country_code: "KE" },
-    { code: "NAIROBI", name: "Nairobi", country_code: "KE" },
+    { id: "s-1", code: "MOMBASA", name: "Mombasa", country_code: "KE" },
+    { id: "s-2", code: "NAIROBI", name: "Nairobi", country_code: "KE" },
   ],
 };
 
 describe("mapCountryConfig", () => {
+  it("formats with the market's locale, never the fallback", () => {
+    const config = mapCountryConfig(KENYA);
+
+    // This value reaches `Intl.NumberFormat` and `<html lang>`. `en-KE` renders
+    // "KSh"; the `en` fallback renders "KES". Preferring the fallback would
+    // quietly change how every price on the site reads.
+    expect(config.locale).toBe("en-KE");
+  });
+
   it("turns the geography labels into the camelCase keys components read", () => {
     const config = mapCountryConfig(KENYA);
 
