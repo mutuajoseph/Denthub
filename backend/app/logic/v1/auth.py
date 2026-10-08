@@ -6,14 +6,14 @@ Handles password hashing, token generation/verification, and signup/login flows.
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import bcrypt
 import jwt
 from pydantic import BaseModel, EmailStr
 
 from app.exceptions import ConflictError, ForbiddenException, UnauthorizedException
-from app.repositories.user import UserRepository
+from app.repositories.user import User, UserRepository
 from app.utils.state import AppState
 
 #: Account types public signup may create (PRD §2). Staff roles are granted by
@@ -29,8 +29,21 @@ AccountType = Literal[
     "training_provider",
 ]
 
+#: Whether a user record has been reviewed by staff. Professional accounts
+#: (PRD §2) start life "pending"; a staff approval flips them to "active".
+AccountStatus = Literal["active", "pending"]
+
+#: Account types whose signup is held for staff review. Patient accounts are
+#: active immediately: nothing about a patient profile is gated behind review.
+PROFESSIONAL_ACCOUNT_TYPES: frozenset[str] = frozenset(
+    {"dentist", "specialist", "intern", "facility_owner", "supplier", "training_provider"}
+)
+
 #: Roles a human granted, as opposed to roles a signup could ever ask for.
 STAFF_ROLES: frozenset[str] = frozenset({"staff", "admin", "super_admin", "platform_operator"})
+
+#: Roles that may perform a user-admin action such as approving an account.
+ADMIN_ROLES: frozenset[str] = frozenset({"admin", "super_admin"})
 
 
 def is_staff_role(role: str) -> bool:
@@ -46,6 +59,7 @@ class UserResponse(BaseModel):
     role: str
     full_name: str
     is_staff: bool
+    account_status: AccountStatus = "active"
 
 
 class AuthResponseModel(BaseModel):
@@ -153,7 +167,9 @@ async def signup_user(
         if existing:
             raise ConflictError(message="A user with this email already exists")
 
-        # Hash password and save user
+        # Hash password and save user. Professional accounts start life pending
+        # (staff review); patient accounts are active immediately.
+        account_status = "pending" if data.account_type in PROFESSIONAL_ACCOUNT_TYPES else "active"
         password_hash = hash_password(data.password)
 
         user = await UserRepository.create(
@@ -163,6 +179,7 @@ async def signup_user(
             password_hash=password_hash,
             role=data.account_type,
             phone=data.phone,
+            account_status=account_status,
         )
 
         await session.commit()
@@ -183,6 +200,7 @@ async def signup_user(
                 role=user.role,
                 full_name=user.full_name,
                 is_staff=is_staff_role(user.role),
+                account_status=cast(AccountStatus, user.account_status),
             ),
         )
 
@@ -223,16 +241,13 @@ async def login_user(
                 role=user.role,
                 full_name=user.full_name,
                 is_staff=is_staff_role(user.role),
+                account_status=cast(AccountStatus, user.account_status),
             ),
         )
 
 
-async def get_current_user(
-    state: AppState,
-    token: str,
-) -> UserResponse:
-    """Verify authentication token and return current user details."""
-
+async def get_user_from_token(state: AppState, token: str) -> User:
+    """Load the token's subject from the database, rejecting invalid tokens."""
     try:
         payload = decode_access_token(
             state,
@@ -259,13 +274,25 @@ async def get_current_user(
         if not user:
             raise UnauthorizedException(message="User not found")
 
-        if not user.is_active:
-            raise ForbiddenException(message="User account is deactivated")
+        return user
 
-        return UserResponse(
-            id=user.id,
-            email=user.email,
-            role=user.role,
-            full_name=user.full_name,
-            is_staff=is_staff_role(user.role),
-        )
+
+async def get_current_user(
+    state: AppState,
+    token: str,
+) -> UserResponse:
+    """Verify authentication token and return current user details."""
+
+    user = await get_user_from_token(state, token)
+
+    if not user.is_active:
+        raise ForbiddenException(message="User account is deactivated")
+
+    return UserResponse(
+        id=user.id,
+        email=user.email,
+        role=user.role,
+        full_name=user.full_name,
+        is_staff=is_staff_role(user.role),
+        account_status=cast(AccountStatus, user.account_status),
+    )

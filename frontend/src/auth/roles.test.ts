@@ -98,6 +98,7 @@ describe("auth contract", () => {
           full_name: "Clinic Owner",
           role: "facility_admin",
           is_staff: false,
+          account_status: "active",
         },
       }),
     });
@@ -137,6 +138,7 @@ describe("auth contract", () => {
             full_name: "Unknown User",
             role: "unrecognized",
             is_staff: false,
+            account_status: "active",
           },
         }),
       }),

@@ -1,12 +1,15 @@
 import { type Role, isPublicRole, normalizeRole } from "../auth/roles";
 import { API_BASE } from "./api";
 
+export type AccountStatus = "active" | "pending";
+
 export interface AuthUser {
   id: string;
   email: string;
   role: Role;
   full_name: string;
   is_staff: boolean;
+  account_status: AccountStatus;
 }
 
 export interface AuthResponse {
@@ -53,6 +56,7 @@ function parseAuthResponse(value: unknown): AuthResponse {
     typeof user.id !== "string" ||
     typeof user.email !== "string" ||
     typeof user.full_name !== "string" ||
+    (user.account_status !== "active" && user.account_status !== "pending") ||
     !role
   ) {
     throw new Error("Invalid authentication response");
@@ -67,6 +71,7 @@ function parseAuthResponse(value: unknown): AuthResponse {
       full_name: user.full_name,
       role,
       is_staff: user.is_staff === true,
+      account_status: user.account_status,
     },
   };
 }
