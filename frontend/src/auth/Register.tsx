@@ -1,4 +1,5 @@
 import {
+  Award,
   BookOpen,
   Building2,
   Eye,
@@ -38,6 +39,13 @@ const ACCOUNT_TYPES = [
     label: "Dentist",
     description: "Manage your professional and clinic profile",
     icon: Stethoscope,
+  },
+  {
+    id: "specialist",
+    role: ROLE.SPECIALIST,
+    label: "Specialist",
+    description: "Professional account for dental specialists",
+    icon: Award,
   },
   {
     id: "international",
