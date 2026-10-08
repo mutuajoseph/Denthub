@@ -23,6 +23,7 @@ from tests.factories import (
     build_countries,
     build_jobs,
     build_listings,
+    build_magazine_articles,
     build_products,
     build_specialties,
 )
@@ -57,6 +58,9 @@ async def session_maker() -> AsyncIterator[async_sessionmaker[AsyncSession]]:
 
             for posting in build_jobs(specialties, facilities):
                 session.add(posting)
+
+            for article in build_magazine_articles():
+                session.add(article)
 
             for supplier, products in build_products():
                 session.add(supplier)
