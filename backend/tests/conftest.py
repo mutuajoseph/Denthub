@@ -19,7 +19,12 @@ from app.main import create_app
 from app.repositories.database import Base
 from app.utils.logger import configure_logging
 from app.utils.state import AppState
-from tests.factories import build_countries, build_products, build_specialties
+from tests.factories import (
+    build_countries,
+    build_listings,
+    build_products,
+    build_specialties,
+)
 
 
 @pytest.fixture
@@ -40,8 +45,14 @@ async def session_maker() -> AsyncIterator[async_sessionmaker[AsyncSession]]:
                 session.add(country)
             await session.flush()
 
-            for specialty in build_specialties():
+            specialties = build_specialties()
+            for specialty in specialties:
                 session.add(specialty)
+            await session.flush()
+
+            facilities, specialists = build_listings(specialties)
+            for listing in [*facilities, *specialists]:
+                session.add(listing)
 
             for supplier, products in build_products():
                 session.add(supplier)
