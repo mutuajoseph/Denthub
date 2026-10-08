@@ -19,7 +19,7 @@ from app.main import create_app
 from app.repositories.database import Base
 from app.utils.logger import configure_logging
 from app.utils.state import AppState
-from tests.factories import build_products
+from tests.factories import build_countries, build_products, build_specialties
 
 
 @pytest.fixture
@@ -34,6 +34,15 @@ async def session_maker() -> AsyncIterator[async_sessionmaker[AsyncSession]]:
         factory = async_sessionmaker(bind=engine, expire_on_commit=False)
 
         async with factory() as session:
+            # Reference data first: a listing's country_code is meaningless
+            # without the market it names.
+            for country in build_countries():
+                session.add(country)
+            await session.flush()
+
+            for specialty in build_specialties():
+                session.add(specialty)
+
             for supplier, products in build_products():
                 session.add(supplier)
                 await session.flush()

@@ -23,6 +23,13 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from app.config import Settings
 from app.repositories.database import Base
 # Import all models to ensure they are registered with the Base metadata before autogenerate runs
+from app.repositories.country import (  # noqa: F401
+    Country,
+    CountryFeature,
+    InsuranceProvider,
+    Specialty,
+    Subdivision,
+)
 from app.repositories.product import Product, Supplier  # noqa: F401
 from app.repositories.user import User  # noqa: F401
 

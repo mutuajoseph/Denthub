@@ -112,13 +112,21 @@ _Avoid_: Prescription (that belongs to the Health Record)
 **Country**:
 A market DentHub operates in, with its own currency, Subdivision label,
 insurance providers, and feature flags. The frontend's "region" is a Country,
-or `GLOBAL` when none is chosen.
-_Avoid_: Market, locale
+or `GLOBAL` when none is chosen. It also carries two locales that are not the
+same thing: the one it formats money in (`en-KE`), and the one the site falls
+back to for a visitor who has chosen no language (`en`).
+_Avoid_: Market, locale (as a name for the Country itself)
 
 **Subdivision**:
 The administrative area below Country (county in Kenya, state or province
 elsewhere).
 _Avoid_: County (as a generic term), area
+
+**Opening Hours**:
+A Branch's per-day open and close times, stored per weekday rather than as a
+summary string, so "open now" is computed in the Branch's Country at read time
+rather than stored as a flag that goes stale.
+_Avoid_: Business hours string, availability
 
 ### Content and careers
 

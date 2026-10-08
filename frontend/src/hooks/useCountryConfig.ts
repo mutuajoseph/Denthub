@@ -13,7 +13,6 @@ export function useCountryConfig() {
   const regionCode = useRegionStore((s) => s.regionCode || s.getRegion().code);
   const { countiesLabel } = useRegion();
   const config = useCountryConfigStore((s) => s.config);
-  const adaptation = useCountryConfigStore((s) => s.adaptation);
   const regions = useCountryConfigStore((s) => s.regions);
   const loading = useCountryConfigStore((s) => s.loading);
   const regionsLoading = useCountryConfigStore((s) => s.regionsLoading);
@@ -29,47 +28,32 @@ export function useCountryConfig() {
     }
   }, [apiCountry, loadForCountry]);
 
-  const subdivisionLabel =
-    config?.geography?.subdivisionLabel ||
-    adaptation?.subdivisionLabel ||
-    countiesLabel ||
-    "Region";
-
-  const mergedRegions = regions.length > 0 ? regions : getStaticSubdivisions(apiCountry);
-
   const geography = {
-    subdivisionLabel: config?.geography?.subdivisionLabel || countiesLabel,
+    subdivisionLabel: config?.geography.subdivisionLabel || countiesLabel,
     subdivisionPlural:
-      config?.geography?.subdivisionPlural ||
-      adaptation?.subdivisionPlural ||
+      config?.geography.subdivisionPlural ||
       getSubdivisionPlural({ subdivisionLabel: countiesLabel }),
   };
 
+  const subdivisionLabel = geography.subdivisionLabel;
+  // An empty API list means "this country has no subdivisions yet", not "still
+  // loading" and not "here is a hardcoded list". The static list is only a
+  // pre-request fallback.
+  const mergedRegions = regions.length > 0 ? regions : getStaticSubdivisions(apiCountry);
   const subdivisionCount = mergedRegions.length;
   const subdivisionPlural = getSubdivisionPlural(geography);
 
-  const insuranceProviders =
-    adaptation?.insuranceProviders ||
-    config?.featureContexts?.DENTAL_INSURANCE?.insuranceProviders ||
-    [];
+  const insuranceProviders = config?.featureContexts.DENTAL_INSURANCE?.insuranceProviders ?? [];
+  const featureContexts = config?.featureContexts ?? {};
 
-  const featureContexts = config?.featureContexts || {};
-
+  // The scheme is market data, not a chain of country codes in the client. A
+  // market with no scheme configured shows a generic label.
   const insuranceSchemeLabel =
-    apiCountry === "NG"
-      ? "NHIS"
-      : apiCountry === "KE"
-        ? "NHIF"
-        : apiCountry === "IN"
-          ? "PM-JAY"
-          : apiCountry === "TR"
-            ? "SGK"
-            : config?.featureConfigs?.DENTAL_INSURANCE?.primaryScheme || "Insurance";
+    config?.featureConfigs.DENTAL_INSURANCE?.primaryScheme ?? "Insurance";
 
   return {
     apiCountry,
     config,
-    adaptation,
     loading,
     regionsLoading,
     error,
@@ -86,6 +70,7 @@ export function useCountryConfig() {
     insuranceEnabled: isFeatureEnabled("DENTAL_INSURANCE"),
     shopEnabled: isFeatureEnabled("ORAL_CARE_SHOP"),
     jobsEnabled: isFeatureEnabled("JOBS_BOARD"),
+    trainingEnabled: isFeatureEnabled("CPD_TRAINING"),
     insuranceSchemeLabel,
   };
 }
