@@ -1,11 +1,18 @@
-import { BookOpen, Clock } from "lucide-react";
+import { BookOpen, CalendarDays } from "lucide-react";
 
-import type { MagazineArticle } from "../../lib/magazineFixtures";
+import type { MagazineArticleSummary } from "../../lib/magazineApi";
 import Badge from "../ui/Badge";
 
 export interface ArticleCardProps {
-  article: MagazineArticle;
-  onOpen: (article: MagazineArticle) => void;
+  article: MagazineArticleSummary;
+  onOpen: (article: MagazineArticleSummary) => void;
+}
+
+function publishedLabel(publishedAt: string): string {
+  const date = new Date(publishedAt);
+  const format: Intl.DateTimeFormatOptions = { day: "numeric", month: "short", year: "numeric" };
+
+  return Number.isNaN(date.getTime()) ? publishedAt : date.toLocaleDateString("en", format);
 }
 
 export function ArticleCard({ article, onOpen }: ArticleCardProps) {
@@ -18,7 +25,6 @@ export function ArticleCard({ article, onOpen }: ArticleCardProps) {
       <div className="flex flex-1 flex-col p-5">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="gold">{article.category}</Badge>
-          {article.isNew && <Badge variant="green">New</Badge>}
         </div>
 
         <h3 className="mt-3 font-heading font-bold text-gray-900 dark:text-white">
@@ -26,17 +32,15 @@ export function ArticleCard({ article, onOpen }: ArticleCardProps) {
         </h3>
 
         <p className="mt-2 line-clamp-3 text-sm text-gray-600 dark:text-gray-400">
-          {article.excerpt}
+          {article.standfirst}
         </p>
 
-        <p className="mt-3 text-xs text-gray-500 dark:text-gray-500">
-          {article.author} · {article.authorClinic}
-        </p>
+        <p className="mt-3 text-xs text-gray-500 dark:text-gray-500">By {article.authorName}</p>
 
         <div className="mt-auto flex items-center justify-between pt-4">
           <span className="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-            <Clock className="h-3.5 w-3.5" aria-hidden="true" />
-            {article.readMinutes} min read
+            <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
+            {publishedLabel(article.publishedAt)}
           </span>
           <button
             type="button"

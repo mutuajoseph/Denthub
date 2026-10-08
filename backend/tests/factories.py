@@ -19,6 +19,7 @@ from app.repositories.country import (
 )
 from app.repositories.job import JobPosting, JobSalaryRange
 from app.repositories.listing import Branch, Facility, OpeningHour, Specialist
+from app.repositories.magazine import MagazineArticle, MagazineArticleTag
 from app.repositories.product import Product, Supplier
 
 LOCAL_SUPPLIER = {
@@ -338,6 +339,106 @@ def build_listings(specialties: list[Specialty]) -> tuple[list[Facility], list[S
     return [smile_point, nyali, lagos_pearl], [amina, chidi]
 
 
+# --- Magazine ----------------------------------------------------------------
+#
+# Two published articles per market plus a Kenyan draft and a scheduled story,
+# so tests can assert the public list is published-only, ordered newest first,
+# and filterable by country, category, and tag.
+
+#: (country_code, slug, title, standfirst, body, author, category, is_featured,
+#:  status, published_at, tags)
+MAGAZINE_ARTICLES: list[tuple[str, str, str, str, str, str, str, bool, str, str, list[str]]] = [
+    (
+        "KE",
+        "orthodontic-care-in-kenya",
+        "Orthodontic Care in Kenya Is Growing Up",
+        "Clear aligners and adult cases are reshaping Kenyan orthodontics.",
+        "## A market in motion\n\nAdult patients now make up half of new aligner cases.",
+        "Dr. Wanjiku Kamau",
+        "patient-care",
+        True,
+        "published",
+        "2026-10-03T08:00:00",
+        ["orthodontics", "aligners"],
+    ),
+    (
+        "KE",
+        "does-nhif-cover-dental",
+        "Does NHIF Cover Dental Treatment?",
+        "What Kenya's national scheme pays for, and what it does not.",
+        "Extractions and simple fillings are usually covered; implants are not.",
+        "Grace Mwende",
+        "insurance",
+        False,
+        "published",
+        "2026-09-18T09:30:00",
+        ["insurance", "nhif"],
+    ),
+    (
+        "KE",
+        "implant-pricing-primer",
+        "An Implant Pricing Primer (Draft)",
+        "This draft must never appear on the board.",
+        "Implant pricing varies with the component set.",
+        "Dr. Brian Kipchumba",
+        "treatments",
+        False,
+        "draft",
+        "2026-10-08T00:00:00",
+        ["implants", "costs"],
+    ),
+    (
+        "NG",
+        "fluoride-lagos-water",
+        "Fluoride and Lagos Water",
+        "Separating fact from rumor in the public water supply.",
+        "Bottled water is rarely fluoridated.",
+        "Dr. Ngozi Adeyemi",
+        "public-health",
+        True,
+        "published",
+        "2026-09-30T08:00:00",
+        ["fluoride", "public-health"],
+    ),
+]
+
+
+def build_magazine_articles() -> list[MagazineArticle]:
+    """Return the seeded MagazineArticles, tag rows attached."""
+    articles: list[MagazineArticle] = []
+
+    for (
+        country_code,
+        slug,
+        title,
+        standfirst,
+        body,
+        author_name,
+        category,
+        is_featured,
+        status,
+        published_at,
+        tags,
+    ) in MAGAZINE_ARTICLES:
+        articles.append(
+            MagazineArticle(
+                country_code=country_code,
+                slug=slug,
+                title=title,
+                standfirst=standfirst,
+                body=body,
+                author_name=author_name,
+                category=category,
+                is_featured=is_featured,
+                status=status,
+                published_at=datetime.fromisoformat(published_at),
+                tags=[MagazineArticleTag(tag=tag) for tag in tags],
+            )
+        )
+
+    return articles
+
+
 def _product(row: tuple[str, str | None, str, str | None, int, str, bool]) -> Product:
     name, brand, retail, wholesale, min_qty, category, in_stock = row
 
@@ -474,6 +575,7 @@ __all__ = [
     "build_countries",
     "build_jobs",
     "build_listings",
+    "build_magazine_articles",
     "build_products",
     "build_specialties",
 ]

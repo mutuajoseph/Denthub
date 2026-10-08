@@ -43,6 +43,11 @@ from app.repositories.job import (  # noqa: F401
     JobPostingSpecialty,
     JobSalaryRange,
 )
+from app.repositories.magazine import (  # noqa: F401
+    MagazineArticle,
+    MagazineArticleTag,
+)
+)
 from app.repositories.product import Product, Supplier  # noqa: F401
 from app.repositories.user import User  # noqa: F401
 
