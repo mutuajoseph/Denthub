@@ -7,7 +7,7 @@ min_qty, category, in_stock)`.
 
 from __future__ import annotations
 
-from datetime import datetime, time
+from datetime import datetime, time, timedelta, UTC
 from decimal import Decimal
 
 from app.repositories.country import (
@@ -21,6 +21,11 @@ from app.repositories.job import JobPosting, JobSalaryRange
 from app.repositories.listing import Branch, Facility, OpeningHour, Specialist
 from app.repositories.magazine import MagazineArticle, MagazineArticleTag
 from app.repositories.product import Product, Supplier
+from app.repositories.training import (
+    TrainingCourse,
+    TrainingProvider,
+    TrainingWebinar,
+)
 
 LOCAL_SUPPLIER = {
     "name": "Nairobi Dental Supplies",
@@ -569,6 +574,118 @@ def build_jobs(
     ]
 
 
+# --- CPD training -------------------------------------------------------------
+#
+# Three providers, five Kenyan courses (a null-priced free course among them,
+# and one of every delivery mode), and three webinars relative to "now" so the
+# past stays past and the upcoming split is stable however long a test runs.
+# Nigeria is deliberately absent: its CPD_TRAINING flag is off, so seeding rows
+# there would make the disabled plate look served.
+
+
+def build_training(
+    now: datetime | None = None,
+) -> list[TrainingProvider]:
+    """Return the seeded training providers, courses and webinars wired."""
+    base = now or datetime.now(UTC).replace(tzinfo=None)
+
+    nairobi_academy = TrainingProvider(
+        name="Nairobi Dental Academy",
+        country_code="KE",
+        is_verified=True,
+        courses=[
+            TrainingCourse(
+                title="Rotative Endodontics Essentials",
+                description="Two days of hands-on rotary endodontics with fresh cases.",
+                country_code="KE",
+                subdivision_code="NAIROBI",
+                delivery_mode="in_person",
+                price=Decimal("45000"),
+                currency="KES",
+            ),
+            TrainingCourse(
+                title="Clear Aligner Case Planning",
+                description="Selection, staging, and retention of aligner cases.",
+                country_code="KE",
+                subdivision_code="MOMBASA",
+                delivery_mode="in_person",
+                price=Decimal("78000"),
+                currency="KES",
+            ),
+        ],
+        webinars=[
+            TrainingWebinar(
+                title="Articulation in Complete Dentures",
+                description="Recording and transferring jaw relations predictably.",
+                country_code="KE",
+                join_url="https://denthub.test/webinar/articulation",
+                scheduled_start=base - timedelta(days=5),
+            ),
+            TrainingWebinar(
+                title="Infection Control Update 2026",
+                description="The year's changes in sterilisation and disinfection.",
+                country_code="KE",
+                join_url="https://denthub.test/webinar/infection-control",
+                scheduled_start=base + timedelta(days=7),
+            ),
+        ],
+    )
+
+    denthub_learning = TrainingProvider(
+        name="DentHub Learning",
+        country_code="KE",
+        is_verified=True,
+        courses=[
+            TrainingCourse(
+                title="Implant Planning for the General Dentist",
+                description="A six-week online course on assessment and planning for implants.",
+                country_code="KE",
+                subdivision_code="NAIROBI",
+                delivery_mode="online",
+                price=Decimal("32000"),
+                currency="KES",
+            ),
+            TrainingCourse(
+                title="Digital Impressions & CAD/CAM",
+                description="Scan-to-mill workflows for the modern practice.",
+                country_code="KE",
+                subdivision_code="NAIROBI",
+                delivery_mode="online",
+                price=Decimal("24000"),
+                currency="KES",
+            ),
+        ],
+        webinars=[
+            TrainingWebinar(
+                title="Running a Modern Dental Practice",
+                description="Scheduling, pricing, and retention for growing clinics.",
+                country_code="KE",
+                join_url="https://denthub.test/webinar/practice-management",
+                scheduled_start=base + timedelta(days=21),
+            ),
+        ],
+    )
+
+    coast_institute = TrainingProvider(
+        name="Coast Dental Institute",
+        country_code="KE",
+        is_verified=False,
+        courses=[
+            TrainingCourse(
+                title="Hands-on Suturing Refresher",
+                description="Free CPD: knot-tying and soft-tissue closure drills.",
+                country_code="KE",
+                subdivision_code="NAIROBI",
+                delivery_mode="blended",
+                price=None,
+                currency=None,
+            ),
+        ],
+    )
+
+    return [nairobi_academy, denthub_learning, coast_institute]
+
+
 __all__ = [
     "INTERNATIONAL_PRODUCTS",
     "LOCAL_PRODUCTS",
@@ -578,4 +695,5 @@ __all__ = [
     "build_magazine_articles",
     "build_products",
     "build_specialties",
+    "build_training",
 ]
