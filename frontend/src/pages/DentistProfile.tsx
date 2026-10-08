@@ -97,12 +97,13 @@ export function DentistProfile() {
   }
 
   const listing = profile.listing;
-  const typeLabel =
-    listing.listingType === "specialist" ? "Specialist physician" : "Dental practice";
+  const typeLabel = listing.listingType === "specialist" ? "Dental specialist" : "Dental practice";
   const ListingIcon = listing.listingType === "specialist" ? Stethoscope : Building2;
-  const approved =
-    listing.verificationTier === "verified" || listing.verificationTier === "featured";
-  const excellence = listing.verificationTier === "featured";
+  const showVerifiedBadge =
+    listing.listingType === "facility" &&
+    (listing.verificationTier === "verified" || listing.verificationTier === "featured");
+  const showFeaturedNote =
+    listing.listingType === "facility" && listing.verificationTier === "featured";
   const price = formatListingPrice(listing.amount, listing.currency);
   const subdivisionName =
     regions.find((row) => row.code === listing.subdivisionCode)?.name ??
@@ -134,7 +135,7 @@ export function DentistProfile() {
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-orange-600 dark:text-gold-300">
                     {typeLabel}
                   </p>
-                  {approved && (
+                  {showVerifiedBadge && (
                     <Badge variant="green" className="gap-1">
                       <ShieldCheck className="h-3 w-3" aria-hidden="true" />
                       Verified listing
@@ -294,7 +295,7 @@ export function DentistProfile() {
                 </div>
               )}
 
-              {excellence && (
+              {showFeaturedNote && (
                 <div className="flex gap-3 rounded-2xl border border-orange-200 bg-orange-50 p-4 text-sm text-orange-950 dark:border-gold-400/30 dark:bg-gold-400/10 dark:text-gold-300">
                   <Award className="h-5 w-5 shrink-0" aria-hidden="true" />
                   <p>This listing is tagged for excellence.</p>

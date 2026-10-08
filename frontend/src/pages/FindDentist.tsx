@@ -145,7 +145,7 @@ export function FindDentist() {
                   Loading dental providers…
                 </p>
                 <p className="mt-2 text-sm text-slate-500 dark:text-gray-400">
-                  Fetching this market's listings from the directory.
+                  Fetching listings for your selection from the directory.
                 </p>
               </output>
             ) : error && listings.length === 0 ? (

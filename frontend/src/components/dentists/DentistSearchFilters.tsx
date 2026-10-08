@@ -180,7 +180,7 @@ export function DentistSearchFilters({
             className={controlClass}
           >
             <option value="all">All listing types</option>
-            <option value="specialist">Specialist physicians</option>
+            <option value="specialist">Dental specialists</option>
             <option value="facility">Dental practices</option>
           </select>
         </div>

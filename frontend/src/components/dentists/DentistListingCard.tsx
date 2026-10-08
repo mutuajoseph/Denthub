@@ -26,12 +26,13 @@ export function DentistListingCard({
   // prettified label rather than an empty line.
   const regions = useCountryConfigStore((s) => s.regions);
   const profilePath = `/dentists/${listing.listingType}/${encodeURIComponent(listing.id)}`;
-  const typeLabel =
-    listing.listingType === "specialist" ? "Specialist physician" : "Dental practice";
+  const typeLabel = listing.listingType === "specialist" ? "Dental specialist" : "Dental practice";
   const ListingIcon = listing.listingType === "specialist" ? Stethoscope : Building2;
-  const approved =
-    listing.verificationTier === "verified" || listing.verificationTier === "featured";
-  const excellence = listing.verificationTier === "featured";
+  const showVerifiedBadge =
+    listing.listingType === "facility" &&
+    (listing.verificationTier === "verified" || listing.verificationTier === "featured");
+  const showFeaturedNote =
+    listing.listingType === "facility" && listing.verificationTier === "featured";
   const subdivisionName =
     regions.find((row) => row.code === listing.subdivisionCode)?.name ??
     describeSubdivisionCode(listing.subdivisionCode);
@@ -128,7 +129,7 @@ export function DentistListingCard({
               <p className="mt-0.5 text-sm text-slate-500 dark:text-gray-400">{listing.clinic}</p>
             )}
           </div>
-          {approved && (
+          {showVerifiedBadge && (
             <Badge variant="green" className="gap-1">
               <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
               Verified
@@ -140,7 +141,7 @@ export function DentistListingCard({
           {listing.specialties.map((specialty) => (
             <Badge key={specialty}>{specialty}</Badge>
           ))}
-          {excellence && (
+          {showFeaturedNote && (
             <Badge variant="orange" className="gap-1">
               <Award className="h-3 w-3" aria-hidden="true" />
               Excellence
