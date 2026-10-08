@@ -7,7 +7,7 @@ min_qty, category, in_stock)`.
 
 from __future__ import annotations
 
-from datetime import time
+from datetime import datetime, time
 from decimal import Decimal
 
 from app.repositories.country import (
@@ -17,6 +17,7 @@ from app.repositories.country import (
     Specialty,
     Subdivision,
 )
+from app.repositories.job import JobPosting, JobSalaryRange
 from app.repositories.listing import Branch, Facility, OpeningHour, Specialist
 from app.repositories.product import Product, Supplier
 
@@ -354,10 +355,124 @@ def _product(row: tuple[str, str | None, str, str | None, int, str, bool]) -> Pr
     )
 
 
+# --- Jobs board ---------------------------------------------------------------
+#
+# Four published postings across both markets (KE and NG), each attached to a
+# real Branch built by `build_listings`, plus one draft that the public API must
+# never serve. Posted dates are fixed so ordering assertions do not depend on
+# when the test runs. Salary rows cover the response shapes: a full band, a
+# one-sided figure, and no salary at all.
+
+
+def build_jobs(
+    specialties: list[Specialty],
+    facilities: list[Facility],
+) -> list[JobPosting]:
+    """Return the seeded postings, wired to Branches and Specialties."""
+    by_code = {row.code: row for row in specialties}
+    smile_point, nyali, lagos_pearl = facilities
+    westlands = smile_point.branches[0]
+    emergency = smile_point.branches[1]
+    nyali_branch = nyali.branches[0]
+    victoria_island = lagos_pearl.branches[0]
+
+    return [
+        JobPosting(
+            title="Associate Dentist",
+            description="Join a growing general practice in Westlands.",
+            requirements="BDS or equivalent; valid practice licence.",
+            country_code="KE",
+            subdivision_code="NAIROBI",
+            branch=westlands,
+            employment_type="Full Time",
+            seniority="Mid Level",
+            status="published",
+            posted_at=datetime(2026, 10, 2, 9, 0, 0),
+            specialties=[by_code["general-dentistry"], by_code["orthodontics"]],
+            salary_ranges=[
+                JobSalaryRange(
+                    currency="KES",
+                    min_amount=Decimal("120000"),
+                    max_amount=Decimal("180000"),
+                )
+            ],
+        ),
+        JobPosting(
+            title="Dental Nurse",
+            description="Chairside support across our 24-hour emergency unit.",
+            requirements="Certificate in dental nursing.",
+            country_code="KE",
+            subdivision_code="NAIROBI",
+            branch=emergency,
+            employment_type="Part Time",
+            seniority="Entry Level",
+            status="published",
+            posted_at=datetime(2026, 10, 1, 12, 0, 0),
+            specialties=[by_code["general-dentistry"]],
+            salary_ranges=[
+                JobSalaryRange(
+                    currency="KES",
+                    min_amount=Decimal("40000"),
+                    max_amount=None,
+                )
+            ],
+        ),
+        JobPosting(
+            title="Practice Manager",
+            description="Run operations for our coastal clinic.",
+            requirements=None,
+            country_code="KE",
+            subdivision_code="MOMBASA",
+            branch=nyali_branch,
+            employment_type="Full Time",
+            seniority="Senior",
+            status="published",
+            posted_at=datetime(2026, 9, 28, 8, 0, 0),
+            specialties=[],
+            salary_ranges=[],
+        ),
+        JobPosting(
+            title="Orthodontist",
+            description="Lead orthodontic care on Victoria Island.",
+            requirements="Specialist qualification in orthodontics.",
+            country_code="NG",
+            subdivision_code="LAGOS",
+            branch=victoria_island,
+            employment_type="Full Time",
+            seniority="Senior",
+            status="published",
+            posted_at=datetime(2026, 10, 3, 10, 0, 0),
+            specialties=[by_code["orthodontics"]],
+            salary_ranges=[
+                JobSalaryRange(
+                    currency="NGN",
+                    min_amount=Decimal("600000"),
+                    max_amount=Decimal("900000"),
+                )
+            ],
+        ),
+        JobPosting(
+            title="Draft Role",
+            description="Never visible: this posting is still in preparation.",
+            requirements=None,
+            country_code="KE",
+            subdivision_code="NAIROBI",
+            branch=westlands,
+            employment_type="Full Time",
+            seniority="Entry Level",
+            status="draft",
+            posted_at=datetime(2026, 10, 4, 7, 0, 0),
+            specialties=[],
+            salary_ranges=[],
+        ),
+    ]
+
+
 __all__ = [
     "INTERNATIONAL_PRODUCTS",
     "LOCAL_PRODUCTS",
     "build_countries",
+    "build_jobs",
     "build_listings",
     "build_products",
     "build_specialties",

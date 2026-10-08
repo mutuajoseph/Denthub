@@ -38,6 +38,11 @@ from app.repositories.listing import (  # noqa: F401
     Specialist,
     SpecialistSpecialty,
 )
+from app.repositories.job import (  # noqa: F401
+    JobPosting,
+    JobPostingSpecialty,
+    JobSalaryRange,
+)
 from app.repositories.product import Product, Supplier  # noqa: F401
 from app.repositories.user import User  # noqa: F401
 

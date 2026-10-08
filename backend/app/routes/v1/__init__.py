@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.routes.v1 import auth, config, health, listing, products, users
+from app.routes.v1 import auth, config, health, jobs, listing, products, users
 
 v1_router = APIRouter()
 v1_router.include_router(health.router)
@@ -17,3 +17,4 @@ v1_router.include_router(config.router)
 v1_router.include_router(products.router)
 v1_router.include_router(listing.router)
 v1_router.include_router(users.router)
+v1_router.include_router(jobs.router)
