@@ -13,6 +13,7 @@ function makeUser(role: Role): AuthUser {
     email: "user@example.com",
     full_name: "Test User",
     role,
+    is_staff: false,
   };
 }
 

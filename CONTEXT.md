@@ -22,6 +22,13 @@ A Patient seeking care in another Country, typically starting with a
 teleconsultation to get a quotation.
 _Avoid_: Dental tourist
 
+**Account Type**:
+What a person chooses when they create an account: Patient, International
+Patient, an individual dental professional, a Facility, a Supplier, or a
+Training Provider. Platform Staff are never an Account Type — a staff role is
+granted, never chosen at signup.
+_Avoid_: requested role, signup role
+
 **Specialist**:
 The account type for an individual dental professional (dentist, specialist,
 or intern). One of the two professional account types chosen at signup.

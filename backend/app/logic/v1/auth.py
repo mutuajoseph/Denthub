@@ -6,7 +6,7 @@ Handles password hashing, token generation/verification, and signup/login flows.
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, Literal
 
 import bcrypt
 import jwt
@@ -16,6 +16,26 @@ from app.exceptions import ConflictError, ForbiddenException, UnauthorizedExcept
 from app.repositories.user import UserRepository
 from app.utils.state import AppState
 
+#: Account types public signup may create (PRD §2). Staff roles are granted by
+#: staff and are deliberately absent: they are not expressible as input.
+AccountType = Literal[
+    "patient",
+    "international_patient",
+    "dentist",
+    "intern",
+    "facility_owner",
+    "supplier",
+    "training_provider",
+]
+
+#: Roles a human granted, as opposed to roles a signup could ever ask for.
+STAFF_ROLES: frozenset[str] = frozenset({"staff", "admin", "super_admin", "platform_operator"})
+
+
+def is_staff_role(role: str) -> bool:
+    """Whether a stored role is a staff role rather than a public one."""
+    return role in STAFF_ROLES
+
 
 class UserResponse(BaseModel):
     """Public view of a user."""
@@ -24,6 +44,7 @@ class UserResponse(BaseModel):
     email: str
     role: str
     full_name: str
+    is_staff: bool
 
 
 class AuthResponseModel(BaseModel):
@@ -35,12 +56,17 @@ class AuthResponseModel(BaseModel):
 
 
 class UserSignup(BaseModel):
-    """Input parameters for signing up."""
+    """Input parameters for signing up.
+
+    The account type is the only thing a caller may choose; a `role` field in
+    the body is ignored rather than trusted, because a role is granted, never
+    requested (root AGENTS.md, "Auth and security").
+    """
 
     full_name: str
     email: EmailStr
     password: str
-    role: str = "patient"
+    account_type: AccountType = "patient"
     phone: str | None = None
 
 
@@ -134,7 +160,7 @@ async def signup_user(
             full_name=data.full_name,
             email=data.email,
             password_hash=password_hash,
-            role=data.role,
+            role=data.account_type,
             phone=data.phone,
         )
 
@@ -155,6 +181,7 @@ async def signup_user(
                 email=user.email,
                 role=user.role,
                 full_name=user.full_name,
+                is_staff=is_staff_role(user.role),
             ),
         )
 
@@ -194,6 +221,7 @@ async def login_user(
                 email=user.email,
                 role=user.role,
                 full_name=user.full_name,
+                is_staff=is_staff_role(user.role),
             ),
         )
 
@@ -238,4 +266,5 @@ async def get_current_user(
             email=user.email,
             role=user.role,
             full_name=user.full_name,
+            is_staff=is_staff_role(user.role),
         )

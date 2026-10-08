@@ -1,4 +1,4 @@
-import { type Role, normalizeRole } from "../auth/roles";
+import { type Role, isPublicRole, normalizeRole } from "../auth/roles";
 import { API_BASE } from "./api";
 
 export interface AuthUser {
@@ -6,6 +6,7 @@ export interface AuthUser {
   email: string;
   role: Role;
   full_name: string;
+  is_staff: boolean;
 }
 
 export interface AuthResponse {
@@ -24,7 +25,7 @@ export interface RegisterRequest {
   email: string;
   phone?: string;
   password: string;
-  role: Role;
+  account_type: Role;
 }
 
 export const AUTH_STORAGE_KEY = "denthub_auth";
@@ -65,6 +66,7 @@ function parseAuthResponse(value: unknown): AuthResponse {
       email: user.email,
       full_name: user.full_name,
       role,
+      is_staff: user.is_staff === true,
     },
   };
 }
@@ -147,10 +149,10 @@ export async function login(credentials: LoginRequest): Promise<AuthResponse> {
 }
 
 export async function register(data: RegisterRequest): Promise<AuthResponse> {
-  const role = normalizeRole(data.role);
+  const accountType = normalizeRole(data.account_type);
 
-  if (!role) {
-    throw new Error("Invalid registration role");
+  if (!accountType || !isPublicRole(accountType)) {
+    throw new Error("Invalid registration account type");
   }
 
   return postAuth(
@@ -159,7 +161,7 @@ export async function register(data: RegisterRequest): Promise<AuthResponse> {
       full_name: data.full_name,
       email: data.email,
       password: data.password,
-      role,
+      account_type: accountType,
       ...(data.phone === undefined ? {} : { phone: data.phone }),
     },
     "Registration failed",

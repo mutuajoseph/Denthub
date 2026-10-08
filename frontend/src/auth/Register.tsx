@@ -116,7 +116,7 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
         email: email.trim(),
         phone: phone.trim() || undefined,
         password,
-        role: selectedAccount.role,
+        account_type: selectedAccount.role,
       });
 
       onRegisterSuccess?.(response);
