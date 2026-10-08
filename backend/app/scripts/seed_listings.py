@@ -35,7 +35,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from structlog.typing import FilteringBoundLogger
 
 from app.config import Settings
-from app.repositories.country import SpecialtyRepository
+from app.repositories.country import CountryRepository, SpecialtyRepository
 from app.repositories.listing import (
     Branch,
     BranchRepository,
@@ -419,6 +419,22 @@ async def seed(state: AppState) -> None:
     """Insert or update the demo listings."""
     async with state.db_session_maker() as session:
         specialties = {row.code: row for row in await SpecialtyRepository.list_all(session)}
+        if not specialties:
+            raise RuntimeError(
+                "No specialties found; run `python -m app.scripts.seed_countries` first."
+            )
+
+        countries = {row.code for row in await CountryRepository.list_active(session)}
+        needed = {str(row["country_code"]) for row in FACILITIES} | {
+            str(row["country_code"]) for row in SPECIALISTS
+        }
+        missing = sorted(needed - countries)
+        if missing:
+            raise RuntimeError(
+                f"Countries not seeded: {', '.join(missing)}; "
+                "run `python -m app.scripts.seed_countries` first."
+            )
+
         branches: dict[tuple[str, str], Branch] = {}
 
         for row in FACILITIES:
