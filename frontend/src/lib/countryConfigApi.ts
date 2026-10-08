@@ -12,7 +12,6 @@
  */
 
 import type { Subdivision } from "../config/subdivisions";
-import { API_BASE } from "./api";
 import { getJson } from "./apiClient";
 
 /** Module keys. A country with no row for one of these does not offer it. */
@@ -208,7 +207,7 @@ export function mapCountryConfig(wire: CountryConfigWire): CountryConfig {
  */
 export async function fetchCountryConfig(countryCode?: string): Promise<CountryConfig> {
   const wire = await getJson<CountryConfigWire>(
-    `${API_BASE}/config/country`,
+    "/config/country",
     countryCode ? { countryCode } : {},
   );
 
@@ -217,12 +216,12 @@ export async function fetchCountryConfig(countryCode?: string): Promise<CountryC
 
 /** Every active country, for the region switcher. */
 export async function fetchCountries(): Promise<CountryListWire> {
-  return getJson<CountryListWire>(`${API_BASE}/config/countries`);
+  return getJson<CountryListWire>("/config/countries");
 }
 
 /** A country's subdivisions, alphabetical. Empty for a country we do not serve. */
 export async function fetchSubdivisions(countryCode: string): Promise<Subdivision[]> {
-  const wire = await getJson<SubdivisionListWire>(`${API_BASE}/config/country/regions`, {
+  const wire = await getJson<SubdivisionListWire>("/config/country/regions", {
     query: { country: countryCode },
   });
 
@@ -231,6 +230,6 @@ export async function fetchSubdivisions(countryCode: string): Promise<Subdivisio
 
 /** Specialties, in display order. The `code` is what a query string carries. */
 export async function fetchSpecialties(): Promise<SpecialtyWire[]> {
-  const wire = await getJson<SpecialtyListWire>(`${API_BASE}/config/specialties`);
+  const wire = await getJson<SpecialtyListWire>("/config/specialties");
   return wire.items;
 }

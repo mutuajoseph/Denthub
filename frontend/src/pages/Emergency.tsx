@@ -1,18 +1,36 @@
-import { AlertTriangle, ArrowRight, Globe2, PhoneCall, ShieldAlert } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  Globe2,
+  PhoneCall,
+  ShieldAlert,
+  TriangleAlert,
+} from "lucide-react";
+import { useMemo } from "react";
 import { DentistListingCard } from "../components/dentists/DentistListingCard";
 import Button from "../components/ui/Button";
-import { listDentistFixtures } from "../lib/dentistFixtures";
+import { useCountryConfig } from "../hooks/useCountryConfig";
+import { useListingSearch } from "../hooks/useListingSearch";
+import { searchListings } from "../lib/listingSearch";
 
-const OPEN_LISTINGS = listDentistFixtures()
-  .filter((listing) => listing.hours.openNow)
-  .slice()
-  .sort((left, right) => {
-    if (left.name < right.name) return -1;
-    if (left.name > right.name) return 1;
-    return left.id < right.id ? -1 : left.id > right.id ? 1 : 0;
-  });
+function describeError(error: unknown): string {
+  return error instanceof Error ? error.message : "Something went wrong loading the directory.";
+}
 
 export function Emergency() {
+  const { apiCountry } = useCountryConfig();
+  const { listings, isLoading, error, refetch } = useListingSearch({
+    country: apiCountry,
+    listingType: "all",
+  });
+
+  const openListings = useMemo(
+    () => searchListings({ openNow: true, sort: "name_asc" }, listings),
+    [listings],
+  );
+
+  const hasData = listings.length > 0;
+
   return (
     <div className="bg-slate-50 dark:bg-navy-950">
       <div className="bg-red-600 px-4 py-3 text-center text-sm font-semibold text-white">
@@ -83,18 +101,63 @@ export function Emergency() {
                 Open dental listings
               </h2>
               <p className="mt-2 text-sm text-slate-600 dark:text-gray-300">
-                {`${OPEN_LISTINGS.length} fixture listings marked open now`}
+                {`${openListings.length} ${openListings.length === 1 ? "listing" : "listings"} marked open now`}
               </p>
             </div>
             <p className="max-w-md text-sm leading-6 text-slate-500 dark:text-gray-400">
-              Open status comes from the frontend fixture dataset, not a live availability feed.
-              Call first to confirm urgent capacity.
+              Open status comes from each listing's published opening hours. Call first to confirm
+              urgent capacity.
             </p>
           </div>
 
-          {OPEN_LISTINGS.length > 0 ? (
+          {error && hasData && (
+            <div
+              role="alert"
+              className="mt-6 flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 sm:flex-row sm:items-center sm:justify-between dark:border-gold-400/30 dark:bg-gold-400/10 dark:text-gold-300"
+            >
+              <p>Could not refresh the directory — showing the last loaded listings.</p>
+              <button
+                type="button"
+                onClick={() => void refetch()}
+                className="min-h-11 shrink-0 rounded-lg border border-amber-300 px-4 font-heading text-sm font-semibold transition hover:border-amber-400 dark:border-gold-400/40"
+              >
+                Try again
+              </button>
+            </div>
+          )}
+
+          {!hasData && isLoading ? (
+            <output className="mt-6 rounded-2xl border border-slate-200 bg-white p-8 text-center dark:border-navy-600 dark:bg-navy-800">
+              <p className="font-heading text-lg font-semibold text-slate-900 dark:text-white">
+                Loading open listings…
+              </p>
+            </output>
+          ) : !hasData && error ? (
+            <div
+              role="alert"
+              className="mt-6 rounded-2xl border border-red-200 bg-white p-8 text-center dark:border-red-500/30 dark:bg-navy-800"
+            >
+              <TriangleAlert
+                className="mx-auto h-8 w-8 text-red-600 dark:text-red-400"
+                aria-hidden="true"
+              />
+              <h3 className="mt-4 font-heading text-lg font-semibold text-slate-900 dark:text-white">
+                Directory unavailable
+              </h3>
+              <p className="mx-auto mt-2 max-w-md text-sm text-slate-600 dark:text-gray-300">
+                {describeError(error)}
+              </p>
+              <button
+                type="button"
+                onClick={() => void refetch()}
+                className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-orange-500 px-5 py-2.5 font-heading text-sm font-semibold text-white transition hover:bg-orange-600"
+              >
+                Try again
+              </button>
+            </div>
+          ) : openListings.length > 0 ? (
             <div className="mt-6 grid gap-4 lg:grid-cols-2">
-              {OPEN_LISTINGS.map((listing) => (
+              {openListings.map((listing) => (
                 <DentistListingCard
                   key={listing.id}
                   listing={listing}

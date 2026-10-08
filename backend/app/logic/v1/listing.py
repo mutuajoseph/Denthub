@@ -97,6 +97,15 @@ class DentistListing(BaseModel):
     #: One currency for the whole page; a listing's own currency is this value.
     currency: str
     open_now: bool
+    #: A number a patient can dial: the Facility's own phone, or a phone from
+    #: one of the Specialist's Branches. Null when no number is published.
+    phone: str | None
+    #: The tier a Facility is verified at (``CONTEXT.md`` "Verification tier").
+    #: Always null for a Specialist: specialists do not carry a tier yet.
+    verification_tier: VerificationTier | None
+    #: For a Specialist, the Facility they work at as a card shows it; a
+    #: Facility's own name is its ``name``, so this is null for a Facility.
+    clinic_name: str | None
 
 
 class ListingPage(BaseModel):
@@ -235,6 +244,25 @@ def _serialize_specialties(specialties: Sequence[Specialty]) -> list[SpecialtyRe
     ]
 
 
+def _specialist_workplace(specialist: Specialist) -> tuple[str | None, str | None]:
+    """Where a Specialist works, as a card renders it: ``(clinic_name, phone)``.
+
+    Branches arrive in no guaranteed order, so the primary Branch is the first
+    alphabetically by its Facility's name, then the Branch name - the same
+    choice on every read. The phone is the first published number in that
+    order: any Branch the Specialist works at reaches them.
+    """
+    if not specialist.branches:
+        return None, None
+
+    ordered = sorted(
+        specialist.branches,
+        key=lambda branch: (branch.facility.name, branch.name or ""),
+    )
+    phone = next((branch.phone for branch in ordered if branch.phone), None)
+    return ordered[0].facility.name, phone
+
+
 def _facility_listing(
     facility: Facility,
     *,
@@ -260,6 +288,9 @@ def _facility_listing(
             is_open_now(branch.opening_hours, timezone_name=timezone_name, now_utc=now)
             for branch in facility.branches
         ),
+        phone=facility.phone,
+        verification_tier=facility.verification_tier,
+        clinic_name=None,
     )
 
 
@@ -270,6 +301,7 @@ def _specialist_listing(
     timezone_name: str,
     now: datetime,
 ) -> DentistListing:
+    clinic_name, phone = _specialist_workplace(specialist)
     return DentistListing(
         id=specialist.id,
         listing_type="specialist",
@@ -289,6 +321,9 @@ def _specialist_listing(
             is_open_now(branch.opening_hours, timezone_name=timezone_name, now_utc=now)
             for branch in specialist.branches
         ),
+        phone=phone,
+        verification_tier=None,
+        clinic_name=clinic_name,
     )
 
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatPrice } from "./formatCurrency";
+import { formatListingPrice, formatPrice } from "./formatCurrency";
 
 /**
  * `Intl.NumberFormat` separates the currency from the digits with U+00A0
@@ -40,5 +40,34 @@ describe("formatPrice", () => {
 
   it("defaults to the runtime locale when none is given", () => {
     expect(price(350, "KES")).toBe("KES 350");
+  });
+});
+
+function listingPrice(amount: string | null, currency: string, locale?: string): string | null {
+  const formatted = formatListingPrice(amount, currency, locale);
+  return formatted === null ? null : formatted.replace(/\s/g, " ");
+}
+
+describe("formatListingPrice", () => {
+  it("decides cents on the string, not float arithmetic", () => {
+    // "1500.00" has no real cents; "1500.50" does. Parsing to a number first
+    // would make both of these indistinguishable from other float noise.
+    expect(listingPrice("1500.00", "KES", LOCALE)).toBe("KES 1,500");
+    expect(listingPrice("1500.50", "KES", LOCALE)).toBe("KES 1,500.50");
+    expect(listingPrice("0.10", "KES", LOCALE)).toBe("KES 0.10");
+  });
+
+  it("passes null through so an unpriced tile can hide the block", () => {
+    expect(listingPrice(null, "KES", LOCALE)).toBeNull();
+    expect(listingPrice("   ", "KES", LOCALE)).toBeNull();
+  });
+
+  it("returns null for an unparseable amount instead of rendering NaN", () => {
+    expect(listingPrice("not-a-number", "KES", LOCALE)).toBeNull();
+  });
+
+  it("uses the currency the API resolved and falls back to KES", () => {
+    expect(listingPrice("500.00", "NGN", LOCALE)).toBe("NGN 500");
+    expect(listingPrice("500.00", "", LOCALE)).toBe("KES 500");
   });
 });

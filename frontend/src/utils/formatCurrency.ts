@@ -53,3 +53,33 @@ export function formatPrice(amount: number, currency: string, locale?: string): 
     maximumFractionDigits: hasCents ? 2 : 0,
   }).format(amount);
 }
+
+/**
+ * Formats an exact decimal-string price the listings API returned (`list_price`).
+ *
+ * The cents decision is made on the string, never on float arithmetic, so an
+ * exact `NUMERIC(12,2)` value keeps its cents (`1500.50` → "KES 1,500.50")
+ * while a whole amount reads clean (`1500.00` → "KES 1,500"). `null` passes
+ * through so a caller can hide an unpriced tile.
+ */
+export function formatListingPrice(
+  amount: string | null,
+  currency: string,
+  locale?: string,
+): string | null {
+  if (amount === null || amount.trim() === "") return null;
+
+  const [, fraction = ""] = amount.split(".");
+  const hasCents = fraction.replace(/0+$/, "") !== "";
+  // NUMERIC(12,2) holds at most 10 integer digits, so this is exact for every
+  // value the column can store; only Intl's rendering goes through a number.
+  const value = Number(amount);
+  if (!Number.isFinite(value)) return null;
+
+  return new Intl.NumberFormat(locale || undefined, {
+    style: "currency",
+    currency: currency || "KES",
+    minimumFractionDigits: hasCents ? 2 : 0,
+    maximumFractionDigits: hasCents ? 2 : 0,
+  }).format(value);
+}

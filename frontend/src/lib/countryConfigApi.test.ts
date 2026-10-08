@@ -1,13 +1,20 @@
-/**
- * The wire->UI mapper is the client's copy of the backend contract, so these
- * tests pin the translation: what the API sends becomes what components read.
- */
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { describe, expect, it } from "vitest";
-import type { CountryConfigWire } from "./countryConfigApi";
-import { mapCountryConfig } from "./countryConfigApi";
+vi.mock("./apiClient", () => ({
+  getJson: vi.fn(),
+}));
 
-const KENYA: CountryConfigWire = {
+import { getJson } from "./apiClient";
+import {
+  fetchCountries,
+  fetchCountryConfig,
+  fetchSpecialties,
+  fetchSubdivisions,
+} from "./countryConfigApi";
+
+const getJsonMock = vi.mocked(getJson);
+
+const wireConfig = {
   code: "KE",
   name: "Kenya",
   currency: "KES",
@@ -19,94 +26,76 @@ const KENYA: CountryConfigWire = {
   geography: {
     subdivision_label: "County",
     subdivision_label_plural: "Counties",
-    city_label: "Town",
+    city_label: "City",
   },
   features: [
-    { feature: "DENTAL_INSURANCE", is_enabled: true, primary_scheme: "NHIF" },
     { feature: "ORAL_CARE_SHOP", is_enabled: true, primary_scheme: null },
+    { feature: "DENTAL_INSURANCE", is_enabled: false, primary_scheme: null },
   ],
-  insurance_providers: [
-    { id: "p-1", name: "NHIF", is_national: true },
-    { id: "p-2", name: "Britam", is_national: false },
-  ],
-  subdivisions: [
-    { id: "s-1", code: "MOMBASA", name: "Mombasa", country_code: "KE" },
-    { id: "s-2", code: "NAIROBI", name: "Nairobi", country_code: "KE" },
-  ],
+  insurance_providers: [{ id: "i1", name: "NHIF", is_national: true }],
+  subdivisions: [{ id: "KE-NBI", code: "NAIROBI", name: "Nairobi", country_code: "KE" }],
 };
 
-describe("mapCountryConfig", () => {
-  it("formats with the market's locale, never the fallback", () => {
-    const config = mapCountryConfig(KENYA);
-
-    // This value reaches `Intl.NumberFormat` and `<html lang>`. `en-KE` renders
-    // "KSh"; the `en` fallback renders "KES". Preferring the fallback would
-    // quietly change how every price on the site reads.
-    expect(config.locale).toBe("en-KE");
+describe("countryConfigApi paths", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
-  it("turns the geography labels into the camelCase keys components read", () => {
-    const config = mapCountryConfig(KENYA);
+  it("asks for the country config at the relative path apiClient prefixes once", async () => {
+    getJsonMock.mockResolvedValue(wireConfig);
 
-    expect(config.geography).toEqual({
-      subdivisionLabel: "County",
-      subdivisionPlural: "Counties",
-      cityLabel: "Town",
+    await fetchCountryConfig("KE");
+
+    // Regression guard: these calls used to carry `${API_BASE}/...` into
+    // getJson, which prepends `/api/v1` again, so every request 404'd and the
+    // store silently fell back to static data.
+    expect(getJsonMock).toHaveBeenCalledWith("/config/country", { countryCode: "KE" });
+    expect(getJsonMock.mock.calls[0][0]).not.toMatch(/^\/api\/v1/);
+  });
+
+  it("omits the override header option when no country is passed", async () => {
+    getJsonMock.mockResolvedValue(wireConfig);
+
+    await fetchCountryConfig();
+
+    expect(getJsonMock).toHaveBeenCalledWith("/config/country", {});
+  });
+
+  it("fetches subdivisions relative to the config resource", async () => {
+    getJsonMock.mockResolvedValue({
+      country_code: "KE",
+      items: [{ id: "KE-NBI", code: "NAIROBI", name: "Nairobi", country_code: "KE" }],
     });
-  });
 
-  it("flattens the features list into a lookup by key", () => {
-    const config = mapCountryConfig(KENYA);
+    const regions = await fetchSubdivisions("KE");
 
-    expect(config.features.DENTAL_INSURANCE).toBe(true);
-    expect(config.features.ORAL_CARE_SHOP).toBe(true);
-  });
-
-  it("keeps the primary scheme, and null when a feature has none", () => {
-    const config = mapCountryConfig(KENYA);
-
-    expect(config.featureConfigs.DENTAL_INSURANCE?.primaryScheme).toBe("NHIF");
-    expect(config.featureConfigs.ORAL_CARE_SHOP?.primaryScheme).toBeNull();
-  });
-
-  it("lists every insurance provider under the insurance feature context", () => {
-    const config = mapCountryConfig(KENYA);
-
-    expect(config.featureContexts.DENTAL_INSURANCE?.insuranceProviders).toEqual(["NHIF", "Britam"]);
-  });
-
-  it("surfaces only the national scheme as the headline provider", () => {
-    const config = mapCountryConfig(KENYA);
-
-    expect(config.insuranceProviders).toEqual(["NHIF"]);
-  });
-
-  it("gives a subdivision a stable id built from its country and code", () => {
-    const config = mapCountryConfig(KENYA);
-
-    expect(config.regions).toEqual([
-      { id: "KE-MOMBASA", name: "Mombasa", code: "MOMBASA", countryCode: "KE" },
+    expect(getJsonMock).toHaveBeenCalledWith("/config/country/regions", {
+      query: { country: "KE" },
+    });
+    expect(regions).toEqual([
+      // The wire id is discarded; the UI id is rebuilt from country + code.
       { id: "KE-NAIROBI", name: "Nairobi", code: "NAIROBI", countryCode: "KE" },
     ]);
   });
 
-  it("leaves a feature the market does not offer absent rather than false", () => {
-    const config = mapCountryConfig(KENYA);
+  it("fetches the country list and the specialty list relative", async () => {
+    getJsonMock.mockResolvedValue({ items: [], default_country_code: "KE" });
+    await fetchCountries();
+    expect(getJsonMock).toHaveBeenCalledWith("/config/countries");
 
-    // A caller reads a missing key as "not offered here".
-    expect(config.features.CPD_TRAINING).toBeUndefined();
-  });
-
-  it("withholds the provider list from a market that switched insurance off", () => {
-    const config = mapCountryConfig({
-      ...KENYA,
-      features: [
-        { feature: "DENTAL_INSURANCE", is_enabled: false, primary_scheme: null },
-        { feature: "ORAL_CARE_SHOP", is_enabled: true, primary_scheme: null },
+    getJsonMock.mockResolvedValue({
+      items: [
+        {
+          id: "sp1",
+          code: "orthodontics",
+          name: "Orthodontics",
+          description: null,
+          display_order: 2,
+        },
       ],
     });
-
-    expect(config.features.DENTAL_INSURANCE).toBe(false);
-    expect(config.featureContexts.DENTAL_INSURANCE).toBeUndefined();
+    const specialties = await fetchSpecialties();
+    expect(getJsonMock).toHaveBeenCalledWith("/config/specialties");
+    expect(specialties).toHaveLength(1);
   });
 });

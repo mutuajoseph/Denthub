@@ -43,6 +43,11 @@ _Avoid_: Clinic, practice
 One physical location of a Facility; a Facility has one or more.
 _Avoid_: Location, site, address
 
+**Workplace**:
+A Branch where a Specialist practises. A Specialist has one or more, and
+their directory presence is anchored on the primary one.
+_Avoid_: employer, affiliation
+
 **Facility Staff**:
 A person working inside a Facility with a facility-scoped permission set, such
 as Front Office (appointments and check-in only) or clinical (full chart access).
@@ -90,6 +95,14 @@ _Avoid_: Booking, visit
 The Patient-owned record of medical and dental history, prescriptions,
 allergies, and maternal status, writable by any Verified Medic treating them.
 _Avoid_: Medical record, EHR, file
+
+### Directory
+
+**Listing**:
+A Facility or Specialist as the directory presents it — a search result and
+its profile page — graded by its Verification tier and carrying its Opening
+Hours and price. A Job posting is never a Listing.
+_Avoid_: vacancy, job post
 
 ### Shop
 
