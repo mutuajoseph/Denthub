@@ -1,7 +1,8 @@
 """HTTP-level tests for the public signup and login endpoints.
 
 Public signup creates public account types only (PRD §2); staff roles are
-granted by staff, never requested by the caller.
+granted by staff, never requested by the caller. Professional accounts start
+life pending staff review; patient accounts are active immediately.
 """
 
 from __future__ import annotations
@@ -30,6 +31,7 @@ async def test_patient_signup_succeeds(client: AsyncClient) -> None:
     assert body["access_token"]
     assert body["user"]["role"] == "patient"
     assert body["user"]["is_staff"] is False
+    assert body["user"]["account_status"] == "active"
 
 
 async def test_signup_ignores_a_role_supplied_in_the_body(client: AsyncClient) -> None:
@@ -69,6 +71,43 @@ async def test_specialist_signup_is_honoured(client: AsyncClient) -> None:
     assert body["user"]["is_staff"] is False
 
 
+async def test_professional_signup_starts_pending(client: AsyncClient) -> None:
+    response = await client.post(
+        "/api/v1/auth/register",
+        json=signup_payload(email="dentist@example.com", account_type="dentist"),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["user"]["role"] == "dentist"
+    assert body["user"]["account_status"] == "pending"
+
+
+async def test_patient_signup_is_active(client: AsyncClient) -> None:
+    response = await client.post(
+        "/api/v1/auth/register",
+        json=signup_payload(email="patient@example.com", account_type="patient"),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["user"]["account_status"] == "active"
+
+
+async def test_login_carries_the_account_status(client: AsyncClient) -> None:
+    await client.post(
+        "/api/v1/auth/register",
+        json=signup_payload(email="intern@example.com", account_type="intern"),
+    )
+
+    response = await client.post(
+        "/api/v1/auth/login",
+        json={"email": "intern@example.com", "password": "correct horse battery staple"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["user"]["account_status"] == "pending"
+
+
 async def test_staff_account_type_is_rejected(client: AsyncClient) -> None:
     response = await client.post(
         "/api/v1/auth/register",
@@ -89,3 +128,19 @@ async def test_me_reports_a_granted_role_as_not_staff(client: AsyncClient) -> No
 
     assert response.status_code == 200
     assert response.json()["is_staff"] is False
+
+
+async def test_me_carries_the_account_status(client: AsyncClient) -> None:
+    signup = await client.post(
+        "/api/v1/auth/register",
+        json=signup_payload(email="facility@example.com", account_type="facility_owner"),
+    )
+    token = signup.json()["access_token"]
+
+    response = await client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["account_status"] == "pending"

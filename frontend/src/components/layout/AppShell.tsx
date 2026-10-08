@@ -10,6 +10,7 @@ import { BackToTop } from "./BackToTop";
 import { EmergencyFAB } from "./EmergencyFAB";
 import { Footer } from "./Footer";
 import { MobileNav } from "./MobileNav";
+import { PendingAccountNotice } from "./PendingAccountNotice";
 
 export interface AppShellProps {
   onSignIn?: () => void;
@@ -51,6 +52,7 @@ export function AppShell({
         <AnnouncementBar />
         <Navbar onSignIn={onSignIn} user={user} onLogout={onLogout} />
       </div>
+      <PendingAccountNotice user={user} />
       <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 focus:outline-none">
         {children ?? <Outlet />}
       </main>

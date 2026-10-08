@@ -14,6 +14,7 @@ function makeUser(role: Role): AuthUser {
     full_name: "Test User",
     role,
     is_staff: false,
+    account_status: "active",
   };
 }
 
