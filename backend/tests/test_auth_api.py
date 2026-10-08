@@ -57,6 +57,18 @@ async def test_public_account_type_is_honoured(client: AsyncClient) -> None:
     assert body["user"]["is_staff"] is False
 
 
+async def test_specialist_signup_is_honoured(client: AsyncClient) -> None:
+    response = await client.post(
+        "/api/v1/auth/register",
+        json=signup_payload(email="kiptoo@example.com", account_type="specialist"),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["user"]["role"] == "specialist"
+    assert body["user"]["is_staff"] is False
+
+
 async def test_staff_account_type_is_rejected(client: AsyncClient) -> None:
     response = await client.post(
         "/api/v1/auth/register",

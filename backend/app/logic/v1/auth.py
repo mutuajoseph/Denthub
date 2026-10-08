@@ -22,6 +22,7 @@ AccountType = Literal[
     "patient",
     "international_patient",
     "dentist",
+    "specialist",
     "intern",
     "facility_owner",
     "supplier",
