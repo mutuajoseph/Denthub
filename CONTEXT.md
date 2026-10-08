@@ -54,6 +54,12 @@ it gates browsing or only ordering/enrolling in CPD and Suppliers is open
 (PRD §8.1).
 _Avoid_: Verified user, approved doctor
 
+**Verification tier**:
+How far a Facility or Specialist profile has been checked by DentHub, one of
+four grades in order: unverified, basic, verified, featured. Staff set it; it
+grades the profile, it is not a set of independent flags.
+_Avoid_: isVerified, approved/excellence flags
+
 **Supplier**:
 A business selling oral-care or dental products, either local or
 international in scope.

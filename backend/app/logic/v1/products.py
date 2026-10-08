@@ -8,13 +8,14 @@ quantity and receive the price to charge.
 from __future__ import annotations
 
 from datetime import datetime
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 from typing import Literal
 
 from pydantic import BaseModel
 
 from app.exceptions import NotFoundException
 from app.repositories.product import Product, ProductFilters, ProductRepository
+from app.utils.money import quantize_money
 from app.utils.state import AppState
 
 PurchaseMode = Literal["retail", "wholesale"]
@@ -26,13 +27,6 @@ DEFAULT_WHOLESALE_MIN_QTY = 12
 
 MAX_PAGE_SIZE = 100
 DEFAULT_PAGE_SIZE = 48
-
-_CENT = Decimal("0.01")
-
-
-def quantize_money(value: Decimal) -> Decimal:
-    """Round a money amount to 2 decimal places, half-up."""
-    return value.quantize(_CENT, rounding=ROUND_HALF_UP)
 
 
 def wholesale_price_for(product: Product) -> Decimal | None:

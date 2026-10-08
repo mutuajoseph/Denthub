@@ -30,6 +30,14 @@ from app.repositories.country import (  # noqa: F401
     Specialty,
     Subdivision,
 )
+from app.repositories.listing import (  # noqa: F401
+    Branch,
+    DentistBranch,
+    Facility,
+    OpeningHour,
+    Specialist,
+    SpecialistSpecialty,
+)
 from app.repositories.product import Product, Supplier  # noqa: F401
 from app.repositories.user import User  # noqa: F401
 

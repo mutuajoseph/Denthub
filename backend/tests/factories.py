@@ -7,6 +7,7 @@ min_qty, category, in_stock)`.
 
 from __future__ import annotations
 
+from datetime import time
 from decimal import Decimal
 
 from app.repositories.country import (
@@ -16,6 +17,7 @@ from app.repositories.country import (
     Specialty,
     Subdivision,
 )
+from app.repositories.listing import Branch, Facility, OpeningHour, Specialist
 from app.repositories.product import Product, Supplier
 
 LOCAL_SUPPLIER = {
@@ -197,6 +199,144 @@ def build_specialties() -> list[Specialty]:
     ]
 
 
+# --- Listings -----------------------------------------------------------------
+#
+# Three Facilities across two markets and two subdivisions, each at a different
+# verification tier, plus one Specialist per market attached to a Facility's
+# Branch. The hours are deliberately extreme - a branch open every minute of the
+# week, one open on no day at all - so an API test can assert `open_now` without
+# depending on when it runs.
+
+
+def _hours(weekday: int, opens: str | None, closes: str | None, is_closed: bool) -> OpeningHour:
+    return OpeningHour(
+        weekday=weekday,
+        opens=time.fromisoformat(opens) if opens else None,
+        closes=time.fromisoformat(closes) if closes else None,
+        is_closed=is_closed,
+    )
+
+
+def _always_open() -> list[OpeningHour]:
+    return [_hours(weekday, "00:00", "23:59", False) for weekday in range(7)]
+
+
+def build_listings(specialties: list[Specialty]) -> tuple[list[Facility], list[Specialist]]:
+    """Return the seeded Facilities and Specialists, relationships wired.
+
+    ``specialties`` must be the same instances ``build_specialties`` returned so
+    the join tables resolve against the rows already in the session.
+    """
+    by_code = {row.code: row for row in specialties}
+
+    westlands = Branch(
+        name="Westlands",
+        subdivision_code="NAIROBI",
+        address="Kileleshwa Road, Nairobi",
+        phone="+254 711 000 111",
+        email="hello@smilepoint.test",
+        opening_hours=[
+            # Mon-Fri 08:00-17:00, Sat 09:00-13:00, Sun explicitly closed.
+            *[_hours(weekday, "08:00", "17:00", False) for weekday in range(5)],
+            _hours(5, "09:00", "13:00", False),
+            _hours(6, None, None, True),
+        ],
+    )
+    emergency = Branch(
+        name="24-Hour Emergency",
+        subdivision_code="NAIROBI",
+        address="Ngong Road, Nairobi",
+        phone="+254 711 000 112",
+        # Open every minute of the week, so an API test can assert
+        # `open_now is True` whenever it happens to run.
+        opening_hours=_always_open(),
+    )
+    smile_point = Facility(
+        name="Smile Point Dental",
+        country_code="KE",
+        subdivision_code="NAIROBI",
+        address="Kileleshwa Road, Nairobi",
+        phone="+254 711 000 111",
+        email="hello@smilepoint.test",
+        verification_tier="verified",
+        currency="KES",
+        list_price=Decimal("2500"),
+        rating=Decimal("4.80"),
+        review_count=37,
+        branches=[westlands, emergency],
+    )
+
+    nyali_branch = Branch(
+        subdivision_code="MOMBASA",
+        address="Shanzu Road, Mombasa",
+        # An explicit closed day and no other rows: closed whatever the clock says.
+        opening_hours=[_hours(6, None, None, True)],
+    )
+    nyali = Facility(
+        name="Nyali Coastal Dental",
+        country_code="KE",
+        subdivision_code="MOMBASA",
+        address="Shanzu Road, Mombasa",
+        verification_tier="unverified",
+        currency="KES",
+        list_price=None,
+        rating=None,
+        review_count=0,
+        branches=[nyali_branch],
+    )
+
+    victoria_island = Branch(
+        name="Victoria Island",
+        subdivision_code="LAGOS",
+        address="Adetokunbo Ademola Street, Lagos",
+        phone="+234 801 000 222",
+        email="care@lagospearl.test",
+        opening_hours=[],
+    )
+    lagos_pearl = Facility(
+        name="Lagos Pearl Dental",
+        country_code="NG",
+        subdivision_code="LAGOS",
+        address="Adetokunbo Ademola Street, Lagos",
+        phone="+234 801 000 222",
+        email="care@lagospearl.test",
+        verification_tier="basic",
+        currency="NGN",
+        list_price=Decimal("45000"),
+        rating=Decimal("4.50"),
+        review_count=10,
+        branches=[victoria_island],
+    )
+
+    amina = Specialist(
+        name="Dr. Amina Otieno",
+        slug="amina-otieno",
+        country_code="KE",
+        subdivision_code="NAIROBI",
+        currency="KES",
+        list_price=Decimal("3500"),
+        rating=Decimal("4.90"),
+        review_count=12,
+        specialties=[by_code["general-dentistry"], by_code["orthodontics"]],
+        branches=[westlands],
+    )
+
+    chidi = Specialist(
+        name="Dr. Chidi Okafor",
+        slug="chidi-okafor",
+        country_code="NG",
+        subdivision_code="LAGOS",
+        currency="NGN",
+        list_price=Decimal("50000"),
+        rating=None,
+        review_count=0,
+        specialties=[by_code["general-dentistry"]],
+        branches=[victoria_island],
+    )
+
+    return [smile_point, nyali, lagos_pearl], [amina, chidi]
+
+
 def _product(row: tuple[str, str | None, str, str | None, int, str, bool]) -> Product:
     name, brand, retail, wholesale, min_qty, category, in_stock = row
 
@@ -218,6 +358,7 @@ __all__ = [
     "INTERNATIONAL_PRODUCTS",
     "LOCAL_PRODUCTS",
     "build_countries",
+    "build_listings",
     "build_products",
     "build_specialties",
 ]
