@@ -86,7 +86,7 @@ describe("auth contract", () => {
     localStorage.clear();
   });
 
-  it("sends the FastAPI role field and stores one canonical session", async () => {
+  it("sends the account type and stores one canonical session", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -97,6 +97,7 @@ describe("auth contract", () => {
           email: "clinic@example.com",
           full_name: "Clinic Owner",
           role: "facility_admin",
+          is_staff: false,
         },
       }),
     });
@@ -106,7 +107,7 @@ describe("auth contract", () => {
       full_name: "Clinic Owner",
       email: "clinic@example.com",
       password: "password123",
-      role: ROLE.FACILITY_OWNER,
+      account_type: ROLE.FACILITY_OWNER,
     });
 
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
@@ -115,9 +116,10 @@ describe("auth contract", () => {
       full_name: "Clinic Owner",
       email: "clinic@example.com",
       password: "password123",
-      role: ROLE.FACILITY_OWNER,
+      account_type: ROLE.FACILITY_OWNER,
     });
     expect(response.user.role).toBe(ROLE.FACILITY_OWNER);
+    expect(response.user.is_staff).toBe(false);
     expect(getStoredAuth()).toEqual(response);
   });
 
@@ -134,6 +136,7 @@ describe("auth contract", () => {
             email: "user@example.com",
             full_name: "Unknown User",
             role: "unrecognized",
+            is_staff: false,
           },
         }),
       }),
@@ -144,9 +147,24 @@ describe("auth contract", () => {
         full_name: "Unknown User",
         email: "user@example.com",
         password: "password123",
-        role: ROLE.PATIENT,
+        account_type: ROLE.PATIENT,
       }),
     ).rejects.toThrow("Invalid authentication response");
     expect(getStoredAuth()).toBeNull();
+  });
+
+  it("refuses a staff account type at registration", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      register({
+        full_name: "Wannabe Admin",
+        email: "admin@example.com",
+        password: "password123",
+        account_type: ROLE.ADMIN,
+      }),
+    ).rejects.toThrow("Invalid registration account type");
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
