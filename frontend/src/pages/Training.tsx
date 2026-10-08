@@ -119,7 +119,7 @@ export function Training() {
                 <p className="mt-1 text-xs text-graphite">{webinar.providerName}</p>
                 <p className="mt-3 line-clamp-2 text-xs text-slate">{webinar.description}</p>
                 <div className="mt-3 flex items-center justify-between">
-                  <Badge variant="neutral">Live</Badge>
+                  <Badge variant="neutral">{archive ? "Recording" : "Live"}</Badge>
                   {webinar.providerVerified && <Badge variant="success">Verified</Badge>}
                 </div>
                 <a

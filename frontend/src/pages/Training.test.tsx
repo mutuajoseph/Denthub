@@ -197,6 +197,7 @@ describe("Training", () => {
         expect.anything(),
       );
     });
+    expect(screen.getByText("Recording")).toBeInTheDocument();
   });
 
   it("shows a loading state while both lists are in flight", () => {
