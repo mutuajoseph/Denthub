@@ -1,63 +1,54 @@
-import { CalendarDays, Clock, MapPin, Star } from "lucide-react";
+import { Clock, MapPin, ShieldCheck } from "lucide-react";
 
-import type { Course } from "../../lib/courseFixtures";
-import { formatMoney } from "../../utils/formatCurrency";
+import { describeSubdivisionCode } from "../../config/subdivisions";
+import type { CourseView } from "../../lib/trainingApi";
+import { formatListingPrice } from "../../utils/formatCurrency";
 import Badge from "../ui/Badge";
 
 export interface CourseCardProps {
-  course: Course;
+  course: CourseView;
+  /** The market locale, so a price in the course's own currency reads right. */
+  locale: string;
 }
 
 const FORMAT_LABELS: Record<string, string> = {
+  in_person: "In Person",
   online: "Online",
-  physical: "Physical",
-  workshop: "Hands-On Workshop",
+  blended: "Blended",
 };
 
-export function CourseCard({ course }: CourseCardProps) {
+export function CourseCard({ course, locale }: CourseCardProps) {
+  const price = formatListingPrice(course.price, course.currency ?? "KES", locale);
+
   return (
-    <article className="flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-5 transition hover:-translate-y-1 hover:shadow-xl dark:border-navy-600 dark:bg-navy-800">
+    <article className="flex h-full flex-col rounded-card border border-cloud bg-paper p-5 shadow-card-cloud">
       <div className="flex flex-wrap items-center gap-2">
-        <Badge variant="navy">{FORMAT_LABELS[course.format] ?? course.format}</Badge>
-        <Badge variant="gold">{course.cpdPoints} CPD</Badge>
-        {course.isNew && <Badge variant="green">New</Badge>}
+        <Badge variant="neutral">{FORMAT_LABELS[course.deliveryMode] ?? course.deliveryMode}</Badge>
+        {course.providerVerified && (
+          <Badge variant="success">
+            <ShieldCheck className="h-3 w-3" aria-hidden="true" />
+            Verified
+          </Badge>
+        )}
       </div>
 
-      <h3 className="mt-4 font-heading text-lg font-bold text-gray-900 dark:text-white">
-        {course.title}
-      </h3>
-      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{course.provider}</p>
+      <h3 className="mt-4 font-heading text-lg font-bold text-ink">{course.title}</h3>
+      <p className="mt-1 text-sm text-slate">{course.providerName}</p>
 
-      <dl className="mt-4 space-y-2 text-sm text-gray-600 dark:text-gray-300">
-        <div className="flex items-center gap-2">
-          <dt className="sr-only">Date</dt>
-          <CalendarDays className="h-4 w-4 text-orange-500" aria-hidden="true" />
-          <dd>
-            {course.date} · {course.duration}
-          </dd>
-        </div>
-        <div className="flex items-center gap-2">
-          <dt className="sr-only">Location</dt>
-          <MapPin className="h-4 w-4 text-orange-500" aria-hidden="true" />
-          <dd>{course.location}</dd>
-        </div>
-        <div className="flex items-center gap-2">
-          <dt className="sr-only">Rating</dt>
-          <Star className="h-4 w-4 text-gold-400" aria-hidden="true" />
-          <dd>
-            {course.rating.toFixed(1)} · {course.enrolled} enrolled
-          </dd>
-        </div>
-        <div className="flex items-center gap-2">
-          <dt className="sr-only">Format</dt>
-          <Clock className="h-4 w-4 text-orange-500" aria-hidden="true" />
-          <dd>{course.specialty}</dd>
-        </div>
-      </dl>
+      <p className="mt-3 line-clamp-2 text-sm text-slate">{course.description}</p>
 
-      <p className="mt-auto pt-5 text-lg font-bold text-orange-500 dark:text-gold-300">
-        {course.price === null ? "Included in membership" : formatMoney(course.price)}
-      </p>
+      <div className="mt-3 flex items-center gap-1.5 text-sm text-slate">
+        <MapPin className="h-4 w-4 text-graphite" aria-hidden="true" />
+        {describeSubdivisionCode(course.subdivisionCode)}
+      </div>
+
+      <div className="mt-auto flex items-center justify-between pt-5">
+        <p className="font-mono text-lg font-bold text-ink">{price ?? "Free CPD"}</p>
+        <p className="flex items-center gap-1.5 text-xs text-slate">
+          <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+          {FORMAT_LABELS[course.deliveryMode] ?? course.deliveryMode}
+        </p>
+      </div>
     </article>
   );
 }

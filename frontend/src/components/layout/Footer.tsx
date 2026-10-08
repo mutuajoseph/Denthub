@@ -1,6 +1,7 @@
 import { ArrowUpRight, Flag, Globe, Mail } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useRegion } from "../../hooks/useRegion";
+import { useTrainingEnabled } from "../../hooks/useTraining";
 
 const quickLinks = [
   { label: "Find a Dentist", to: "/dentists" },
@@ -22,6 +23,10 @@ const headingClass = "text-sm font-medium text-paper/60";
 
 export function Footer() {
   const { region, brandName } = useRegion();
+  const trainingEnabled = useTrainingEnabled();
+  const dentistLinks = trainingEnabled
+    ? professionalLinks
+    : professionalLinks.filter((link) => link.to !== "/training");
   const email = `hello@${region.domain}`;
   const RegionIcon = region.code === "GLOBAL" ? Globe : Flag;
 
@@ -68,7 +73,7 @@ export function Footer() {
             For Dentists
           </h2>
           <ul className="mt-5 space-y-3 text-sm">
-            {professionalLinks.map((link) => (
+            {dentistLinks.map((link) => (
               <li key={link.to}>
                 <Link to={link.to} className={linkClass}>
                   {link.label}
