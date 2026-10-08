@@ -21,6 +21,7 @@ from app.utils.logger import configure_logging
 from app.utils.state import AppState
 from tests.factories import (
     build_countries,
+    build_jobs,
     build_listings,
     build_products,
     build_specialties,
@@ -53,6 +54,9 @@ async def session_maker() -> AsyncIterator[async_sessionmaker[AsyncSession]]:
             facilities, specialists = build_listings(specialties)
             for listing in [*facilities, *specialists]:
                 session.add(listing)
+
+            for posting in build_jobs(specialties, facilities):
+                session.add(posting)
 
             for supplier, products in build_products():
                 session.add(supplier)

@@ -296,9 +296,7 @@ def test_open_now_reads_the_local_clock_not_utc() -> None:
     """16:30 UTC is 19:30 in Nairobi: past a 17:00 close."""
     hours = _weekday_hours(2, "08:00", "17:00")
 
-    assert (
-        is_open_now(hours, timezone_name="Africa/Nairobi", now_utc=WEDNESDAY_MIDDAY_UTC) is True
-    )
+    assert is_open_now(hours, timezone_name="Africa/Nairobi", now_utc=WEDNESDAY_MIDDAY_UTC) is True
     assert (
         is_open_now(hours, timezone_name="Africa/Nairobi", now_utc=WEDNESDAY_EVENING_UTC) is False
     )
@@ -315,9 +313,7 @@ def test_open_now_closes_on_a_day_with_no_row() -> None:
 def test_open_now_treats_an_explicit_closed_row_as_closed() -> None:
     hours = [OpeningHour(weekday=2, opens=None, closes=None, is_closed=True)]
 
-    assert (
-        is_open_now(hours, timezone_name="Africa/Nairobi", now_utc=WEDNESDAY_MIDDAY_UTC) is False
-    )
+    assert is_open_now(hours, timezone_name="Africa/Nairobi", now_utc=WEDNESDAY_MIDDAY_UTC) is False
 
 
 def test_open_now_handles_a_shift_that_crosses_midnight() -> None:
@@ -377,9 +373,9 @@ async def test_replace_hours_is_idempotent(
         await session.commit()
 
         rows = (
-            await session.execute(
-                select(OpeningHour).where(OpeningHour.branch_id == branch.id)
-            )
-        ).scalars().all()
+            (await session.execute(select(OpeningHour).where(OpeningHour.branch_id == branch.id)))
+            .scalars()
+            .all()
+        )
 
     assert sorted(row.weekday for row in rows) == [0, 1, 2]
