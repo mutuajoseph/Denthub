@@ -1,4 +1,4 @@
-import { LayoutGrid, List, SearchX, ShieldCheck, Stethoscope } from "lucide-react";
+import { LayoutGrid, List, SearchX, ShieldCheck, Stethoscope, TriangleAlert } from "lucide-react";
 import { useMemo, useState } from "react";
 import { DentistListingCard } from "../components/dentists/DentistListingCard";
 import {
@@ -6,84 +6,46 @@ import {
   type DentistFilterState,
   DentistSearchFilters,
 } from "../components/dentists/DentistSearchFilters";
-import { REGIONS } from "../config/regions";
-import { type CountryCode, listDentistFixtures } from "../lib/dentistFixtures";
-import { searchDentistListings } from "../lib/dentistSearch";
-
-const FIXTURES = listDentistFixtures();
-
-function compareText(left: string, right: string): number {
-  if (left < right) return -1;
-  if (left > right) return 1;
-  return 0;
-}
-
-function uniqueSorted<Value extends string>(values: readonly Value[]): Value[] {
-  return Array.from(new Set(values)).sort(compareText);
-}
-
-const COUNTRIES = uniqueSorted(FIXTURES.map((listing) => listing.location.countryCode)).map(
-  (code) => ({ code, name: REGIONS[code].countryName }),
-);
-
-const SPECIALTIES = uniqueSorted(FIXTURES.flatMap((listing) => listing.specialties));
-
-const INSURANCE_OPTIONS = uniqueSorted(
-  FIXTURES.flatMap((listing) => [
-    ...(listing.insurance.nationalScheme ? [listing.insurance.nationalScheme] : []),
-    ...listing.insurance.accepted,
-  ]),
-);
-
-function subdivisionsForCountry(country: CountryCode | ""): string[] {
-  const matchingFixtures = country
-    ? FIXTURES.filter((listing) => listing.location.countryCode === country)
-    : FIXTURES;
-  return uniqueSorted(
-    matchingFixtures.flatMap((listing) => [
-      listing.location.subdivision,
-      ...listing.location.operatingAreas,
-    ]),
-  );
-}
+import { useCountryConfig } from "../hooks/useCountryConfig";
+import { useListingSearch } from "../hooks/useListingSearch";
+import { useSpecialties } from "../hooks/useSpecialties";
+import { searchListings } from "../lib/listingSearch";
+import { useRegionStore } from "../store/regionStore";
 
 function countActiveFilters(filters: DentistFilterState): number {
   return [
     filters.query.trim(),
-    filters.country,
     filters.subdivision,
     filters.listingType === "all" ? "" : filters.listingType,
     filters.specialty,
-    filters.insurance,
     filters.minRating > 0 ? filters.minRating : "",
     filters.openNow,
   ].filter(Boolean).length;
 }
 
+function describeError(error: unknown): string {
+  return error instanceof Error ? error.message : "Something went wrong loading the directory.";
+}
+
 export function FindDentist() {
+  const { apiCountry, regions } = useCountryConfig();
+  const { options: specialtyOptions } = useSpecialties();
+  const setRegion = useRegionStore((s) => s.setRegion);
   const [filters, setFilters] = useState<DentistFilterState>({ ...DEFAULT_DENTIST_FILTERS });
   const [view, setView] = useState<"grid" | "list">("grid");
-  const subdivisions = useMemo(() => subdivisionsForCountry(filters.country), [filters.country]);
+
+  const { listings, isLoading, error, refetch } = useListingSearch({
+    country: apiCountry,
+    subdivisionCode: filters.subdivision || undefined,
+    listingType: filters.listingType,
+  });
+
+  const results = useMemo(() => searchListings(filters, listings), [filters, listings]);
   const activeFilterCount = countActiveFilters(filters);
 
-  const results = useMemo(
-    () =>
-      searchDentistListings(
-        {
-          query: filters.query,
-          countryCode: filters.country || undefined,
-          subdivision: filters.subdivision || undefined,
-          listingType: filters.listingType,
-          specialty: filters.specialty || undefined,
-          insurance: filters.insurance || undefined,
-          minRating: filters.minRating > 0 ? filters.minRating : undefined,
-          openNow: filters.openNow,
-          sort: filters.sort,
-        },
-        FIXTURES,
-      ),
-    [filters],
-  );
+  function handleCountryChange(country: string): void {
+    setRegion(country);
+  }
 
   function clearFilters(): void {
     setFilters({ ...DEFAULT_DENTIST_FILTERS });
@@ -103,7 +65,7 @@ export function FindDentist() {
             </h1>
             <p className="mt-4 text-lg text-slate-600 dark:text-gray-300">
               Search specialist physicians and dental practices across countries, regions,
-              specialties, insurance options, and availability.
+              specialties, and availability.
             </p>
           </div>
         </div>
@@ -120,11 +82,11 @@ export function FindDentist() {
         <div className="grid items-start gap-6 lg:grid-cols-[18.5rem_minmax(0,1fr)] xl:gap-8">
           <DentistSearchFilters
             value={filters}
-            countries={COUNTRIES}
-            subdivisions={subdivisions}
-            specialties={SPECIALTIES}
-            insuranceOptions={INSURANCE_OPTIONS}
+            country={apiCountry}
+            subdivisions={regions}
+            specialtyOptions={specialtyOptions}
             activeFilterCount={activeFilterCount}
+            onCountryChange={handleCountryChange}
             onChange={setFilters}
             onClear={clearFilters}
           />
@@ -133,11 +95,13 @@ export function FindDentist() {
             <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-end sm:justify-between dark:border-navy-600">
               <div aria-live="polite">
                 <p className="font-heading text-2xl font-semibold text-slate-900 dark:text-white">
-                  {`${results.length} ${results.length === 1 ? "result" : "results"}`}
+                  {isLoading && listings.length === 0
+                    ? "Loading results…"
+                    : `${results.length} ${results.length === 1 ? "result" : "results"}`}
                 </p>
                 <p className="mt-1 text-sm text-slate-500 dark:text-gray-400">
                   {results.length > 0
-                    ? "Compare specialties, fees, insurance, and opening status."
+                    ? "Compare specialties, fees, and opening status."
                     : "Adjust your search to see available providers."}
                 </p>
               </div>
@@ -175,18 +139,68 @@ export function FindDentist() {
               </fieldset>
             </div>
 
-            {results.length > 0 ? (
+            {isLoading && listings.length === 0 ? (
+              <output className="mt-6 rounded-2xl border border-slate-200 bg-white px-6 py-14 text-center dark:border-navy-600 dark:bg-navy-800">
+                <p className="font-heading text-lg font-semibold text-slate-900 dark:text-white">
+                  Loading dental providers…
+                </p>
+                <p className="mt-2 text-sm text-slate-500 dark:text-gray-400">
+                  Fetching this market's listings from the directory.
+                </p>
+              </output>
+            ) : error && listings.length === 0 ? (
               <div
-                className={
-                  view === "grid"
-                    ? "mt-6 grid gap-5 sm:grid-cols-2 2xl:grid-cols-3"
-                    : "mt-6 grid gap-4"
-                }
+                role="alert"
+                className="mt-6 rounded-2xl border border-red-200 bg-white px-6 py-14 text-center dark:border-red-500/30 dark:bg-navy-800"
               >
-                {results.map((listing) => (
-                  <DentistListingCard key={listing.id} listing={listing} variant={view} />
-                ))}
+                <TriangleAlert
+                  className="mx-auto h-10 w-10 text-red-600 dark:text-red-400"
+                  aria-hidden="true"
+                />
+                <h3 className="mt-4 font-heading text-xl font-semibold text-slate-900 dark:text-white">
+                  Directory unavailable
+                </h3>
+                <p className="mx-auto mt-2 max-w-md text-sm text-slate-600 dark:text-gray-300">
+                  {describeError(error)}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void refetch()}
+                  className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-orange-500 px-5 py-2.5 font-heading text-sm font-semibold text-white transition hover:bg-orange-600"
+                >
+                  Try again
+                </button>
               </div>
+            ) : results.length > 0 ? (
+              <>
+                {error && (
+                  <div
+                    role="alert"
+                    className="mt-6 flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 sm:flex-row sm:items-center sm:justify-between dark:border-gold-400/30 dark:bg-gold-400/10 dark:text-gold-300"
+                  >
+                    <p>Could not refresh results — showing the last loaded listings.</p>
+                    <button
+                      type="button"
+                      onClick={() => void refetch()}
+                      className="min-h-11 shrink-0 rounded-lg border border-amber-300 px-4 font-heading text-sm font-semibold transition hover:border-amber-400 dark:border-gold-400/40"
+                    >
+                      Try again
+                    </button>
+                  </div>
+                )}
+
+                <div
+                  className={
+                    view === "grid"
+                      ? "mt-6 grid gap-5 sm:grid-cols-2 2xl:grid-cols-3"
+                      : "mt-6 grid gap-4"
+                  }
+                >
+                  {results.map((listing) => (
+                    <DentistListingCard key={listing.id} listing={listing} variant={view} />
+                  ))}
+                </div>
+              </>
             ) : (
               <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center dark:border-navy-500 dark:bg-navy-800">
                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-50 text-orange-600 dark:bg-navy-700 dark:text-gold-300">
@@ -196,8 +210,8 @@ export function FindDentist() {
                   No dental providers match
                 </h3>
                 <p className="mx-auto mt-2 max-w-md text-sm text-slate-600 dark:text-gray-300">
-                  Try a broader location, remove a specialty or insurance filter, or include closed
-                  providers by turning off Open now.
+                  Try a broader location, remove a specialty filter, or include closed providers by
+                  turning off Open now.
                 </p>
                 <button
                   type="button"

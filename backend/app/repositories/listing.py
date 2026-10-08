@@ -420,6 +420,9 @@ class SpecialistRepository:
             .options(
                 selectinload(Specialist.specialties),
                 selectinload(Specialist.branches).selectinload(Branch.opening_hours),
+                # The card carries the Branch's Facility (clinic name), so the
+                # rows are loaded here too: the response is built detached.
+                selectinload(Specialist.branches).selectinload(Branch.facility),
             )
             .where(*filters.conditions())
             .order_by(Specialist.name.asc())

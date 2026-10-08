@@ -94,7 +94,7 @@ export function getPageMeta(pathname: string, brandName: string): PageMeta {
   const exact = routeMeta[path];
   if (exact) return exact(brandName);
 
-  if (path.startsWith("/dentist/")) {
+  if (path.startsWith("/dentist/") || path.startsWith("/dentists/")) {
     return {
       title: `Dentist Profile — ${brandName}`,
       description: `View clinic details, ratings and book an appointment with ${brandName}.`,

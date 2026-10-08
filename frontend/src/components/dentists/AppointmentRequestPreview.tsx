@@ -1,10 +1,15 @@
 import { CalendarDays, CheckCircle2, RotateCcw, X } from "lucide-react";
 import { type FormEvent, useId, useState } from "react";
-import type { DentistListing } from "../../lib/dentistFixtures";
 import Button from "../ui/Button";
 
+/** Who the preview is addressed to: a listing's card name and published phone. */
+export interface AppointmentProvider {
+  name: string;
+  phone: string | null;
+}
+
 export interface AppointmentRequestPreviewProps {
-  listing: DentistListing;
+  provider: AppointmentProvider;
 }
 
 interface AppointmentPreview {
@@ -24,7 +29,7 @@ const EMPTY_PREVIEW: AppointmentPreview = {
 const fieldClass =
   "mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 dark:border-navy-600 dark:bg-navy-900 dark:text-white";
 
-export function AppointmentRequestPreview({ listing }: AppointmentRequestPreviewProps) {
+export function AppointmentRequestPreview({ provider }: AppointmentRequestPreviewProps) {
   const headingId = useId();
   const [isOpen, setIsOpen] = useState(false);
   const [form, setForm] = useState<AppointmentPreview>(EMPTY_PREVIEW);
@@ -53,7 +58,7 @@ export function AppointmentRequestPreview({ listing }: AppointmentRequestPreview
           Plan your next visit
         </h2>
         <p className="mt-2 text-sm text-slate-600 dark:text-gray-300">
-          Build an appointment message for {listing.name} and review it before contacting the
+          Build an appointment message for {provider.name} and review it before contacting the
           provider.
         </p>
         <Button className="mt-4" icon={CalendarDays} onClick={() => setIsOpen(true)}>
@@ -103,7 +108,7 @@ export function AppointmentRequestPreview({ listing }: AppointmentRequestPreview
                 Preview ready — nothing was sent or saved.
               </h3>
               <p className="mt-1 text-sm">
-                Use this summary to contact {listing.name} directly if the details are correct.
+                Use this summary to contact {provider.name} directly if the details are correct.
               </p>
             </div>
           </div>
@@ -134,12 +139,14 @@ export function AppointmentRequestPreview({ listing }: AppointmentRequestPreview
             )}
           </dl>
           <div className="mt-5 flex flex-wrap gap-3">
-            <a
-              href={`tel:${listing.contact.phone}`}
-              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-red-600 px-5 py-2.5 font-heading text-sm font-semibold text-white transition hover:bg-red-700"
-            >
-              Call to request appointment
-            </a>
+            {provider.phone && (
+              <a
+                href={`tel:${provider.phone}`}
+                className="inline-flex min-h-11 items-center justify-center rounded-lg bg-red-600 px-5 py-2.5 font-heading text-sm font-semibold text-white transition hover:bg-red-700"
+              >
+                Call to request appointment
+              </a>
+            )}
             <Button variant="secondary" icon={RotateCcw} onClick={() => setPreview(null)}>
               Edit preview
             </Button>

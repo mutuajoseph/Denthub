@@ -1,11 +1,115 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
 import { NAV_LINKS } from "./components/Navbar";
 import { getPageMeta } from "./hooks/usePageMeta";
+import { ApiError } from "./lib/apiClient";
+import {
+  type CountryConfig,
+  fetchCountryConfig,
+  fetchSpecialties,
+  fetchSubdivisions,
+} from "./lib/countryConfigApi";
+import {
+  type FacilityDetail,
+  type SpecialistDetail,
+  fetchFacilityDetail,
+  fetchListingSearch,
+  fetchSpecialistDetail,
+} from "./lib/listingApi";
+
+vi.mock("./lib/listingApi", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./lib/listingApi")>();
+
+  return {
+    ...actual,
+    fetchListingSearch: vi.fn(),
+    fetchFacilityDetail: vi.fn(),
+    fetchSpecialistDetail: vi.fn(),
+  };
+});
+
+vi.mock("./lib/countryConfigApi", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./lib/countryConfigApi")>();
+
+  return {
+    ...actual,
+    fetchCountryConfig: vi.fn(),
+    fetchSubdivisions: vi.fn(),
+    fetchSpecialties: vi.fn(),
+  };
+});
+
+const fetchListingSearchMock = vi.mocked(fetchListingSearch);
+const fetchFacilityDetailMock = vi.mocked(fetchFacilityDetail);
+const fetchSpecialistDetailMock = vi.mocked(fetchSpecialistDetail);
+const fetchCountryConfigMock = vi.mocked(fetchCountryConfig);
+const fetchSubdivisionsMock = vi.mocked(fetchSubdivisions);
+const fetchSpecialtiesMock = vi.mocked(fetchSpecialties);
+
+const facilityDetail: FacilityDetail = {
+  listing: {
+    id: "f-1",
+    listing_type: "facility",
+    name: "SmileCare Dental Centre",
+    country_code: "KE",
+    subdivision_code: "NAIROBI",
+    specialty_codes: ["general-dentistry"],
+    rating: "4.50",
+    review_count: 12,
+    list_price: "1500.00",
+    currency: "KES",
+    open_now: true,
+    phone: "+254712345678",
+    verification_tier: "verified",
+    clinic_name: null,
+  },
+  address: "12 Peponi Road, Nairobi",
+  phone: "+254712345678",
+  email: "hello@smilecare.ke",
+  verification_tier: "verified",
+  branches: [],
+};
+
+const specialistDetail: SpecialistDetail = {
+  listing: {
+    id: "sp-1",
+    listing_type: "specialist",
+    name: "Dr. Wanjiku Kamau",
+    country_code: "KE",
+    subdivision_code: "NAIROBI",
+    specialty_codes: ["general-dentistry"],
+    rating: "4.50",
+    review_count: 12,
+    list_price: null,
+    currency: "KES",
+    open_now: true,
+    phone: "+254711223344",
+    verification_tier: null,
+    clinic_name: "SmileCare Dental Centre",
+  },
+  slug: "dr-wanjiku-kamau",
+  specialties: [],
+  branches: [],
+};
+
+function makeConfig(code: string): CountryConfig {
+  return {
+    code,
+    currency: "KES",
+    currencySymbol: "KSh",
+    locale: "en-KE",
+    geography: { subdivisionLabel: "County", subdivisionPlural: "Counties", cityLabel: "City" },
+    features: {},
+    featureConfigs: {},
+    featureContexts: {},
+    insuranceProviders: [],
+    regions: [],
+  };
+}
 
 function renderApp(path: string) {
   const queryClient = new QueryClient({
@@ -22,6 +126,16 @@ function renderApp(path: string) {
 }
 
 describe("App routes", () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    fetchListingSearchMock.mockResolvedValue([]);
+    fetchCountryConfigMock.mockImplementation(async (code) => makeConfig(code ?? "KE"));
+    fetchSubdivisionsMock.mockResolvedValue([]);
+    fetchSpecialtiesMock.mockResolvedValue([]);
+    fetchFacilityDetailMock.mockResolvedValue(facilityDetail);
+    fetchSpecialistDetailMock.mockResolvedValue(specialistDetail);
+  });
+
   it("renders the home page at /", () => {
     const { container } = renderApp("/");
 
@@ -36,11 +150,31 @@ describe("App routes", () => {
     ).toBeInTheDocument();
   });
 
-  it.each(["/dentists/sp-1", "/dentist/sp-1"])("renders a profile at %s", (path) => {
-    renderApp(path);
+  it("renders a profile at the typed route", async () => {
+    renderApp("/dentists/facility/f-1");
 
-    expect(screen.getByRole("heading", { name: /dr\. wanjiku kamau/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: /smilecare dental centre/i }),
+    ).toBeInTheDocument();
+    expect(fetchFacilityDetailMock).toHaveBeenCalledWith("f-1", expect.anything());
+    expect(fetchSpecialistDetailMock).not.toHaveBeenCalled();
   });
+
+  it.each(["/dentists/sp-1", "/dentist/sp-1"])(
+    "renders a profile at the legacy route %s via specialist fallback",
+    async (path) => {
+      fetchFacilityDetailMock.mockRejectedValue(
+        new ApiError("Not found", { status: 404, code: "NOT_FOUND" }),
+      );
+
+      renderApp(path);
+
+      expect(
+        await screen.findByRole("heading", { name: /dr\. wanjiku kamau/i }),
+      ).toBeInTheDocument();
+      expect(fetchSpecialistDetailMock).toHaveBeenCalledWith("sp-1", expect.anything());
+    },
+  );
 
   it("renders the international patient page", () => {
     renderApp("/international");
@@ -79,6 +213,12 @@ describe("App routes", () => {
 
     for (const link of nonHome) {
       expect(getPageMeta(link.href, "DentHub").title).not.toMatch(/Complete Dental Platform/);
+    }
+  });
+
+  it("titles typed and legacy dentist profile routes alike", () => {
+    for (const path of ["/dentists/facility/f-1", "/dentists/sp-1", "/dentist/sp-1"]) {
+      expect(getPageMeta(path, "DentHub").title).toMatch(/dentist profile/i);
     }
   });
 });

@@ -1,30 +1,26 @@
 import { Search, SlidersHorizontal } from "lucide-react";
 import { useId } from "react";
-import { REGIONS } from "../../config/regions";
-import type { CountryCode, DentistListingType } from "../../lib/dentistFixtures";
-import type { DentistSearchSort } from "../../lib/dentistSearch";
-
-export type DentistListingTypeFilter = DentistListingType | "all";
+import { REGIONS, REGION_LIST } from "../../config/regions";
+import type { Subdivision } from "../../config/subdivisions";
+import type { ListingSort, ListingTypeFilter } from "../../lib/listingSearch";
 
 export interface DentistFilterState {
   query: string;
-  country: CountryCode | "";
+  /** Subdivision code within the active market; a request input, not text. */
   subdivision: string;
-  listingType: DentistListingTypeFilter;
+  listingType: ListingTypeFilter;
+  /** A specialty **code**; `""` is any. */
   specialty: string;
-  insurance: string;
   minRating: number;
   openNow: boolean;
-  sort: DentistSearchSort;
+  sort: ListingSort;
 }
 
 export const DEFAULT_DENTIST_FILTERS: DentistFilterState = {
   query: "",
-  country: "",
   subdivision: "",
   listingType: "all",
   specialty: "",
-  insurance: "",
   minRating: 0,
   openNow: false,
   sort: "rating_desc",
@@ -32,25 +28,28 @@ export const DEFAULT_DENTIST_FILTERS: DentistFilterState = {
 
 export interface DentistSearchFiltersProps {
   value: DentistFilterState;
-  countries: readonly { code: CountryCode; name: string }[];
-  subdivisions: readonly string[];
-  specialties: readonly string[];
-  insuranceOptions: readonly string[];
+  /** The active market. The country combo switches the region itself (#18). */
+  country: string;
+  subdivisions: readonly Subdivision[];
+  specialtyOptions: readonly { code: string; name: string }[];
   activeFilterCount: number;
+  onCountryChange: (country: string) => void;
   onChange: (next: DentistFilterState) => void;
   onClear: () => void;
 }
+
+const COUNTRY_OPTIONS = REGION_LIST.filter((region) => region.code !== "GLOBAL");
 
 const controlClass =
   "mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 dark:border-navy-600 dark:bg-navy-900 dark:text-white";
 
 export function DentistSearchFilters({
   value,
-  countries,
+  country,
   subdivisions,
-  specialties,
-  insuranceOptions,
+  specialtyOptions,
   activeFilterCount,
+  onCountryChange,
   onChange,
   onClear,
 }: DentistSearchFiltersProps) {
@@ -59,12 +58,9 @@ export function DentistSearchFilters({
   const subdivisionId = useId();
   const listingTypeId = useId();
   const specialtyId = useId();
-  const insuranceId = useId();
   const ratingId = useId();
   const sortId = useId();
-  const subdivisionHint = value.country
-    ? REGIONS[value.country].countiesLabel
-    : "region or subdivision";
+  const subdivisionHint = REGIONS[country]?.countiesLabel ?? "region";
 
   function update<Key extends keyof DentistFilterState>(
     key: Key,
@@ -129,17 +125,18 @@ export function DentistSearchFilters({
           </label>
           <select
             id={countryId}
-            value={value.country}
+            value={country}
             onChange={(event) => {
-              const country = event.currentTarget.value as CountryCode | "";
-              onChange({ ...value, country, subdivision: "" });
+              // One source of truth: the combo switches the region, which
+              // drives Accept-Country, the currency, and this page's request.
+              onCountryChange(event.currentTarget.value);
+              onChange({ ...value, subdivision: "" });
             }}
             className={controlClass}
           >
-            <option value="">All countries</option>
-            {countries.map((country) => (
-              <option key={country.code} value={country.code}>
-                {country.name}
+            {COUNTRY_OPTIONS.map((region) => (
+              <option key={region.code} value={region.code}>
+                {region.countryName}
               </option>
             ))}
           </select>
@@ -160,8 +157,8 @@ export function DentistSearchFilters({
           >
             <option value="">All {subdivisionHint}s</option>
             {subdivisions.map((subdivision) => (
-              <option key={subdivision} value={subdivision}>
-                {subdivision}
+              <option key={subdivision.code} value={subdivision.code}>
+                {subdivision.name}
               </option>
             ))}
           </select>
@@ -178,13 +175,13 @@ export function DentistSearchFilters({
             id={listingTypeId}
             value={value.listingType}
             onChange={(event) =>
-              update("listingType", event.currentTarget.value as DentistListingTypeFilter)
+              update("listingType", event.currentTarget.value as ListingTypeFilter)
             }
             className={controlClass}
           >
             <option value="all">All listing types</option>
             <option value="specialist">Specialist physicians</option>
-            <option value="practice">Dental practices</option>
+            <option value="facility">Dental practices</option>
           </select>
         </div>
 
@@ -202,31 +199,9 @@ export function DentistSearchFilters({
             className={controlClass}
           >
             <option value="">Any specialty</option>
-            {specialties.map((specialty) => (
-              <option key={specialty} value={specialty}>
-                {specialty}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label
-            htmlFor={insuranceId}
-            className="text-sm font-medium text-slate-700 dark:text-gray-300"
-          >
-            Insurance
-          </label>
-          <select
-            id={insuranceId}
-            value={value.insurance}
-            onChange={(event) => update("insurance", event.currentTarget.value)}
-            className={controlClass}
-          >
-            <option value="">Any insurance</option>
-            {insuranceOptions.map((insurance) => (
-              <option key={insurance} value={insurance}>
-                {insurance}
+            {specialtyOptions.map((specialty) => (
+              <option key={specialty.code} value={specialty.code}>
+                {specialty.name}
               </option>
             ))}
           </select>
@@ -280,7 +255,7 @@ export function DentistSearchFilters({
           <select
             id={sortId}
             value={value.sort}
-            onChange={(event) => update("sort", event.currentTarget.value as DentistSearchSort)}
+            onChange={(event) => update("sort", event.currentTarget.value as ListingSort)}
             className={controlClass}
           >
             <option value="rating_desc">Highest rated</option>

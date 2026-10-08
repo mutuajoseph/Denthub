@@ -1,42 +1,19 @@
-import {
-  Award,
-  Building2,
-  CheckCircle2,
-  Clock3,
-  MapPin,
-  Phone,
-  Stethoscope,
-  Users,
-} from "lucide-react";
+import { Award, Building2, CheckCircle2, MapPin, Phone, Stethoscope } from "lucide-react";
 import { Link } from "react-router-dom";
-import type { DentistListing } from "../../lib/dentistFixtures";
+import { describeSubdivisionCode } from "../../config/subdivisions";
+import type { ListingView } from "../../lib/listingApi";
+import { useCountryConfigStore } from "../../store/countryConfigStore";
 import { cn } from "../../utils/cn";
+import { formatListingPrice } from "../../utils/formatCurrency";
 import Badge from "../ui/Badge";
 import StarRating from "../ui/StarRating";
 
 export type DentistListingCardVariant = "grid" | "list" | "compact";
 
 export interface DentistListingCardProps {
-  listing: DentistListing;
+  listing: ListingView;
   variant?: DentistListingCardVariant;
   showPhone?: boolean;
-}
-
-function formatPrice(listing: DentistListing): string {
-  const amount = new Intl.NumberFormat("en", {
-    maximumFractionDigits: 0,
-  }).format(listing.pricing.amount);
-  return `${listing.pricing.currency} ${amount}`;
-}
-
-function insuranceLabels(listing: DentistListing): string[] {
-  return Array.from(
-    new Set(
-      [listing.insurance.nationalScheme, ...listing.insurance.accepted].filter(
-        (value): value is string => Boolean(value),
-      ),
-    ),
-  );
 }
 
 export function DentistListingCard({
@@ -44,11 +21,21 @@ export function DentistListingCard({
   variant = "grid",
   showPhone = false,
 }: DentistListingCardProps) {
-  const profilePath = `/dentists/${encodeURIComponent(listing.id)}`;
+  // Read the loaded market's names without triggering a load per card: the
+  // page already mounts `useCountryConfig`, and an unknown code degrades to a
+  // prettified label rather than an empty line.
+  const regions = useCountryConfigStore((s) => s.regions);
+  const profilePath = `/dentists/${listing.listingType}/${encodeURIComponent(listing.id)}`;
   const typeLabel =
     listing.listingType === "specialist" ? "Specialist physician" : "Dental practice";
   const ListingIcon = listing.listingType === "specialist" ? Stethoscope : Building2;
-  const insurance = insuranceLabels(listing);
+  const approved =
+    listing.verificationTier === "verified" || listing.verificationTier === "featured";
+  const excellence = listing.verificationTier === "featured";
+  const subdivisionName =
+    regions.find((row) => row.code === listing.subdivisionCode)?.name ??
+    describeSubdivisionCode(listing.subdivisionCode);
+  const price = formatListingPrice(listing.amount, listing.currency);
 
   if (variant === "compact") {
     return (
@@ -68,9 +55,7 @@ export function DentistListingCard({
                 </Link>
               </h3>
               <p className="mt-1 text-sm text-slate-500 dark:text-gray-400">
-                {[listing.clinic, listing.location.city, listing.location.subdivision]
-                  .filter(Boolean)
-                  .join(" · ")}
+                {[listing.clinic, subdivisionName, listing.countryCode].filter(Boolean).join(" · ")}
               </p>
             </div>
           </div>
@@ -78,21 +63,21 @@ export function DentistListingCard({
             <span
               className={cn(
                 "inline-flex items-center gap-1.5 text-xs font-semibold",
-                listing.hours.openNow ? "text-green-700 dark:text-green-400" : "text-slate-500",
+                listing.openNow ? "text-green-700 dark:text-green-400" : "text-slate-500",
               )}
             >
               <span
                 className={cn(
                   "h-2 w-2 rounded-full",
-                  listing.hours.openNow ? "bg-green-500" : "bg-slate-400",
+                  listing.openNow ? "bg-green-500" : "bg-slate-400",
                 )}
                 aria-hidden="true"
               />
-              {listing.hours.openNow ? "Open in fixture" : "Closed in fixture"}
+              {listing.openNow ? "Open now" : "Closed"}
             </span>
-            {showPhone && (
+            {showPhone && listing.phone && (
               <a
-                href={`tel:${listing.contact.phone}`}
+                href={`tel:${listing.phone}`}
                 aria-label={`Call ${listing.name}`}
                 className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
               >
@@ -143,7 +128,7 @@ export function DentistListingCard({
               <p className="mt-0.5 text-sm text-slate-500 dark:text-gray-400">{listing.clinic}</p>
             )}
           </div>
-          {listing.verification.approved && (
+          {approved && (
             <Badge variant="green" className="gap-1">
               <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
               Verified
@@ -155,20 +140,13 @@ export function DentistListingCard({
           {listing.specialties.map((specialty) => (
             <Badge key={specialty}>{specialty}</Badge>
           ))}
-          {listing.verification.excellence && (
+          {excellence && (
             <Badge variant="orange" className="gap-1">
               <Award className="h-3 w-3" aria-hidden="true" />
               Excellence
             </Badge>
           )}
         </div>
-
-        {variant === "list" && listing.listingType === "practice" && (
-          <p className="mt-3 text-sm text-slate-500 dark:text-gray-400">
-            <span className="font-medium text-slate-700 dark:text-gray-300">Areas served: </span>
-            {listing.location.operatingAreas.join(", ")}
-          </p>
-        )}
 
         <div className="mt-4 space-y-2 text-sm text-slate-600 dark:text-gray-300">
           <p className="flex items-start gap-2">
@@ -177,39 +155,27 @@ export function DentistListingCard({
               aria-hidden="true"
             />
             <span>
-              {listing.location.city}, {listing.location.subdivision} ·{" "}
-              {listing.location.countryCode}
+              {subdivisionName} · {listing.countryCode}
             </span>
           </p>
-          <p className="flex items-center gap-2">
-            <Clock3
-              className="h-4 w-4 shrink-0 text-orange-500 dark:text-gold-400"
-              aria-hidden="true"
-            />
-            {listing.hours.summary}
-          </p>
-          {listing.teamSize !== undefined && (
-            <p className="flex items-center gap-2">
-              <Users
-                className="h-4 w-4 shrink-0 text-orange-500 dark:text-gold-400"
-                aria-hidden="true"
-              />
-              {listing.teamSize} clinicians
-            </p>
-          )}
         </div>
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4 dark:border-navy-600">
           <div>
-            <StarRating rating={listing.rating} />
-            <p className="mt-1 text-xs text-slate-500 dark:text-gray-400">
-              {listing.reviewCount} reviews
+            {listing.rating !== null && <StarRating rating={listing.rating} />}
+            <p
+              className={cn(
+                "text-xs text-slate-500 dark:text-gray-400",
+                listing.rating !== null && "mt-1",
+              )}
+            >
+              {listing.reviewCount > 0 ? `${listing.reviewCount} reviews` : "No reviews yet"}
             </p>
           </div>
           <span
             className={cn(
               "inline-flex items-center gap-1.5 text-xs font-semibold",
-              listing.hours.openNow
+              listing.openNow
                 ? "text-green-700 dark:text-green-400"
                 : "text-slate-500 dark:text-gray-400",
             )}
@@ -217,21 +183,23 @@ export function DentistListingCard({
             <span
               className={cn(
                 "h-2 w-2 rounded-full",
-                listing.hours.openNow ? "bg-green-500" : "bg-slate-400",
+                listing.openNow ? "bg-green-500" : "bg-slate-400",
               )}
               aria-hidden="true"
             />
-            {listing.hours.openNow ? "Open now" : "Closed"}
+            {listing.openNow ? "Open now" : "Closed"}
           </span>
         </div>
 
         <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="text-xs text-slate-500 dark:text-gray-400">Consultation from</p>
-            <p className="mt-0.5 font-heading text-lg font-semibold text-slate-900 dark:text-white">
-              {formatPrice(listing)}
-            </p>
-          </div>
+          {price && (
+            <div>
+              <p className="text-xs text-slate-500 dark:text-gray-400">Consultation from</p>
+              <p className="mt-0.5 font-heading text-lg font-semibold text-slate-900 dark:text-white">
+                {price}
+              </p>
+            </div>
+          )}
           <Link
             to={profilePath}
             aria-label={`View profile for ${listing.name}`}
@@ -240,13 +208,6 @@ export function DentistListingCard({
             View profile
           </Link>
         </div>
-
-        {insurance.length > 0 && (
-          <p className="mt-4 text-xs text-slate-500 dark:text-gray-400">
-            Insurance accepted: {insurance.slice(0, 3).join(", ")}
-            {insurance.length > 3 ? ` +${insurance.length - 3}` : ""}
-          </p>
-        )}
       </div>
     </article>
   );

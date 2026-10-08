@@ -75,6 +75,9 @@ async def test_facility_list_reports_the_shared_card_contract(client: AsyncClien
     assert smile_point["review_count"] == 37
     assert smile_point["currency"] == "KES"
     assert smile_point["open_now"] is True
+    assert smile_point["phone"] == "+254 711 000 111"
+    assert smile_point["verification_tier"] == "verified"
+    assert smile_point["clinic_name"] is None
 
     # Money stays exact: two decimal places, not float noise.
     assert Decimal(str(smile_point["list_price"])) == Decimal("2500.00")
@@ -85,6 +88,9 @@ async def test_facility_list_reports_the_shared_card_contract(client: AsyncClien
     assert nyali["rating"] is None
     assert nyali["review_count"] == 0
     assert nyali["open_now"] is False
+    assert nyali["phone"] is None
+    assert nyali["verification_tier"] == "unverified"
+    assert nyali["clinic_name"] is None
 
 
 async def test_facility_list_filters_by_subdivision(client: AsyncClient) -> None:
@@ -140,6 +146,9 @@ async def test_facility_detail_nests_the_card_and_resolves_hours(client: AsyncCl
 
     assert body["listing"]["listing_type"] == "facility"
     assert body["listing"]["open_now"] is True
+    # The nested card agrees with the detail's own contact and tier.
+    assert body["listing"]["phone"] == "+254 711 000 111"
+    assert body["listing"]["verification_tier"] == "verified"
     assert body["verification_tier"] == "verified"
     assert body["address"] == "Kileleshwa Road, Nairobi"
     assert body["email"] == "hello@smilepoint.test"
@@ -209,6 +218,11 @@ async def test_specialist_list_reuses_the_same_card(client: AsyncClient) -> None
     assert item["open_now"] is True
     assert Decimal(str(item["list_price"])) == Decimal("3500.00")
     assert Decimal(str(item["rating"])) == Decimal("4.90")
+    # The specialist's card points at their workplace's phone, and carries no
+    # tier of its own (specialists gain one in a later issue).
+    assert item["phone"] == "+254 711 000 111"
+    assert item["clinic_name"] == "Smile Point Dental"
+    assert item["verification_tier"] is None
 
 
 async def test_specialist_list_filters_by_specialty(client: AsyncClient) -> None:
@@ -230,6 +244,8 @@ async def test_specialist_list_reads_the_markets_own_rows(client: AsyncClient) -
     assert body["total"] == 1
     # Lagos Pearl's branch publishes no hours, so nobody is open there.
     assert body["items"][0]["open_now"] is False
+    assert body["items"][0]["clinic_name"] == "Lagos Pearl Dental"
+    assert body["items"][0]["phone"] == "+234 801 000 222"
 
 
 async def test_specialist_detail_carries_specialties_and_branches(client: AsyncClient) -> None:

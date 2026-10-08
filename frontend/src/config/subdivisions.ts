@@ -20,6 +20,19 @@ function slug(name: string): string {
     .toUpperCase();
 }
 
+/**
+ * A subdivision code as a readable label, for the moment before a market's
+ * name list is loaded: `UASIN_GISHU` → "Uasin Gishu". The API's
+ * `Subdivision.name` (or the static list's) always wins when it is known.
+ */
+export function describeSubdivisionCode(code: string): string {
+  return code
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
 function pack(countryCode: string, items: { name: string; code?: string }[]): Subdivision[] {
   return items.map(({ name, code }) => ({
     id: `static-${countryCode}-${code || slug(name)}`,
