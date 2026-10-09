@@ -42,6 +42,13 @@ jobs:
       - name: Mypy (strict)
         run: uv run mypy app
 
+      # Alembic imports migrations/env.py on every deploy (Render runs
+      # `alembic upgrade head` before new code goes live), so an unparseable
+      # env.py would take production down. ruff/mypy only cover app/, so this
+      # step is the only thing that catches it. See issue #39.
+      - name: Parse migrations/env.py
+        run: uv run python -c "compile(open('migrations/env.py', encoding='utf-8').read(), 'env.py', 'exec')"
+
   typescript-quality:
     name: TypeScript Quality · biome + tsc
     runs-on: ubuntu-latest
