@@ -329,6 +329,36 @@ class FacilityRepository:
         return int(result.scalar_one())
 
     @staticmethod
+    async def count_verified(session: AsyncSession, *, country_code: str) -> int:
+        """Count Facilities in a Country that are verified beyond the default tier.
+
+        "Verified" is any tier above ``unverified`` (``CONTEXT.md`` "Verification
+        tier"): the Home stats answer "how many clinics can a patient trust at a
+        glance", so the no-checked default never counts.
+        """
+        stmt = (
+            select(func.count())
+            .select_from(Facility)
+            .where(
+                Facility.country_code == country_code,
+                Facility.verification_tier != "unverified",
+            )
+        )
+        result = await session.execute(stmt)
+        return int(result.scalar_one())
+
+    @staticmethod
+    async def count_subdivisions(session: AsyncSession, *, country_code: str) -> int:
+        """Count the distinct subdivisions (counties, states) a market covers."""
+        stmt = (
+            select(func.count(func.distinct(Facility.subdivision_code)))
+            .select_from(Facility)
+            .where(Facility.country_code == country_code)
+        )
+        result = await session.execute(stmt)
+        return int(result.scalar_one())
+
+    @staticmethod
     async def specialty_codes_by_facility(
         session: AsyncSession,
         facility_ids: list[str],
