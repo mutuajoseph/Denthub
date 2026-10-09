@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.config import API_V1_PREFIX, Settings
 from app.exceptions import register_exception_handlers
+from app.middleware.http_cache import HttpCacheMiddleware
 from app.middleware.logging import RequestLoggingMiddleware
 from app.routes.v1 import v1_router
 from app.utils.logger import configure_logging
@@ -57,6 +58,7 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.add_middleware(HttpCacheMiddleware)
     app.add_middleware(RequestLoggingMiddleware)
 
     register_exception_handlers(app)
