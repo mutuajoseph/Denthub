@@ -120,6 +120,7 @@ tests yet, so running them is on you.
 uv run --directory backend ruff check app
 uv run --directory backend ruff format --check app
 uv run --directory backend mypy app
+uv run --directory backend python -c "compile(open('migrations/env.py', encoding='utf-8').read(), 'env.py', 'exec')"  # env.py must parse or deploys break
 pnpm --filter frontend exec biome check .
 pnpm --filter frontend build          # tsc + vite; the real type gate
 uv run --directory backend pytest -q

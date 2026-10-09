@@ -112,6 +112,137 @@ ARTICLES: list[tuple[str, str, str, str, str, str, str, bool, str, str, list[str
     ),
     (
         "KE",
+        "ai-second-reader-radiography",
+        "AI Diagnostics: Second-Reader Detection Is Now Affordable",
+        (
+            "Caries and periapical triage tools cost less than a month of "
+            "imaging software and measurably reduce missed findings."
+        ),
+        (
+            "## A second pair of eyes\n\n"
+            "Practice-management teams on both X-ray vendors' clouds now ship "
+            "AI triage as an option: the software flags suspicious bitewing "
+            "lesions and periapical regions before a human reads the film.\n\n"
+            "- Detection handles caries, periapical lesions and bone level.\n"
+            "- The AI suggests, the clinician decides - nothing is auto-filled.\n"
+            "- Monthly fees sit well inside what a busy practice already "
+            "spends on film and storage.\n\n"
+            "Expect the watch-list to shrink: fewer missed findings, and "
+            "fewer films pulled for a second read."
+        ),
+        "Mwangi Njoroge",
+        "technology",
+        True,
+        "published",
+        "2026-09-24T08:00:00",
+        ["ai", "radiography", "diagnostics", "technology"],
+    ),
+    (
+        "KE",
+        "chairside-3d-printing-workflow",
+        "3D Printing: Same-Day Aligners and Surgical Guides",
+        (
+            "Chairside resin printing has moved from curiosity to a realistic "
+            "same-day workflow for aligners, splints and guides."
+        ),
+        (
+            "A desktop resin printer next to the treatment chair changes the "
+            "day's rhythm: scan in the morning, print at lunch, try in by "
+            "midday.\n\n"
+            "**Where it earns its keep today:**\n\n"
+            "- Night guards and splints, fitted at the same visit.\n"
+            "- Surgical guides printed from the same scan the implant plan used.\n"
+            "- Small aligner adjustments between full clear-aligner stages.\n\n"
+            "Materials matter more than speed - a resin's flexural strength "
+            "decides whether a guide survives its single use."
+        ),
+        "Mwangi Njoroge",
+        "technology",
+        False,
+        "published",
+        "2026-09-10T09:00:00",
+        ["3d-printing", "aligners", "technology"],
+    ),
+    (
+        "KE",
+        "preventive-devices-beyond-the-toothbrush",
+        "Preventive Devices: Beyond the Electric Toothbrush",
+        (
+            "Drug-eluting and remineralising devices give high-risk patients "
+            "options that sit between brushing and a prescription."
+        ),
+        (
+            "For a high-caries patient, the jump from 'brush better' to "
+            "'prescription suspension' is wide. Preventive devices are "
+            "starting to fill it.\n\n"
+            "- Remineralising mouthpieces worn overnight.\n"
+            "- Slow-release fluoride and antibacterial coatings in selective "
+            "situations.\n"
+            "- Home-use trays that dose precisely rather than batch-swear.\n\n"
+            "These sit squarely in preventive care: useful for xerostomia, "
+            "orthodontic patients, and anyone whose decay rate outruns a "
+            "toothbrush."
+        ),
+        "Mwangi Njoroge",
+        "technology",
+        False,
+        "published",
+        "2026-07-28T10:00:00",
+        ["prevention", "devices", "technology"],
+    ),
+    (
+        "KE",
+        "bioactive-restorative-materials",
+        "Bioactive Materials: Materials That Release Ions on Demand",
+        (
+            "Alkalis and ion-releasing composites reward careful placement, "
+            "and are useful in the sandwich technique and around provisionals."
+        ),
+        (
+            "Bioactive restoratives differ from standard composites in what "
+            "they do after placement: they release calcium and ions when the "
+            "environment turns acidic.\n\n"
+            "**Where clinicians reach for them:**\n\n"
+            "- Class V and root-surface lesions in dentine.\n"
+            "- The sandwich layer under a conventional composite.\n"
+            "- Around temporary crowns where margins are hard to keep dry.\n\n"
+            "Bonding discipline still rules - a bioactive liner is not a "
+            "substitute for a clean, dry interface."
+        ),
+        "Mwangi Njoroge",
+        "technology",
+        False,
+        "published",
+        "2026-06-18T08:30:00",
+        ["materials", "restorative", "technology"],
+    ),
+    (
+        "KE",
+        "regenerative-endodontics-kenya",
+        "Regenerative Endodontics: Revascularisation Moves Toward Routine Practice",
+        (
+            "Still led by specialists, but the protocols are now standardised "
+            "enough that referral no longer means losing the tooth."
+        ),
+        (
+            "Revascularisation aims to restore a young, infected immature "
+            "tooth rather than fill its canal. The referral pattern is "
+            "finally predictable.\n\n"
+            "- Cases are selected on root maturity and infection status.\n"
+            "- Protocols have moved past research-lab variance.\n"
+            "- A general dentist's honest triage keeps the window open.\n\n"
+            "It remains specialist-led in Kenya, but a referral is now a "
+            "chance to save the tooth, not an end of the line."
+        ),
+        "Mwangi Njoroge",
+        "technology",
+        False,
+        "published",
+        "2026-05-22T09:00:00",
+        ["endodontics", "regenerative", "technology"],
+    ),
+    (
+        "KE",
         "whitening-vs-veneers",
         "Whitening or Veneers? What Dentists Actually Recommend",
         ("The two are not interchangeable. Here is how Kenyan dentists decide between them."),
