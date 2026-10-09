@@ -39,7 +39,7 @@ async def test_seed_is_idempotent_and_writes_unpublished_rows() -> None:
         assert sum(first.values()) == len(ARTICLES)
         # Drafts and scheduled stories are seeded on purpose, so the API has
         # something to prove it never serves them.
-        assert first["published"] == 7
+        assert first["published"] == 12
         assert first["draft"] == 1
         assert first["scheduled"] == 1
 
