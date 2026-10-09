@@ -14,3 +14,22 @@ Client cache keys currently omit country and currency
 (`frontend/src/hooks/useProductSearch.ts`), so switching region served the
 previous country's prices. That is the bug this decision has to fix, not just
 avoid.
+
+## Implementation (issue #23)
+
+A `HttpCacheMiddleware` (`backend/app/middleware/http_cache.py`) applies to every
+public GET answer; auth, users, and health are never publicly cached.
+
+- **ETag** is a strong SHA-256 over the serialised body; a matching
+  `If-None-Match` returns `304` with the cache headers and no body.
+- **`Vary: Accept-Country, Accept-Currency, Accept-Language`** is always set, so
+  a shared cache cannot serve one market's bytes to another.
+- **Per-endpoint policy:** reference data under `/config/` is
+  `public, max-age=300, must-revalidate`; every other read (listings, products,
+  home, jobs, magazine, training) is `public, no-cache` — stored but revalidated
+  on every read via its ETag.
+- **Negotiation is presentation-only.** Money is never converted and labels are
+  not re-translated; the response instead reflects the market it actually
+  resolved to in `Content-Country`, `Content-Currency`, and `Content-Language`,
+  so a client that asked for an unsupported market/currency/language fails
+  honestly ("prices in KES") instead of quietly.
