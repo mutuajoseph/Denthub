@@ -3,12 +3,6 @@ import { persist } from "zustand/middleware";
 
 const clone = (data: unknown) => JSON.parse(JSON.stringify(data));
 
-export interface Stat {
-  label: string;
-  value: number;
-  suffix: string;
-}
-
 export interface HowItWorksStep {
   icon?: string;
   emoji?: string;
@@ -24,7 +18,6 @@ export interface HeroCard {
 }
 
 export interface HomeContent {
-  stats: Stat[];
   howItWorksTitle: string;
   howItWorksSteps: HowItWorksStep[];
   featuredClinicsTitle: string;
@@ -82,12 +75,6 @@ export interface SiteContent {
 export function getDefaultSiteContent(): SiteContent {
   return {
     home: {
-      stats: [
-        { label: "Clinics Listed", value: 2400, suffix: "+" },
-        { label: "Jobs Posted", value: 840, suffix: "+" },
-        { label: "Products in Shop", value: 500, suffix: "+" },
-        { label: "Training Courses", value: 120, suffix: "+" },
-      ],
       howItWorksTitle: "How DentHub Works",
       howItWorksSteps: [
         { icon: "Search", title: "Search", desc: "Find dentists by county, specialty, or NHIF" },
@@ -239,7 +226,6 @@ interface SiteContentState extends SiteContent {
   importContent: (payload: Record<string, unknown>) => void;
   exportSnapshot: () => Record<string, unknown>;
   patchHome: (partial: Partial<HomeContent>) => void;
-  setHomeStats: (stats: Stat[]) => void;
   setHowItWorksSteps: (steps: HowItWorksStep[]) => void;
   setHeroCard: (heroCard: Partial<HeroCard>) => void;
   patchJobsBoard: (partial: Partial<SiteContent["jobsBoard"]>) => void;
@@ -305,8 +291,6 @@ export const useSiteContentStore = create<SiteContentState>()(
 
       patchHome: (partial) => set((s) => ({ home: { ...s.home, ...partial } })),
 
-      setHomeStats: (stats) => set((s) => ({ home: { ...s.home, stats: clone(stats) } })),
-
       setHowItWorksSteps: (steps) =>
         set((s) => ({ home: { ...s.home, howItWorksSteps: clone(steps) } })),
 
@@ -343,9 +327,11 @@ export const useSiteContentStore = create<SiteContentState>()(
     }),
     {
       name: "denthub-site-content",
-      version: 2,
+      version: 3,
       migrate: (persistedState: unknown, version: number) => {
-        if (version < 2) {
+        // v3 removed the invented Home stats (they moved to `GET /home/stats`),
+        // so any store that could still carry a `stats` array resets to default.
+        if (version < 3) {
           return getDefaultSiteContent();
         }
         return persistedState as PersistedState;
