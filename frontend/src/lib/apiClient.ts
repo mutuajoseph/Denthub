@@ -4,6 +4,7 @@
  * the `{ code, message, detail? }` error envelope are handled in one place.
  */
 
+import { useCountryConfigStore } from "../store/countryConfigStore";
 import { useRegionStore } from "../store/regionStore";
 import { API_BASE } from "./api";
 import { getStoredToken } from "./auth";
@@ -54,13 +55,17 @@ interface ActiveRegion {
 function resolveActiveRegion(): ActiveRegion {
   const state = useRegionStore.getState();
   const code = state.regionCode || state.getRegion().code;
-  const region = state.getRegion();
+  const config = useCountryConfigStore.getState().config;
 
   return {
     // GLOBAL is a display-only region; the API always resolves to a real country.
     code: code === "GLOBAL" ? "KE" : code,
-    currency: region.currency,
-    language: region.locale.split("-")[0] || "en",
+    // Currency and language come from country configuration, never from a
+    // hardcoded country→currency map. `""` when the config has not landed, and
+    // the request then omits the header and lets the server resolve its own
+    // default.
+    currency: config?.currency ?? "",
+    language: config?.locale.split("-")[0] || "en",
   };
 }
 
@@ -130,7 +135,8 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
 
   headers.set("Accept", "application/json");
   headers.set("Accept-Country", countryCode || region.code);
-  headers.set("Accept-Currency", currency || region.currency);
+  const resolvedCurrency = currency || region.currency;
+  if (resolvedCurrency) headers.set("Accept-Currency", resolvedCurrency);
   headers.set("Accept-Language", region.language);
 
   if (auth) {

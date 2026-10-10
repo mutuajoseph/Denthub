@@ -3,12 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  type CountryConfig,
-  fetchCountryConfig,
-  fetchSpecialties,
-  fetchSubdivisions,
-} from "../lib/countryConfigApi";
+import { type CountryConfig, fetchCountryConfig, fetchSpecialties } from "../lib/countryConfigApi";
 import { type DentistListing, fetchListingSearch } from "../lib/listingApi";
 import { useCountryConfigStore } from "../store/countryConfigStore";
 import { useRegionStore } from "../store/regionStore";
@@ -20,20 +15,14 @@ vi.mock("../lib/listingApi", async (importOriginal) => {
   return { ...actual, fetchListingSearch: vi.fn() };
 });
 
-vi.mock("../lib/countryConfigApi", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../lib/countryConfigApi")>();
-
-  return {
-    ...actual,
-    fetchCountryConfig: vi.fn(),
-    fetchSubdivisions: vi.fn(),
-    fetchSpecialties: vi.fn(),
-  };
-});
+vi.mock("../lib/countryConfigApi", () => ({
+  fetchCountries: vi.fn(),
+  fetchCountryConfig: vi.fn(),
+  fetchSpecialties: vi.fn(),
+}));
 
 const fetchListingSearchMock = vi.mocked(fetchListingSearch);
 const fetchCountryConfigMock = vi.mocked(fetchCountryConfig);
-const fetchSubdivisionsMock = vi.mocked(fetchSubdivisions);
 const fetchSpecialtiesMock = vi.mocked(fetchSpecialties);
 
 const openSpecialist: DentistListing = {
@@ -73,6 +62,7 @@ const closedFacility: DentistListing = {
 function makeConfig(code: string): CountryConfig {
   return {
     code,
+    name: code,
     currency: "KES",
     currencySymbol: "KSh",
     locale: "en-KE",
@@ -112,7 +102,6 @@ describe("Emergency", () => {
       regionsLoading: false,
     });
     fetchCountryConfigMock.mockImplementation(async (code) => makeConfig(code ?? "KE"));
-    fetchSubdivisionsMock.mockResolvedValue([]);
     fetchSpecialtiesMock.mockResolvedValue([]);
     fetchListingSearchMock.mockResolvedValue([openSpecialist, closedFacility]);
   });
@@ -123,7 +112,7 @@ describe("Emergency", () => {
     expect(
       await screen.findByRole("heading", { name: "Open dental listings" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Dr. Wanjiku Kamau" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Dr. Wanjiku Kamau" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Eldoret Dental Hub" })).not.toBeInTheDocument();
     expect(screen.getByText("1 listing marked open now")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /call dr\. wanjiku kamau/i })).toHaveAttribute(

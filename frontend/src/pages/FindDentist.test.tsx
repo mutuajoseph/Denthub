@@ -6,9 +6,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   type CountryConfig,
+  fetchCountries,
   fetchCountryConfig,
   fetchSpecialties,
-  fetchSubdivisions,
 } from "../lib/countryConfigApi";
 import { type DentistListing, fetchListingSearch } from "../lib/listingApi";
 import { useCountryConfigStore } from "../store/countryConfigStore";
@@ -21,20 +21,15 @@ vi.mock("../lib/listingApi", async (importOriginal) => {
   return { ...actual, fetchListingSearch: vi.fn() };
 });
 
-vi.mock("../lib/countryConfigApi", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../lib/countryConfigApi")>();
-
-  return {
-    ...actual,
-    fetchCountryConfig: vi.fn(),
-    fetchSubdivisions: vi.fn(),
-    fetchSpecialties: vi.fn(),
-  };
-});
+vi.mock("../lib/countryConfigApi", () => ({
+  fetchCountries: vi.fn(),
+  fetchCountryConfig: vi.fn(),
+  fetchSpecialties: vi.fn(),
+}));
 
 const fetchListingSearchMock = vi.mocked(fetchListingSearch);
+const fetchCountriesMock = vi.mocked(fetchCountries);
 const fetchCountryConfigMock = vi.mocked(fetchCountryConfig);
-const fetchSubdivisionsMock = vi.mocked(fetchSubdivisions);
 const fetchSpecialtiesMock = vi.mocked(fetchSpecialties);
 
 const wireSpecialist: DentistListing = {
@@ -74,6 +69,7 @@ const wireFacility: DentistListing = {
 function makeConfig(code: string): CountryConfig {
   return {
     code,
+    name: code,
     currency: "KES",
     currencySymbol: "KSh",
     locale: "en-KE",
@@ -113,9 +109,31 @@ describe("FindDentist", () => {
       regionsLoading: false,
     });
     fetchCountryConfigMock.mockImplementation(async (code) => makeConfig(code ?? "KE"));
-    fetchSubdivisionsMock.mockResolvedValue([
-      { id: "KE-NAIROBI", name: "Nairobi", code: "NAIROBI", countryCode: "KE" },
-    ]);
+    fetchCountriesMock.mockResolvedValue({
+      default_country_code: "KE",
+      items: [
+        {
+          code: "KE",
+          name: "Kenya",
+          currency: "KES",
+          currency_symbol: "KSh",
+          locale: "en-KE",
+          timezone: "Africa/Nairobi",
+          subdivision_label: "County",
+          subdivision_label_plural: "Counties",
+        },
+        {
+          code: "NG",
+          name: "Nigeria",
+          currency: "NGN",
+          currency_symbol: "₦",
+          locale: "en-NG",
+          timezone: "Africa/Lagos",
+          subdivision_label: "State",
+          subdivision_label_plural: "States",
+        },
+      ],
+    });
     fetchSpecialtiesMock.mockResolvedValue([
       {
         id: "sp1",

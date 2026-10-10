@@ -9,9 +9,9 @@ import { getPageMeta } from "./hooks/usePageMeta";
 import { ApiError } from "./lib/apiClient";
 import {
   type CountryConfig,
+  fetchCountries,
   fetchCountryConfig,
   fetchSpecialties,
-  fetchSubdivisions,
 } from "./lib/countryConfigApi";
 import {
   type FacilityDetail,
@@ -32,22 +32,17 @@ vi.mock("./lib/listingApi", async (importOriginal) => {
   };
 });
 
-vi.mock("./lib/countryConfigApi", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./lib/countryConfigApi")>();
-
-  return {
-    ...actual,
-    fetchCountryConfig: vi.fn(),
-    fetchSubdivisions: vi.fn(),
-    fetchSpecialties: vi.fn(),
-  };
-});
+vi.mock("./lib/countryConfigApi", () => ({
+  fetchCountries: vi.fn(),
+  fetchCountryConfig: vi.fn(),
+  fetchSpecialties: vi.fn(),
+}));
 
 const fetchListingSearchMock = vi.mocked(fetchListingSearch);
 const fetchFacilityDetailMock = vi.mocked(fetchFacilityDetail);
 const fetchSpecialistDetailMock = vi.mocked(fetchSpecialistDetail);
+const fetchCountriesMock = vi.mocked(fetchCountries);
 const fetchCountryConfigMock = vi.mocked(fetchCountryConfig);
-const fetchSubdivisionsMock = vi.mocked(fetchSubdivisions);
 const fetchSpecialtiesMock = vi.mocked(fetchSpecialties);
 
 const facilityDetail: FacilityDetail = {
@@ -99,6 +94,7 @@ const specialistDetail: SpecialistDetail = {
 function makeConfig(code: string): CountryConfig {
   return {
     code,
+    name: "Kenya",
     currency: "KES",
     currencySymbol: "KSh",
     locale: "en-KE",
@@ -129,8 +125,8 @@ describe("App routes", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     fetchListingSearchMock.mockResolvedValue([]);
+    fetchCountriesMock.mockResolvedValue({ items: [], default_country_code: "KE" });
     fetchCountryConfigMock.mockImplementation(async (code) => makeConfig(code ?? "KE"));
-    fetchSubdivisionsMock.mockResolvedValue([]);
     fetchSpecialtiesMock.mockResolvedValue([]);
     fetchFacilityDetailMock.mockResolvedValue(facilityDetail);
     fetchSpecialistDetailMock.mockResolvedValue(specialistDetail);

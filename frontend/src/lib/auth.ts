@@ -1,5 +1,5 @@
 import { type Role, isPublicRole, normalizeRole } from "../auth/roles";
-import { API_BASE } from "./api";
+import { postJson } from "./apiClient";
 
 export type AccountStatus = "active" | "pending";
 
@@ -102,40 +102,8 @@ function saveStoredAuth(auth: AuthResponse): void {
   }
 }
 
-function getErrorMessage(value: unknown, fallback: string): string {
-  if (!isRecord(value)) {
-    return fallback;
-  }
-
-  if (typeof value.message === "string" && value.message) {
-    return value.message;
-  }
-
-  if (typeof value.detail === "string" && value.detail) {
-    return value.detail;
-  }
-
-  return fallback;
-}
-
-async function postAuth(
-  path: string,
-  body: UnknownRecord,
-  fallbackError: string,
-): Promise<AuthResponse> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
-
-  const data: unknown = await res.json();
-
-  if (!res.ok) {
-    throw new Error(getErrorMessage(data, `${fallbackError}: ${res.status}`));
-  }
+async function postAuth(path: string, body: UnknownRecord): Promise<AuthResponse> {
+  const data = await postJson<unknown>(path, body);
 
   const authResponse = parseAuthResponse(data);
   saveStoredAuth(authResponse);
@@ -143,14 +111,10 @@ async function postAuth(
 }
 
 export async function login(credentials: LoginRequest): Promise<AuthResponse> {
-  return postAuth(
-    "/auth/login",
-    {
-      email: credentials.email,
-      password: credentials.password,
-    },
-    "Login failed",
-  );
+  return postAuth("/auth/login", {
+    email: credentials.email,
+    password: credentials.password,
+  });
 }
 
 export async function register(data: RegisterRequest): Promise<AuthResponse> {
@@ -160,17 +124,13 @@ export async function register(data: RegisterRequest): Promise<AuthResponse> {
     throw new Error("Invalid registration account type");
   }
 
-  return postAuth(
-    "/auth/register",
-    {
-      full_name: data.full_name,
-      email: data.email,
-      password: data.password,
-      account_type: accountType,
-      ...(data.phone === undefined ? {} : { phone: data.phone }),
-    },
-    "Registration failed",
-  );
+  return postAuth("/auth/register", {
+    full_name: data.full_name,
+    email: data.email,
+    password: data.password,
+    account_type: accountType,
+    ...(data.phone === undefined ? {} : { phone: data.phone }),
+  });
 }
 
 export function getStoredAuth(): AuthResponse | null {

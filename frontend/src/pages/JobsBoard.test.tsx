@@ -5,7 +5,12 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { JOBS_PAGE_SIZE, JOB_EMPLOYMENT_TYPES } from "../config/jobConstants";
-import { type SpecialtyWire, fetchSpecialties } from "../lib/countryConfigApi";
+import {
+  type CountryConfig,
+  type SpecialtyWire,
+  fetchCountryConfig,
+  fetchSpecialties,
+} from "../lib/countryConfigApi";
 import { type JobPageWire, type JobPostingWire, fetchJobs } from "../lib/jobsApi";
 import { useRegionStore } from "../store/regionStore";
 import { JobsBoard } from "./JobsBoard";
@@ -19,17 +24,38 @@ vi.mock("../lib/jobsApi", async (importOriginal) => {
   };
 });
 
-vi.mock("../lib/countryConfigApi", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../lib/countryConfigApi")>();
-
-  return {
-    ...actual,
-    fetchSpecialties: vi.fn(),
-  };
-});
+vi.mock("../lib/countryConfigApi", () => ({
+  fetchCountries: vi.fn(),
+  fetchCountryConfig: vi.fn(),
+  fetchSpecialties: vi.fn(),
+}));
 
 const fetchJobsMock = vi.mocked(fetchJobs);
+const fetchCountryConfigMock = vi.mocked(fetchCountryConfig);
 const fetchSpecialtiesMock = vi.mocked(fetchSpecialties);
+
+function makeConfig(code: string): CountryConfig {
+  const regions =
+    code === "KE"
+      ? [
+          { id: "KE-NAIROBI", name: "Nairobi", code: "NAIROBI", countryCode: "KE" },
+          { id: "KE-MOMBASA", name: "Mombasa", code: "MOMBASA", countryCode: "KE" },
+        ]
+      : [];
+  return {
+    code,
+    name: code,
+    currency: "KES",
+    currencySymbol: "KSh",
+    locale: "en-KE",
+    geography: { subdivisionLabel: "County", subdivisionPlural: "Counties", cityLabel: "City" },
+    features: {},
+    featureConfigs: {},
+    featureContexts: {},
+    insuranceProviders: [],
+    regions,
+  };
+}
 
 function buildPosting(overrides: Partial<JobPostingWire> = {}): JobPostingWire {
   return {
@@ -87,6 +113,7 @@ describe("JobsBoard", () => {
   // The region store otherwise infers the country from `navigator.languages`,
   // which is `en-US` under jsdom, and every mocked posting is Kenyan.
   beforeEach(() => {
+    fetchCountryConfigMock.mockImplementation(async (code) => makeConfig(code ?? "KE"));
     useRegionStore.getState().setRegion("KE");
     fetchSpecialtiesMock.mockResolvedValue([
       {

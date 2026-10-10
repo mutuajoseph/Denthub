@@ -147,7 +147,7 @@ function setCanonical(pathname: string, domain: string) {
 export function usePageMeta(pathname?: string) {
   const location = useLocation();
   const path = pathname ?? location.pathname;
-  const { brandName, region } = useRegion();
+  const { brandName, region, locale } = useRegion();
 
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -159,6 +159,6 @@ export function usePageMeta(pathname?: string) {
     setMetaContent('meta[property="og:description"]', "content", meta.description);
     setMetaContent('meta[property="og:site_name"]', "content", brandName);
     setCanonical(path, region.domain);
-    document.documentElement.lang = region.locale;
-  }, [brandName, path, region.domain, region.locale]);
+    document.documentElement.lang = locale || "en";
+  }, [brandName, path, region.domain, locale]);
 }

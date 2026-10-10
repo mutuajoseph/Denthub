@@ -16,12 +16,12 @@ import { AppointmentRequestPreview } from "../components/dentists/AppointmentReq
 import Badge from "../components/ui/Badge";
 import Button from "../components/ui/Button";
 import StarRating from "../components/ui/StarRating";
-import { describeSubdivisionCode } from "../config/subdivisions";
 import { useCountryConfig } from "../hooks/useCountryConfig";
 import { useListingDetail } from "../hooks/useListingDetail";
 import type { ListingType } from "../lib/listingApi";
 import { formatListingPrice } from "../utils/formatCurrency";
 import { summarizeHours } from "../utils/hours";
+import { subdivisionLabel } from "../utils/subdivisionLabel";
 
 function describeError(error: unknown): string {
   return error instanceof Error ? error.message : "Something went wrong loading this profile.";
@@ -107,7 +107,7 @@ export function DentistProfile() {
   const price = formatListingPrice(listing.amount, listing.currency);
   const subdivisionName =
     regions.find((row) => row.code === listing.subdivisionCode)?.name ??
-    describeSubdivisionCode(listing.subdivisionCode);
+    subdivisionLabel(listing.subdivisionCode);
 
   return (
     <div className="bg-slate-50 py-8 dark:bg-navy-950 sm:py-10 lg:py-12">

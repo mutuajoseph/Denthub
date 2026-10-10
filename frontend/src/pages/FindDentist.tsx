@@ -6,6 +6,7 @@ import {
   type DentistFilterState,
   DentistSearchFilters,
 } from "../components/dentists/DentistSearchFilters";
+import { useCountries } from "../hooks/useCountries";
 import { useCountryConfig } from "../hooks/useCountryConfig";
 import { useListingSearch } from "../hooks/useListingSearch";
 import { useSpecialties } from "../hooks/useSpecialties";
@@ -29,6 +30,7 @@ function describeError(error: unknown): string {
 
 export function FindDentist() {
   const { apiCountry, regions } = useCountryConfig();
+  const { countries } = useCountries();
   const { options: specialtyOptions } = useSpecialties();
   const setRegion = useRegionStore((s) => s.setRegion);
   const [filters, setFilters] = useState<DentistFilterState>({ ...DEFAULT_DENTIST_FILTERS });
@@ -83,6 +85,7 @@ export function FindDentist() {
           <DentistSearchFilters
             value={filters}
             country={apiCountry}
+            countries={countries}
             subdivisions={regions}
             specialtyOptions={specialtyOptions}
             activeFilterCount={activeFilterCount}

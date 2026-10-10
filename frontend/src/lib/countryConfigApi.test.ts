@@ -5,12 +5,7 @@ vi.mock("./apiClient", () => ({
 }));
 
 import { getJson } from "./apiClient";
-import {
-  fetchCountries,
-  fetchCountryConfig,
-  fetchSpecialties,
-  fetchSubdivisions,
-} from "./countryConfigApi";
+import { fetchCountries, fetchCountryConfig, fetchSpecialties } from "./countryConfigApi";
 
 const getJsonMock = vi.mocked(getJson);
 
@@ -59,23 +54,6 @@ describe("countryConfigApi paths", () => {
     await fetchCountryConfig();
 
     expect(getJsonMock).toHaveBeenCalledWith("/config/country", {});
-  });
-
-  it("fetches subdivisions relative to the config resource", async () => {
-    getJsonMock.mockResolvedValue({
-      country_code: "KE",
-      items: [{ id: "KE-NBI", code: "NAIROBI", name: "Nairobi", country_code: "KE" }],
-    });
-
-    const regions = await fetchSubdivisions("KE");
-
-    expect(getJsonMock).toHaveBeenCalledWith("/config/country/regions", {
-      query: { country: "KE" },
-    });
-    expect(regions).toEqual([
-      // The wire id is discarded; the UI id is rebuilt from country + code.
-      { id: "KE-NAIROBI", name: "Nairobi", code: "NAIROBI", countryCode: "KE" },
-    ]);
   });
 
   it("fetches the country list and the specialty list relative", async () => {

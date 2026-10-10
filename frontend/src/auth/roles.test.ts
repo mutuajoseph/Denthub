@@ -89,18 +89,19 @@ describe("auth contract", () => {
   it("sends the account type and stores one canonical session", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({
-        access_token: "token",
-        token_type: "bearer",
-        user: {
-          id: "user-1",
-          email: "clinic@example.com",
-          full_name: "Clinic Owner",
-          role: "facility_admin",
-          is_staff: false,
-          account_status: "active",
-        },
-      }),
+      text: async () =>
+        JSON.stringify({
+          access_token: "token",
+          token_type: "bearer",
+          user: {
+            id: "user-1",
+            email: "clinic@example.com",
+            full_name: "Clinic Owner",
+            role: "facility_admin",
+            is_staff: false,
+            account_status: "active",
+          },
+        }),
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -129,18 +130,19 @@ describe("auth contract", () => {
       "fetch",
       vi.fn().mockResolvedValue({
         ok: true,
-        json: async () => ({
-          access_token: "token",
-          token_type: "bearer",
-          user: {
-            id: "user-1",
-            email: "user@example.com",
-            full_name: "Unknown User",
-            role: "unrecognized",
-            is_staff: false,
-            account_status: "active",
-          },
-        }),
+        text: async () =>
+          JSON.stringify({
+            access_token: "token",
+            token_type: "bearer",
+            user: {
+              id: "user-1",
+              email: "user@example.com",
+              full_name: "Unknown User",
+              role: "unrecognized",
+              is_staff: false,
+              account_status: "active",
+            },
+          }),
       }),
     );
 

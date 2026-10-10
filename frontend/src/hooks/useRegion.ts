@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import { getBrandName } from "../config/regions";
-import { getStaticSubdivisions } from "../config/subdivisions";
 import { useCountryConfigStore } from "../store/countryConfigStore";
 import { useRegionStore } from "../store/regionStore";
 import {
@@ -28,10 +27,8 @@ export function useRegion() {
     [countiesLabel, config?.geography?.subdivisionPlural],
   );
 
-  const code = regionCode === "GLOBAL" ? "KE" : regionCode;
   const storeRegions = useCountryConfigStore.getState().regions;
-  const subdivisionCount =
-    storeRegions?.length > 0 ? storeRegions.length : getStaticSubdivisions(code).length;
+  const subdivisionCount = storeRegions.length;
 
   const trustBadges = useMemo(
     () => patchTrustBadges(region.trustBadges, subdivisionCount, geography),
@@ -41,6 +38,7 @@ export function useRegion() {
   return {
     region: {
       ...region,
+      countryName: config?.name || region.countryName,
       countiesLabel,
       trustBadges,
       subdivisionTrustBadge: subdivisionTrustBadge(subdivisionCount, geography),
@@ -49,10 +47,10 @@ export function useRegion() {
     brandName,
     brandShort: region.brandSuffix ? region.brandSuffix : "Global",
     setRegion,
-    currency: config?.currency || region.currency,
-    currencySymbol: config?.currencySymbol || region.currencySymbol,
-    locale: config?.locale || region.locale,
-    countryName: region.countryName,
+    currency: config?.currency || "",
+    currencySymbol: config?.currencySymbol || "",
+    locale: config?.locale || "",
+    countryName: config?.name || region.countryName,
     flag: region.flag,
     countiesLabel,
     subdivisionCount,

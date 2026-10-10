@@ -61,6 +61,10 @@ async function fetchProfile(
  * `listingType: null` is the legacy typeless route (`/dentists/:id`,
  * `/dentist/:id`); the query key names that mode so it never serves a cached
  * facility result to a typed specialist URL.
+ *
+ * The key carries no country: the detail routes accept the market for parity
+ * but the listing's own Country governs the response, so a region switch never
+ * changes what a deep link reads.
  */
 export function useListingDetail(listingType: ListingType | null, id: string) {
   const { nameOf } = useSpecialties();

@@ -5,12 +5,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "../lib/apiClient";
-import {
-  type CountryConfig,
-  fetchCountryConfig,
-  fetchSpecialties,
-  fetchSubdivisions,
-} from "../lib/countryConfigApi";
+import { type CountryConfig, fetchCountryConfig, fetchSpecialties } from "../lib/countryConfigApi";
 import {
   type DentistListing,
   type FacilityDetail,
@@ -32,21 +27,15 @@ vi.mock("../lib/listingApi", async (importOriginal) => {
   };
 });
 
-vi.mock("../lib/countryConfigApi", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../lib/countryConfigApi")>();
-
-  return {
-    ...actual,
-    fetchCountryConfig: vi.fn(),
-    fetchSubdivisions: vi.fn(),
-    fetchSpecialties: vi.fn(),
-  };
-});
+vi.mock("../lib/countryConfigApi", () => ({
+  fetchCountries: vi.fn(),
+  fetchCountryConfig: vi.fn(),
+  fetchSpecialties: vi.fn(),
+}));
 
 const fetchFacilityDetailMock = vi.mocked(fetchFacilityDetail);
 const fetchSpecialistDetailMock = vi.mocked(fetchSpecialistDetail);
 const fetchCountryConfigMock = vi.mocked(fetchCountryConfig);
-const fetchSubdivisionsMock = vi.mocked(fetchSubdivisions);
 const fetchSpecialtiesMock = vi.mocked(fetchSpecialties);
 
 const WEEKDAY_HOURS = [
@@ -158,6 +147,7 @@ const specialistDetail: SpecialistDetail = {
 function makeConfig(code: string): CountryConfig {
   return {
     code,
+    name: code,
     currency: "KES",
     currencySymbol: "KSh",
     locale: "en-KE",
@@ -205,7 +195,6 @@ describe("DentistProfile", () => {
       regionsLoading: false,
     });
     fetchCountryConfigMock.mockImplementation(async (code) => makeConfig(code ?? "KE"));
-    fetchSubdivisionsMock.mockResolvedValue([]);
     fetchSpecialtiesMock.mockResolvedValue([
       {
         id: "sp1",

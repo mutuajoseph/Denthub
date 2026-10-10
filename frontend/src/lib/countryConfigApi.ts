@@ -11,8 +11,15 @@
  * snake_case wire fields into the camelCase shape the UI reads.
  */
 
-import type { Subdivision } from "../config/subdivisions";
 import { getJson } from "./apiClient";
+
+/** A region / county / state / province within a country. */
+export interface Subdivision {
+  id: string;
+  name: string;
+  code: string;
+  countryCode: string;
+}
 
 /** Module keys. A country with no row for one of these does not offer it. */
 export type CountryFeatureKey =
@@ -90,11 +97,6 @@ export interface CountryListWire {
   default_country_code: string;
 }
 
-export interface SubdivisionListWire {
-  country_code: string;
-  items: SubdivisionWire[];
-}
-
 export interface SpecialtyWire {
   id: string;
   code: string;
@@ -110,6 +112,8 @@ export interface SpecialtyListWire {
 /** The shape the UI reads, assembled from the wire by {@link mapCountryConfig}. */
 export interface CountryConfig {
   code: string;
+  /** The market's display name ("Kenya"); the only country→name chain left. */
+  name: string;
   currency: string;
   currencySymbol: string;
   locale: string;
@@ -175,6 +179,7 @@ export function mapCountryConfig(wire: CountryConfigWire): CountryConfig {
 
   return {
     code: wire.code,
+    name: wire.name,
     currency: wire.currency,
     currencySymbol: wire.currency_symbol,
     // The market's locale, never `default_locale`. This value reaches
@@ -202,8 +207,8 @@ export function mapCountryConfig(wire: CountryConfigWire): CountryConfig {
  * already sets from the region store, so no query parameter is needed. Passing
  * `countryCode` overrides that header for this one request — which is how a
  * region switcher previews another market without changing the ambient one.
- * Note this is the header, not the `country` query parameter the endpoint also
- * accepts; {@link fetchSubdivisions} uses the query parameter instead.
+ * The payload carries the country's subdivisions, so the market needs no
+ * second call for its regions.
  */
 export async function fetchCountryConfig(countryCode?: string): Promise<CountryConfig> {
   const wire = await getJson<CountryConfigWire>(
@@ -217,15 +222,6 @@ export async function fetchCountryConfig(countryCode?: string): Promise<CountryC
 /** Every active country, for the region switcher. */
 export async function fetchCountries(): Promise<CountryListWire> {
   return getJson<CountryListWire>("/config/countries");
-}
-
-/** A country's subdivisions, alphabetical. Empty for a country we do not serve. */
-export async function fetchSubdivisions(countryCode: string): Promise<Subdivision[]> {
-  const wire = await getJson<SubdivisionListWire>("/config/country/regions", {
-    query: { country: countryCode },
-  });
-
-  return wire.items.map(toSubdivision);
 }
 
 /** Specialties, in display order. The `code` is what a query string carries. */

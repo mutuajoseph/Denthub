@@ -1,10 +1,10 @@
 import { Award, Building2, CheckCircle2, MapPin, Phone, Stethoscope } from "lucide-react";
 import { Link } from "react-router-dom";
-import { describeSubdivisionCode } from "../../config/subdivisions";
 import type { ListingView } from "../../lib/listingApi";
 import { useCountryConfigStore } from "../../store/countryConfigStore";
 import { cn } from "../../utils/cn";
 import { formatListingPrice } from "../../utils/formatCurrency";
+import { subdivisionLabel } from "../../utils/subdivisionLabel";
 import Badge from "../ui/Badge";
 import StarRating from "../ui/StarRating";
 
@@ -35,7 +35,7 @@ export function DentistListingCard({
     listing.listingType === "facility" && listing.verificationTier === "featured";
   const subdivisionName =
     regions.find((row) => row.code === listing.subdivisionCode)?.name ??
-    describeSubdivisionCode(listing.subdivisionCode);
+    subdivisionLabel(listing.subdivisionCode);
   const price = formatListingPrice(listing.amount, listing.currency);
 
   if (variant === "compact") {

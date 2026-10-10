@@ -7,6 +7,7 @@ import {
   fetchProductCategories,
   fetchProducts,
 } from "../lib/productApi";
+import { useActiveCountryCode } from "./useActiveCountryCode";
 import { useDebouncedValue } from "./useDebouncedValue";
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -26,8 +27,10 @@ export interface UseProductSearchParams {
 /**
  * Catalog search, debounced.
  *
- * `placeholderData` keeps the previous page visible while a new one loads so
- * switching filters does not flash an empty grid.
+ * The query key lists every input the request reads — country, search, category,
+ * quantity, stock filter — so a region switch refetches rather than serving
+ * another market's prices. `placeholderData` keeps the previous page visible
+ * while a new one loads so switching filters does not flash an empty grid.
  */
 export function useProductSearch({
   search = "",
@@ -36,9 +39,10 @@ export function useProductSearch({
   inStock = true,
 }: UseProductSearchParams = {}) {
   const debouncedSearch = useDebouncedValue(search.trim(), SEARCH_DEBOUNCE_MS);
+  const country = useActiveCountryCode();
 
   const page = useQuery<ProductPage>({
-    queryKey: ["products", "search", debouncedSearch, category, quantity, inStock],
+    queryKey: ["products", "search", country, debouncedSearch, category, quantity, inStock],
     queryFn: ({ signal }) =>
       fetchProducts(
         {
@@ -66,8 +70,10 @@ export function useProductSearch({
 
 /** Categories actually stocked in the active country. */
 export function useProductCategories() {
+  const country = useActiveCountryCode();
+
   const query = useQuery<ProductCategories>({
-    queryKey: ["products", "categories"],
+    queryKey: ["products", "categories", country],
     queryFn: ({ signal }) => fetchProductCategories(signal),
     staleTime: 5 * 60 * 1000,
   });

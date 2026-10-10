@@ -1,17 +1,18 @@
 import { Briefcase } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 import { JobCard } from "../components/jobs/JobCard";
 import Button from "../components/ui/Button";
 import { JOBS_BOARD_LIMIT, JOBS_PAGE_SIZE, JOB_EMPLOYMENT_TYPES } from "../config/jobConstants";
-import { getStaticSubdivisions } from "../config/subdivisions";
+import { useCountryConfig } from "../hooks/useCountryConfig";
 import { useJobs } from "../hooks/useJobs";
 import { useRegion } from "../hooks/useRegion";
 import { useSpecialties } from "../hooks/useSpecialties";
 import { useSiteContentStore } from "../store/siteContentStore";
 
 export function JobsBoard() {
-  const { regionCode, countiesLabel, locale } = useRegion();
+  const { locale } = useRegion();
+  const { apiCountry, regions, subdivisionLabel } = useCountryConfig();
   const { title, subtitle } = useSiteContentStore((s) => s.jobsBoard);
 
   const [employment, setEmployment] = useState("");
@@ -21,13 +22,13 @@ export function JobsBoard() {
   // it by country makes the reset automatic rather than an effect.
   const [expandedIn, setExpandedIn] = useState<string | null>(null);
 
-  const countryCode = regionCode === "GLOBAL" ? "KE" : regionCode;
-  const subdivisions = useMemo(() => getStaticSubdivisions(countryCode), [countryCode]);
+  const countryCode = apiCountry;
+  const subdivisions = regions;
   const specialtyOptions = useSpecialties().options;
 
   // A subdivision picked in one country has no meaning in another, so a region
   // switch drops it rather than silently filtering everything out. Membership
-  // in the current country's static list does that without a reset effect.
+  // in the current country's list does that without a reset effect.
   const activeSubdivision = subdivisions.some((option) => option.code === subdivisionCode)
     ? subdivisionCode
     : "";
@@ -129,7 +130,7 @@ export function JobsBoard() {
               className="text-xs text-gray-500 dark:text-gray-400"
               htmlFor="jobs-filter-subdivision"
             >
-              {countiesLabel}
+              {subdivisionLabel}
             </label>
             <select
               id="jobs-filter-subdivision"

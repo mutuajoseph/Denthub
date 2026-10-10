@@ -3,6 +3,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { type CountryConfig, fetchCountryConfig } from "../lib/countryConfigApi";
 import {
   type TrainingCoursePageWire,
   type TrainingCourseWire,
@@ -11,6 +12,7 @@ import {
   fetchTrainingCourses,
   fetchTrainingWebinars,
 } from "../lib/trainingApi";
+import { useCountryConfigStore } from "../store/countryConfigStore";
 import { useRegionStore } from "../store/regionStore";
 import { Training } from "./Training";
 
@@ -24,8 +26,31 @@ vi.mock("../lib/trainingApi", async (importOriginal) => {
   };
 });
 
+vi.mock("../lib/countryConfigApi", () => ({
+  fetchCountries: vi.fn(),
+  fetchCountryConfig: vi.fn(),
+  fetchSpecialties: vi.fn(),
+}));
+
 const fetchCoursesMock = vi.mocked(fetchTrainingCourses);
 const fetchWebinarsMock = vi.mocked(fetchTrainingWebinars);
+const fetchCountryConfigMock = vi.mocked(fetchCountryConfig);
+
+function makeConfig(code: string): CountryConfig {
+  return {
+    code,
+    name: code,
+    currency: "KES",
+    currencySymbol: "KSh",
+    locale: "en-KE",
+    geography: { subdivisionLabel: "County", subdivisionPlural: "Counties", cityLabel: "City" },
+    features: {},
+    featureConfigs: {},
+    featureContexts: {},
+    insuranceProviders: [],
+    regions: [],
+  };
+}
 
 const HOUR_MS = 3_600_000;
 
@@ -97,8 +122,10 @@ function pending<T>(): Promise<T> {
 describe("Training", () => {
   // The region store otherwise infers the country from `navigator.languages`,
   // which is `en-US` under jsdom, and every mocked catalogue is Kenyan.
-  beforeEach(() => {
+  beforeEach(async () => {
     useRegionStore.setState({ regionCode: "KE", hasManualSelection: true });
+    fetchCountryConfigMock.mockImplementation(async (code) => makeConfig(code ?? "KE"));
+    await useCountryConfigStore.getState().loadForCountry("KE");
     fetchCoursesMock.mockResolvedValue(coursePage());
     fetchWebinarsMock.mockResolvedValue(webinarPage());
   });
