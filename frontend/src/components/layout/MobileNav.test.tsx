@@ -10,6 +10,7 @@ import { MobileNav } from "./MobileNav";
 function makeConfig(code: string, features: Record<string, boolean> = {}): CountryConfig {
   return {
     code,
+    name: "Kenya",
     currency: "KES",
     currencySymbol: "KSh",
     locale: "en-KE",

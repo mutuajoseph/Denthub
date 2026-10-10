@@ -1,7 +1,7 @@
 import { Search, SlidersHorizontal } from "lucide-react";
 import { useId } from "react";
-import { REGIONS, REGION_LIST } from "../../config/regions";
-import type { Subdivision } from "../../config/subdivisions";
+import type { CountrySummaryWire } from "../../lib/countryConfigApi";
+import type { Subdivision } from "../../lib/countryConfigApi";
 import type { ListingSort, ListingTypeFilter } from "../../lib/listingSearch";
 
 export interface DentistFilterState {
@@ -30,6 +30,8 @@ export interface DentistSearchFiltersProps {
   value: DentistFilterState;
   /** The active market. The country combo switches the region itself (#18). */
   country: string;
+  /** Every active country, for the country combo. */
+  countries: readonly CountrySummaryWire[];
   subdivisions: readonly Subdivision[];
   specialtyOptions: readonly { code: string; name: string }[];
   activeFilterCount: number;
@@ -38,14 +40,13 @@ export interface DentistSearchFiltersProps {
   onClear: () => void;
 }
 
-const COUNTRY_OPTIONS = REGION_LIST.filter((region) => region.code !== "GLOBAL");
-
 const controlClass =
   "mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 dark:border-navy-600 dark:bg-navy-900 dark:text-white";
 
 export function DentistSearchFilters({
   value,
   country,
+  countries,
   subdivisions,
   specialtyOptions,
   activeFilterCount,
@@ -60,7 +61,8 @@ export function DentistSearchFilters({
   const specialtyId = useId();
   const ratingId = useId();
   const sortId = useId();
-  const subdivisionHint = REGIONS[country]?.countiesLabel ?? "region";
+  const subdivisionHint =
+    countries.find((option) => option.code === country)?.subdivision_label ?? "region";
 
   function update<Key extends keyof DentistFilterState>(
     key: Key,
@@ -134,9 +136,9 @@ export function DentistSearchFilters({
             }}
             className={controlClass}
           >
-            {COUNTRY_OPTIONS.map((region) => (
-              <option key={region.code} value={region.code}>
-                {region.countryName}
+            {countries.map((option) => (
+              <option key={option.code} value={option.code}>
+                {option.name}
               </option>
             ))}
           </select>

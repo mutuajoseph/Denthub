@@ -1,16 +1,15 @@
 import { useEffect } from "react";
-import { getStaticSubdivisions } from "../config/subdivisions";
 import { useCountryConfigStore } from "../store/countryConfigStore";
-import { useRegionStore } from "../store/regionStore";
 import {
   getSubdivisionPlural,
   subdivisionTrustBadge,
   verifiedClinicsSubtitle,
 } from "../utils/subdivisionCopy";
+import { useActiveCountryCode } from "./useActiveCountryCode";
 import { useRegion } from "./useRegion";
 
 export function useCountryConfig() {
-  const regionCode = useRegionStore((s) => s.regionCode || s.getRegion().code);
+  const apiCountry = useActiveCountryCode();
   const { countiesLabel } = useRegion();
   const config = useCountryConfigStore((s) => s.config);
   const regions = useCountryConfigStore((s) => s.regions);
@@ -19,8 +18,6 @@ export function useCountryConfig() {
   const error = useCountryConfigStore((s) => s.error);
   const loadForCountry = useCountryConfigStore((s) => s.loadForCountry);
   const isFeatureEnabled = useCountryConfigStore((s) => s.isFeatureEnabled);
-
-  const apiCountry = regionCode === "GLOBAL" ? "KE" : regionCode;
 
   useEffect(() => {
     if (apiCountry && apiCountry !== "GLOBAL") {
@@ -36,11 +33,9 @@ export function useCountryConfig() {
   };
 
   const subdivisionLabel = geography.subdivisionLabel;
-  // An empty API list means "this country has no subdivisions yet", not "still
-  // loading" and not "here is a hardcoded list". The static list is only a
-  // pre-request fallback.
-  const mergedRegions = regions.length > 0 ? regions : getStaticSubdivisions(apiCountry);
-  const subdivisionCount = mergedRegions.length;
+  // An empty API list means "this country has no subdivisions yet" — not a
+  // hardcoded fallback. A page with no market data shows an empty dropdown.
+  const subdivisionCount = regions.length;
   const subdivisionPlural = getSubdivisionPlural(geography);
 
   const insuranceProviders = config?.featureContexts.DENTAL_INSURANCE?.insuranceProviders ?? [];
@@ -63,7 +58,7 @@ export function useCountryConfig() {
     subdivisionCount,
     verifiedClinicsSubtitle: verifiedClinicsSubtitle(subdivisionCount, geography),
     subdivisionTrustBadge: subdivisionTrustBadge(subdivisionCount, geography),
-    regions: mergedRegions,
+    regions,
     insuranceProviders,
     featureContexts,
     isFeatureEnabled,

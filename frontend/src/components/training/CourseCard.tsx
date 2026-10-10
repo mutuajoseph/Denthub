@@ -1,8 +1,8 @@
 import { Clock, MapPin, ShieldCheck } from "lucide-react";
 
-import { describeSubdivisionCode } from "../../config/subdivisions";
 import type { CourseView } from "../../lib/trainingApi";
 import { formatListingPrice } from "../../utils/formatCurrency";
+import { subdivisionLabel } from "../../utils/subdivisionLabel";
 import Badge from "../ui/Badge";
 
 export interface CourseCardProps {
@@ -39,7 +39,7 @@ export function CourseCard({ course, locale }: CourseCardProps) {
 
       <div className="mt-3 flex items-center gap-1.5 text-sm text-slate">
         <MapPin className="h-4 w-4 text-graphite" aria-hidden="true" />
-        {describeSubdivisionCode(course.subdivisionCode)}
+        {subdivisionLabel(course.subdivisionCode)}
       </div>
 
       <div className="mt-auto flex items-center justify-between pt-5">

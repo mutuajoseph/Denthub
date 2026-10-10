@@ -1,24 +1,16 @@
-import { type Region, getRegionByCode } from "../config/regions";
-import { useRegionStore } from "../store/regionStore";
+import { useCountryConfigStore } from "../store/countryConfigStore";
 
-function activeRegion(): Region {
-  const state = useRegionStore.getState();
-  const code = state.regionCode || state.getRegion().code;
-
-  // GLOBAL is a display-only region; money always resolves to a real country.
-  return getRegionByCode(code === "GLOBAL" ? "KE" : code);
-}
-
-/** Formats an amount in the active region's currency, without trailing decimals. */
+/**
+ * Formats an amount in the active market's currency.
+ *
+ * The market's currency and locale come from country configuration, never from
+ * a hardcoded country→currency map. Before a config lands (or when it fails) an
+ * amount renders as a plain decimal number rather than pretending to know the
+ * currency.
+ */
 export function formatMoney(amount: number): string {
-  const region = activeRegion();
-
-  return new Intl.NumberFormat(region.locale, {
-    style: "currency",
-    currency: region.currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
+  const config = useCountryConfigStore.getState().config;
+  return formatPrice(amount, config?.currency ?? "", config?.locale);
 }
 
 /**
@@ -46,12 +38,20 @@ export function formatMoneyAs(amount: number, locale: string, currency: string):
 export function formatPrice(amount: number, currency: string, locale?: string): string {
   const hasCents = Math.round(amount * 100) % 100 !== 0;
 
-  return new Intl.NumberFormat(locale || undefined, {
-    style: "currency",
-    currency: currency || "KES",
-    minimumFractionDigits: hasCents ? 2 : 0,
-    maximumFractionDigits: hasCents ? 2 : 0,
-  }).format(amount);
+  const options: Intl.NumberFormatOptions = currency
+    ? {
+        style: "currency",
+        currency,
+        minimumFractionDigits: hasCents ? 2 : 0,
+        maximumFractionDigits: hasCents ? 2 : 0,
+      }
+    : {
+        style: "decimal",
+        minimumFractionDigits: hasCents ? 2 : 0,
+        maximumFractionDigits: hasCents ? 2 : 0,
+      };
+
+  return new Intl.NumberFormat(locale || undefined, options).format(amount);
 }
 
 /**
@@ -76,10 +76,18 @@ export function formatListingPrice(
   const value = Number(amount);
   if (!Number.isFinite(value)) return null;
 
-  return new Intl.NumberFormat(locale || undefined, {
-    style: "currency",
-    currency: currency || "KES",
-    minimumFractionDigits: hasCents ? 2 : 0,
-    maximumFractionDigits: hasCents ? 2 : 0,
-  }).format(value);
+  const options: Intl.NumberFormatOptions = currency
+    ? {
+        style: "currency",
+        currency,
+        minimumFractionDigits: hasCents ? 2 : 0,
+        maximumFractionDigits: hasCents ? 2 : 0,
+      }
+    : {
+        style: "decimal",
+        minimumFractionDigits: hasCents ? 2 : 0,
+        maximumFractionDigits: hasCents ? 2 : 0,
+      };
+
+  return new Intl.NumberFormat(locale || undefined, options).format(value);
 }

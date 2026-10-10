@@ -34,8 +34,8 @@ describe("formatPrice", () => {
     expect(price(350, "UGX", LOCALE)).toBe("UGX 350");
   });
 
-  it("falls back to KES when no currency is supplied", () => {
-    expect(price(350, "", LOCALE)).toBe("KES 350");
+  it("renders a plain decimal when no currency is known", () => {
+    expect(price(350, "", LOCALE)).toBe("350");
   });
 
   it("defaults to the runtime locale when none is given", () => {
@@ -66,8 +66,8 @@ describe("formatListingPrice", () => {
     expect(listingPrice("not-a-number", "KES", LOCALE)).toBeNull();
   });
 
-  it("uses the currency the API resolved and falls back to KES", () => {
+  it("uses the currency the API resolved and renders a plain decimal without one", () => {
     expect(listingPrice("500.00", "NGN", LOCALE)).toBe("NGN 500");
-    expect(listingPrice("500.00", "", LOCALE)).toBe("KES 500");
+    expect(listingPrice("500.00", "", LOCALE)).toBe("500");
   });
 });

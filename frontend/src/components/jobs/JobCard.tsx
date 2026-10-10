@@ -1,7 +1,7 @@
-import { describeSubdivisionCode } from "../../config/subdivisions";
 import type { JobView } from "../../lib/jobsApi";
 import { postedLabel } from "../../lib/jobsApi";
 import { formatListingPrice } from "../../utils/formatCurrency";
+import { subdivisionLabel } from "../../utils/subdivisionLabel";
 import Badge from "../ui/Badge";
 
 export interface JobCardProps {
@@ -36,7 +36,7 @@ export function JobCard({ job, locale }: JobCardProps) {
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2">
-        <Badge variant="navy">{describeSubdivisionCode(job.workplace.subdivisionCode)}</Badge>
+        <Badge variant="navy">{subdivisionLabel(job.workplace.subdivisionCode)}</Badge>
         <Badge variant="orange">{job.employmentType}</Badge>
         <Badge variant="gold">{job.seniority}</Badge>
       </div>

@@ -1,17 +1,32 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, useNavigate } from "react-router-dom";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useCartStore } from "../../store/cartStore";
 import { useCartUiStore } from "../../store/cartUiStore";
 import { AppShell } from "./AppShell";
 
+vi.mock("../../lib/countryConfigApi", () => ({
+  fetchCountries: vi.fn().mockResolvedValue({ items: [], default_country_code: "KE" }),
+  fetchCountryConfig: vi.fn(),
+  fetchSpecialties: vi.fn(),
+}));
+
+function newClient() {
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: 0, gcTime: 0 } },
+  });
+}
+
 function renderShell() {
   return render(
-    <MemoryRouter>
-      <AppShell />
-    </MemoryRouter>,
+    <QueryClientProvider client={newClient()}>
+      <MemoryRouter>
+        <AppShell />
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
@@ -76,9 +91,11 @@ describe("AppShell cart", () => {
     }
 
     render(
-      <MemoryRouter initialEntries={["/shop"]}>
-        <NavigatingShell />
-      </MemoryRouter>,
+      <QueryClientProvider client={newClient()}>
+        <MemoryRouter initialEntries={["/shop"]}>
+          <NavigatingShell />
+        </MemoryRouter>
+      </QueryClientProvider>,
     );
 
     await user.click(screen.getByRole("button", { name: "Shopping cart" }));
