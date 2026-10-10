@@ -109,6 +109,10 @@ jobs:
         with:
           ref: ${{ needs.tag.outputs.version }} # build the tagged commit
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10 # matches workspace; pnpm must be on PATH for `vercel build`
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
