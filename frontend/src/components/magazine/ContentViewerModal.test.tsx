@@ -3,19 +3,21 @@ import { describe, expect, it } from "vitest";
 import { youtubeEmbedUrl } from "./ContentViewerModal";
 
 describe("youtubeEmbedUrl", () => {
-  it("converts a watch link to an embed link", () => {
+  it("converts a watch link to a privacy-enhanced embed link", () => {
     expect(youtubeEmbedUrl("https://www.youtube.com/watch?v=abc123")).toBe(
-      "https://www.youtube.com/embed/abc123",
+      "https://www.youtube-nocookie.com/embed/abc123",
     );
   });
 
   it("converts a short youtu.be link", () => {
-    expect(youtubeEmbedUrl("https://youtu.be/abc123")).toBe("https://www.youtube.com/embed/abc123");
+    expect(youtubeEmbedUrl("https://youtu.be/abc123")).toBe(
+      "https://www.youtube-nocookie.com/embed/abc123",
+    );
   });
 
-  it("passes through an embed link unchanged", () => {
+  it("rewrites an embed link onto the nocookie host", () => {
     expect(youtubeEmbedUrl("https://www.youtube.com/embed/abc123")).toBe(
-      "https://www.youtube.com/embed/abc123",
+      "https://www.youtube-nocookie.com/embed/abc123",
     );
   });
 

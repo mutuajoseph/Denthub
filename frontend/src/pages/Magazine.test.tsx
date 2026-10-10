@@ -224,7 +224,7 @@ describe("Magazine", () => {
     expect(within(dialog).getByText("Video")).toBeInTheDocument();
     expect(within(dialog).getByTitle(/caring for clear aligners/i)).toHaveAttribute(
       "src",
-      "https://www.youtube.com/embed/aqz-KE-bpKQ",
+      "https://www.youtube-nocookie.com/embed/aqz-KE-bpKQ",
     );
   });
 

@@ -19,7 +19,7 @@ function publishedLabel(publishedAt: string): string {
   return Number.isNaN(date.getTime()) ? publishedAt : date.toLocaleDateString("en", DATE_FORMAT);
 }
 
-/** Turn a YouTube watch/short/embed link into a privacy-friendly embed URL. */
+/** Turn a YouTube watch/short/embed link into a privacy-enhanced embed URL. */
 export function youtubeEmbedUrl(videoUrl: string): string | null {
   let parsed: URL;
   try {
@@ -28,18 +28,21 @@ export function youtubeEmbedUrl(videoUrl: string): string | null {
     return null;
   }
 
-  if (parsed.hostname === "youtu.be") {
-    const id = parsed.pathname.slice(1);
-    return id ? `https://www.youtube.com/embed/${id}` : null;
+  const host = parsed.hostname.replace(/^www\./, "");
+  if (host !== "youtube.com" && host !== "youtu.be" && host !== "youtube-nocookie.com") {
+    return null;
   }
 
-  if (parsed.hostname.endsWith("youtube.com") || parsed.hostname.endsWith("youtube-nocookie.com")) {
-    const id = parsed.searchParams.get("v");
-    if (id) return `https://www.youtube.com/embed/${id}`;
-    if (parsed.pathname.startsWith("/embed/")) return videoUrl;
+  let id: string | null = null;
+  if (host === "youtu.be") {
+    id = parsed.pathname.slice(1);
+  } else if (parsed.searchParams.get("v")) {
+    id = parsed.searchParams.get("v");
+  } else if (parsed.pathname.startsWith("/embed/")) {
+    id = parsed.pathname.slice("/embed/".length);
   }
 
-  return null;
+  return id ? `https://www.youtube-nocookie.com/embed/${id}` : null;
 }
 
 export function ContentViewerModal({ article, onClose }: ContentViewerModalProps) {
