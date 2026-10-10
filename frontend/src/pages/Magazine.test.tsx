@@ -23,6 +23,8 @@ const FEATURED: MagazineArticleSummary = {
   heroImageUrl: null,
   authorName: "Dr. Mary Kamau",
   category: "clinical-guides",
+  contentType: "article",
+  videoUrl: null,
   countryCode: "KE",
   isFeatured: true,
   tags: ["composites", "aesthetics"],
@@ -37,6 +39,8 @@ const REMINERALISATION: MagazineArticleSummary = {
   heroImageUrl: null,
   authorName: "Dr. Brian Otieno",
   category: "clinical-guides",
+  contentType: "article",
+  videoUrl: null,
   countryCode: "KE",
   isFeatured: false,
   tags: ["prevention", "fluoride"],
@@ -51,6 +55,8 @@ const INFECTION_CONTROL: MagazineArticleSummary = {
   heroImageUrl: null,
   authorName: "Dr. Wanjiku Njoroge",
   category: "clinical-guides",
+  contentType: "article",
+  videoUrl: null,
   countryCode: "KE",
   isFeatured: false,
   tags: ["infection control", "safety"],
@@ -65,13 +71,31 @@ const PRICING: MagazineArticleSummary = {
   heroImageUrl: null,
   authorName: "Dr. Amara Zuma",
   category: "business",
+  contentType: "article",
+  videoUrl: null,
   countryCode: "NG",
   isFeatured: false,
   tags: ["business", "fees"],
   publishedAt: "2026-09-01T08:00:00Z",
 };
 
-const ARTICLES = [FEATURED, REMINERALISATION, INFECTION_CONTROL, PRICING];
+const VIDEO: MagazineArticleSummary = {
+  id: "video-1",
+  slug: "caring-for-clear-aligners-video",
+  title: "Caring for Clear Aligners",
+  standfirst: "A two-minute walkthrough of daily aligner care.",
+  heroImageUrl: null,
+  authorName: "Dr. Amina Otieno",
+  category: "clinical-guides",
+  contentType: "video",
+  videoUrl: "https://www.youtube.com/watch?v=aqz-KE-bpKQ",
+  countryCode: "KE",
+  isFeatured: false,
+  tags: ["aligners", "patient-care"],
+  publishedAt: "2026-08-28T08:00:00Z",
+};
+
+const ARTICLES = [FEATURED, REMINERALISATION, INFECTION_CONTROL, PRICING, VIDEO];
 
 const PAGE: MagazinePage = {
   items: ARTICLES,
@@ -138,7 +162,7 @@ describe("Magazine", () => {
     ).toBeInTheDocument();
   });
 
-  it("lists every published article, newest first", async () => {
+  it("lists every published item, newest first", async () => {
     renderPage();
 
     const cards = await screen.findAllByRole("article");
@@ -149,6 +173,7 @@ describe("Magazine", () => {
       "Remineralisation in Practice",
       "The Infection Control Checklist",
       "Pricing Your First Practice",
+      "Caring for Clear Aligners",
     ];
     expect(cardTitles()).toEqual(expectedOrder);
   });
@@ -185,8 +210,22 @@ describe("Magazine", () => {
 
     await user.click(await screen.findByRole("button", { name: "Clinical Guides" }));
 
-    expect(screen.getAllByRole("article")).toHaveLength(3);
+    expect(screen.getAllByRole("article")).toHaveLength(4);
     expect(screen.queryByText(/pricing your first practice/i)).toBeNull();
+  });
+
+  it("renders a video item as a VideoCard and plays it in the viewer", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: /watch video →/i }));
+
+    const dialog = await screen.findByRole("dialog", { name: /caring for clear aligners/i });
+    expect(within(dialog).getByText("Video")).toBeInTheDocument();
+    expect(within(dialog).getByTitle(/caring for clear aligners/i)).toHaveAttribute(
+      "src",
+      "https://www.youtube.com/embed/aqz-KE-bpKQ",
+    );
   });
 
   it("searches titles, standfirsts and tags", async () => {

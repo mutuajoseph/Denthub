@@ -20,7 +20,7 @@ function useActiveCountryCode(): string {
 }
 
 /**
- * Every published article in the active market, newest first.
+ * Every published item in the active market, newest first.
  *
  * `placeholderData` keeps the previous list visible while a region switch
  * refetches, so a country change does not flash an empty grid.

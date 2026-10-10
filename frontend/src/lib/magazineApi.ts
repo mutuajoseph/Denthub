@@ -10,6 +10,9 @@
 
 import { getJson } from "./apiClient";
 
+/** The two content types the magazine publishes (PRD §3.8). */
+export type MagazineContentType = "article" | "video";
+
 export interface MagazineArticleSummary {
   id: string;
   slug: string;
@@ -18,6 +21,9 @@ export interface MagazineArticleSummary {
   heroImageUrl: string | null;
   authorName: string;
   category: string;
+  contentType: MagazineContentType;
+  /** YouTube link for a video; null for an article. */
+  videoUrl: string | null;
   countryCode: string;
   isFeatured: boolean;
   tags: string[];
@@ -65,6 +71,8 @@ interface WireArticleSummary extends WireRecord {
   hero_image_url: string | null;
   author_name: string;
   category: string;
+  content_type: string;
+  video_url: string | null;
   country_code: string;
   is_featured: boolean;
   tags: string[];
@@ -107,6 +115,8 @@ export function mapArticleSummary(wire: WireArticleSummary): MagazineArticleSumm
     heroImageUrl: toOptionalString(wire.hero_image_url),
     authorName: wire.author_name,
     category: wire.category,
+    contentType: wire.content_type === "video" ? "video" : "article",
+    videoUrl: toOptionalString(wire.video_url),
     countryCode: wire.country_code,
     isFeatured: Boolean(wire.is_featured),
     tags: Array.isArray(wire.tags) ? wire.tags.filter((tag) => typeof tag === "string") : [],
