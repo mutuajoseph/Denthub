@@ -1,11 +1,13 @@
-"""Magazine: published articles and their tag join.
+"""Magazine: published articles/videos and their tag join.
 
-Articles are the only content the magazine publishes in v1. ``body`` holds
-Markdown; the public client renders a safe subset (headings, paragraphs, bold,
-italic, bullets, links) and HTML-escapes everything else, so a stray angle
-bracket renders as text. ``status`` defaults to ``published`` and every public
-read path selects only published rows, so a draft or scheduled story can never
-leak by guessing a slug.
+The magazine publishes two content types (PRD §3.8, §4): ``article`` rows carry
+a Markdown ``body``, ``video`` rows carry a YouTube ``video_url`` instead (the
+body stays a summary). ``content_type`` distinguishes them and defaults to
+``article``. ``body`` holds Markdown; the public client renders a safe subset
+(headings, paragraphs, bold, italic, bullets, links) and HTML-escapes
+everything else, so a stray angle bracket renders as text. ``status`` defaults
+to ``published`` and every public read path selects only published rows, so a
+draft or scheduled story can never leak by guessing a slug.
 
 Tags live on a join table (``magazine_article_tags``) but are plain strings,
 not a dimension table - a country's tag set is whatever its published articles
@@ -44,6 +46,13 @@ class MagazineArticle(Base):
     hero_image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     author_name: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
     category: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+
+    #: ``article`` or ``video`` (PRD §3.8). Set from a controlled vocabulary in
+    #: logic; videos carry a YouTube ``video_url`` and never a Markdown body.
+    content_type: Mapped[str] = mapped_column(
+        String(20), default="article", nullable=False, index=True
+    )
+    video_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     country_code: Mapped[str] = mapped_column(String(2), default="KE", index=True, nullable=False)
     status: Mapped[str] = mapped_column(String(20), default="published", nullable=False, index=True)

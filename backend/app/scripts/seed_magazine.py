@@ -13,7 +13,7 @@ from __future__ import annotations
 import asyncio
 from datetime import datetime
 
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from structlog.typing import FilteringBoundLogger
 
 from app.config import Settings
@@ -329,8 +329,61 @@ ARTICLES: list[tuple[str, str, str, str, str, str, str, bool, str, str, list[str
 ]
 
 
+#: (country_code, slug, title, standfirst, body, author, category, is_featured,
+#:  status, published_at, tags, video_url). ``body`` is the summary shown beside
+#: the player; the YouTube link is the content (PRD §3.8).
+VIDEOS: list[tuple[str, str, str, str, str, str, str, bool, str, str, list[str], str]] = [
+    (
+        "KE",
+        "caring-for-clear-aligners-video",
+        "Caring for Clear Aligners",
+        "A three-minute walkthrough of cleaning, wear time, and what shortens treatment.",
+        ("Keep aligners clean, wear them 20-22 hours a day, and never rinse them with hot water."),
+        "Dr. Amina Otieno",
+        "patient-care",
+        False,
+        "published",
+        "2026-10-01T08:00:00",
+        ["aligners", "patient-care"],
+        "https://www.youtube.com/watch?v=aqz-KE-bpKQ",
+    ),
+    (
+        "NG",
+        "fluoride-in-lagos-water-video",
+        "Fluoride in Lagos Water, Explained",
+        "A short explainer for Nigerian patients on what fluoride does and does not do.",
+        "Fluoride strengthens enamel; it is not a substitute for cleaning.",
+        "Dr. Ngozi Adeyemi",
+        "public-health",
+        False,
+        "published",
+        "2026-09-25T08:00:00",
+        ["fluoride", "public-health"],
+        "https://youtu.be/aqz-KE-bpKQ",
+    ),
+]
+
+
+async def _upsert(
+    session: AsyncSession,
+    *,
+    slug: str,
+    values: dict[str, object],
+    tags: list[str],
+) -> None:
+    """Create or update one article/video keyed by slug, tags included."""
+    article = await MagazineRepository.find_by_slug(session, slug)
+
+    if article is None:
+        article = await MagazineRepository.create(session, slug=slug, **values)
+    else:
+        await MagazineRepository.update(article, **values)
+
+    await MagazineRepository.replace_tags(session, article, tags)
+
+
 async def seed(state: AppState) -> None:
-    """Insert or update the demo articles."""
+    """Insert or update the demo articles and videos."""
     async with state.db_session_maker() as session:
         for (
             country_code,
@@ -345,31 +398,64 @@ async def seed(state: AppState) -> None:
             published_at,
             tags,
         ) in ARTICLES:
-            article = await MagazineRepository.find_by_slug(session, slug)
-            values: dict[str, object] = {
-                "country_code": country_code,
-                "title": title,
-                "standfirst": standfirst,
-                "body": body,
-                "author_name": author_name,
-                "category": category,
-                "is_featured": is_featured,
-                "status": status,
-                "published_at": datetime.fromisoformat(published_at),
-            }
+            await _upsert(
+                session,
+                slug=slug,
+                values={
+                    "country_code": country_code,
+                    "title": title,
+                    "standfirst": standfirst,
+                    "body": body,
+                    "author_name": author_name,
+                    "category": category,
+                    "content_type": "article",
+                    "video_url": None,
+                    "is_featured": is_featured,
+                    "status": status,
+                    "published_at": datetime.fromisoformat(published_at),
+                },
+                tags=tags,
+            )
 
-            if article is None:
-                article = await MagazineRepository.create(session, slug=slug, **values)
-            else:
-                await MagazineRepository.update(article, **values)
-
-            await MagazineRepository.replace_tags(session, article, tags)
+        for (
+            country_code,
+            slug,
+            title,
+            standfirst,
+            body,
+            author_name,
+            category,
+            is_featured,
+            status,
+            published_at,
+            tags,
+            video_url,
+        ) in VIDEOS:
+            await _upsert(
+                session,
+                slug=slug,
+                values={
+                    "country_code": country_code,
+                    "title": title,
+                    "standfirst": standfirst,
+                    "body": body,
+                    "author_name": author_name,
+                    "category": category,
+                    "content_type": "video",
+                    "video_url": video_url,
+                    "is_featured": is_featured,
+                    "status": status,
+                    "published_at": datetime.fromisoformat(published_at),
+                },
+                tags=tags,
+            )
 
         await session.commit()
 
     state.logger.info(
         "seed.magazine",
         articles=len(ARTICLES),
+        videos=len(VIDEOS),
     )
 
 

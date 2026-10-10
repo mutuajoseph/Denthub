@@ -1,12 +1,14 @@
-import { Newspaper } from "lucide-react";
+import { Newspaper, Play } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { ArticleCard } from "../components/magazine/ArticleCard";
 import { ContentViewerModal } from "../components/magazine/ContentViewerModal";
+import { VideoCard } from "../components/magazine/VideoCard";
 import Badge from "../components/ui/Badge";
 import SearchBar from "../components/ui/SearchBar";
 import { useMagazineArticles, useMagazineCategories } from "../hooks/useMagazine";
 import type { MagazineArticleSummary } from "../lib/magazineApi";
+import { cn } from "../utils/cn";
 
 const ALL_CATEGORIES = "all";
 
@@ -50,22 +52,22 @@ export function Magazine() {
 
   return (
     <div className="app-container py-8 lg:py-12">
-      <section className="mb-8 overflow-hidden rounded-2xl border border-orange-100 bg-gradient-to-br from-white via-orange-50 to-white p-8 md:p-12 dark:border-navy-600 dark:from-navy-950 dark:via-navy-800 dark:to-navy-900">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="gold">
+      <section className="mb-8 overflow-hidden rounded-card border border-steel bg-cloud p-8 md:p-12">
+        <h1 className="font-display text-display-section text-ink">
+          Dental <span className="text-graphite">Magazine</span>
+        </h1>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <Badge variant="ink">
             <Newspaper className="h-3 w-3" aria-hidden="true" />
             DentHub Magazine
           </Badge>
-          <Badge variant="orange">Dentist-written</Badge>
+          <Badge variant="neutral">Dentist-written</Badge>
         </div>
 
-        <h1 className="mt-4 font-display text-3xl font-bold text-gray-900 md:text-4xl dark:text-white">
-          Dental <span className="text-gold-500">Magazine</span>
-        </h1>
-
-        <p className="mt-2 max-w-2xl text-gray-600 dark:text-gray-300">
-          Educational articles from practising dentists, written for patients and professionals.
-          Learn, share, and stay ahead.
+        <p className="mt-3 max-w-2xl text-slate">
+          Educational articles and videos from practising dentists, written for patients and
+          professionals. Learn, share, and stay ahead.
         </p>
 
         <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -79,18 +81,15 @@ export function Magazine() {
       </section>
 
       {isLoading ? (
-        <p className="py-16 text-center text-gray-600 dark:text-gray-400">Loading articles…</p>
+        <p className="py-16 text-center text-slate">Loading articles…</p>
       ) : error ? (
         <div className="py-16 text-center">
-          <Newspaper
-            className="mx-auto h-12 w-12 text-orange-400 dark:text-gold-400/50"
-            aria-hidden="true"
-          />
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Could not load the magazine.</p>
+          <Newspaper className="mx-auto h-12 w-12 text-graphite" aria-hidden="true" />
+          <p className="mt-4 text-slate">Could not load the magazine.</p>
           <button
             type="button"
             onClick={() => void refetch()}
-            className="mx-auto mt-5 block rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-orange-500 hover:text-orange-600 dark:border-navy-600 dark:bg-navy-800 dark:text-gold-300"
+            className="mx-auto mt-5 block rounded-button border border-steel bg-paper px-4 py-2 text-sm font-semibold text-graphite hover:text-ink"
           >
             Try again
           </button>
@@ -99,33 +98,39 @@ export function Magazine() {
         <>
           {showFeatured && (
             <section className="mb-10">
-              <h2 className="mb-3 font-heading text-lg font-semibold text-gray-900 dark:text-gray-200">
+              <h2 className="mb-3 font-heading text-lg font-semibold text-ink">
                 Featured this month
               </h2>
 
               <button
                 type="button"
                 onClick={() => setViewing(featured)}
-                className="group grid w-full overflow-hidden rounded-2xl border border-gray-200 bg-white text-left transition hover:border-orange-300 dark:border-navy-600 dark:bg-navy-800 dark:hover:border-gold-400/50 md:grid-cols-2"
+                className="group grid w-full overflow-hidden rounded-card border border-steel bg-paper text-left shadow-card-white transition hover:border-slate md:grid-cols-2"
               >
-                <div className="flex h-48 items-center justify-center bg-navy-800 md:h-full">
-                  <Newspaper className="h-14 w-14 text-white/70" aria-hidden="true" />
+                <div className="flex h-48 items-center justify-center bg-graphite md:h-full">
+                  {featured.contentType === "video" ? (
+                    <Play className="h-14 w-14 fill-paper text-paper" aria-hidden="true" />
+                  ) : (
+                    <Newspaper className="h-14 w-14 text-paper" aria-hidden="true" />
+                  )}
                 </div>
 
                 <div className="flex flex-col justify-center gap-3 p-6 md:p-8">
                   <div className="flex flex-wrap gap-2">
-                    <Badge variant="gold">{featured.category}</Badge>
-                    <Badge variant="navy">Article</Badge>
+                    <Badge variant="neutral">{featured.category}</Badge>
+                    <Badge variant="ink">
+                      {featured.contentType === "video" ? "Video" : "Article"}
+                    </Badge>
                   </div>
 
-                  <h3 className="font-display text-2xl font-bold text-gray-900 group-hover:text-orange-500 dark:text-white dark:group-hover:text-gold-300">
+                  <h3 className="font-display text-2xl font-bold text-ink group-hover:text-graphite">
                     {featured.title}
                   </h3>
 
-                  <p className="text-gray-600 dark:text-gray-400">{featured.standfirst}</p>
+                  <p className="text-slate">{featured.standfirst}</p>
 
-                  <span className="text-sm font-semibold text-orange-500 dark:text-gold-300">
-                    Read article →
+                  <span className="text-sm font-semibold text-graphite">
+                    {featured.contentType === "video" ? "Watch video →" : "Read article →"}
                   </span>
                 </div>
               </button>
@@ -136,35 +141,41 @@ export function Magazine() {
             className="mb-6 flex flex-wrap items-center gap-2"
             aria-label="Filter dental articles"
           >
-            {[ALL_CATEGORIES, ...categories].map((option) => (
-              <button
-                key={option}
-                type="button"
-                aria-pressed={category === option}
-                onClick={() => setCategory(option)}
-                className={`rounded-full px-3 py-2 text-sm font-medium ${
-                  option === ALL_CATEGORIES
-                    ? "border border-gray-200 bg-white text-gray-600 dark:border-navy-600 dark:bg-navy-800 dark:text-gray-300"
-                    : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
-                }`}
-              >
-                {option === ALL_CATEGORIES ? "All topics" : chipLabel(option)}
-              </button>
-            ))}
+            {[ALL_CATEGORIES, ...categories].map((option) => {
+              const pressed = category === option;
+
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  aria-pressed={pressed}
+                  onClick={() => setCategory(option)}
+                  className={cn(
+                    "rounded-button px-3 py-2 text-sm font-medium transition",
+                    pressed
+                      ? "bg-ink text-paper"
+                      : "border border-steel bg-paper text-slate hover:text-ink",
+                  )}
+                >
+                  {option === ALL_CATEGORIES ? "All topics" : chipLabel(option)}
+                </button>
+              );
+            })}
           </aside>
 
           {items.length > 0 ? (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {items.map((article) => (
-                <ArticleCard key={article.id} article={article} onOpen={setViewing} />
-              ))}
+              {items.map((item) =>
+                item.contentType === "video" ? (
+                  <VideoCard key={item.id} video={item} onOpen={setViewing} />
+                ) : (
+                  <ArticleCard key={item.id} article={item} onOpen={setViewing} />
+                ),
+              )}
             </div>
           ) : (
-            <div className="py-16 text-center text-gray-600 dark:text-gray-400">
-              <Newspaper
-                className="mx-auto h-12 w-12 text-orange-400 dark:text-gold-400/50"
-                aria-hidden="true"
-              />
+            <div className="py-16 text-center text-slate">
+              <Newspaper className="mx-auto h-12 w-12 text-graphite" aria-hidden="true" />
               <p className="mt-4">No articles match your filters yet.</p>
             </div>
           )}

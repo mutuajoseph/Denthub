@@ -407,6 +407,28 @@ MAGAZINE_ARTICLES: list[tuple[str, str, str, str, str, str, str, bool, str, str,
     ),
 ]
 
+#: (country_code, slug, title, standfirst, body, author, category, is_featured,
+#:  status, published_at, tags, video_url). Videos carry a YouTube link and no
+#: real Markdown body. Dated oldest so the article ordering tests are stable.
+MAGAZINE_VIDEOS: list[
+    tuple[str, str, str, str, str, str, str, bool, str, str, list[str], str]
+] = [
+    (
+        "KE",
+        "caring-for-clear-aligners-video",
+        "Caring for Clear Aligners",
+        "Clean them, wear them 20-22 hours a day, keep them out of hot water.",
+        "A short walkthrough of aligner care for new patients.",
+        "Dr. Amina Otieno",
+        "patient-care",
+        False,
+        "published",
+        "2026-09-01T08:00:00",
+        ["patient-care"],
+        "https://www.youtube.com/watch?v=aqz-KE-bpKQ",
+    ),
+]
+
 
 def build_magazine_articles() -> list[MagazineArticle]:
     """Return the seeded MagazineArticles, tag rows attached."""
@@ -434,6 +456,40 @@ def build_magazine_articles() -> list[MagazineArticle]:
                 body=body,
                 author_name=author_name,
                 category=category,
+                content_type="article",
+                video_url=None,
+                is_featured=is_featured,
+                status=status,
+                published_at=datetime.fromisoformat(published_at),
+                tags=[MagazineArticleTag(tag=tag) for tag in tags],
+            )
+        )
+
+    for (
+        country_code,
+        slug,
+        title,
+        standfirst,
+        body,
+        author_name,
+        category,
+        is_featured,
+        status,
+        published_at,
+        tags,
+        video_url,
+    ) in MAGAZINE_VIDEOS:
+        articles.append(
+            MagazineArticle(
+                country_code=country_code,
+                slug=slug,
+                title=title,
+                standfirst=standfirst,
+                body=body,
+                author_name=author_name,
+                category=category,
+                content_type="video",
+                video_url=video_url,
                 is_featured=is_featured,
                 status=status,
                 published_at=datetime.fromisoformat(published_at),

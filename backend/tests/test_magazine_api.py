@@ -16,12 +16,13 @@ async def test_list_articles_defaults_to_kenya_and_skips_unpublished(client: Asy
     assert response.status_code == 200
     body = response.json()
     assert body["country_code"] == "KE"
-    assert body["total"] == 2
+    assert body["total"] == 3
     assert body["offset"] == 0
 
     slugs = [item["slug"] for item in body["items"]]
     assert "orthodontic-care-in-kenya" in slugs
     assert "does-nhif-cover-dental" in slugs
+    assert "caring-for-clear-aligners-video" in slugs
     # A draft and a scheduled story exist in the seed but must never be served.
     assert "implant-pricing-primer" not in slugs
 
@@ -32,6 +33,7 @@ async def test_list_articles_is_newest_first(client: AsyncClient) -> None:
     assert [item["slug"] for item in body["items"]] == [
         "orthodontic-care-in-kenya",
         "does-nhif-cover-dental",
+        "caring-for-clear-aligners-video",
     ]
 
 
@@ -44,9 +46,22 @@ async def test_list_articles_returns_summaries_without_body(client: AsyncClient)
     assert first["standfirst"]
     assert first["author_name"] == "Dr. Wanjiku Kamau"
     assert first["category"] == "patient-care"
+    assert first["content_type"] == "article"
+    assert first["video_url"] is None
     assert first["is_featured"] is True
     assert first["tags"] == ["aligners", "orthodontics"]
     assert "body" not in first
+
+
+async def test_list_articles_carries_videos_with_their_youtube_link(
+    client: AsyncClient,
+) -> None:
+    body = (await client.get("/api/v1/magazine/articles", headers=KE)).json()
+
+    video = next(item for item in body["items"] if item["content_type"] == "video")
+    assert video["slug"] == "caring-for-clear-aligners-video"
+    assert video["content_type"] == "video"
+    assert video["video_url"] == "https://www.youtube.com/watch?v=aqz-KE-bpKQ"
 
 
 async def test_list_articles_filters_by_country(client: AsyncClient) -> None:
@@ -105,7 +120,7 @@ async def test_list_articles_paginates(client: AsyncClient) -> None:
         "/api/v1/magazine/articles", params={"limit": 1, "offset": 1}, headers=KE
     )
 
-    assert first_page.json()["total"] == 2
+    assert first_page.json()["total"] == 3
     assert [item["slug"] for item in first_page.json()["items"]] == ["orthodontic-care-in-kenya"]
     assert [item["slug"] for item in second_page.json()["items"]] == ["does-nhif-cover-dental"]
 

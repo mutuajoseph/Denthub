@@ -12,6 +12,7 @@ the full Markdown. Only ``published`` rows are reachable either way.
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel
 
@@ -33,6 +34,8 @@ class MagazineArticleSummary(BaseModel):
     hero_image_url: str | None
     author_name: str
     category: str
+    content_type: Literal["article", "video"]
+    video_url: str | None
     country_code: str
     is_featured: bool
     tags: list[str]
@@ -71,6 +74,11 @@ def _tag_names(article: MagazineArticle) -> list[str]:
     return [row.tag for row in article.tags]
 
 
+def _content_type(value: str) -> Literal["article", "video"]:
+    """Narrow the stored string to the two known content types."""
+    return "video" if value == "video" else "article"
+
+
 def _serialize_summary(article: MagazineArticle) -> MagazineArticleSummary:
     return MagazineArticleSummary(
         id=article.id,
@@ -80,6 +88,8 @@ def _serialize_summary(article: MagazineArticle) -> MagazineArticleSummary:
         hero_image_url=article.hero_image_url,
         author_name=article.author_name,
         category=article.category,
+        content_type=_content_type(article.content_type),
+        video_url=article.video_url,
         country_code=article.country_code,
         is_featured=article.is_featured,
         tags=_tag_names(article),

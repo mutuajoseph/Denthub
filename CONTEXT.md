@@ -160,12 +160,16 @@ _Avoid_: Business hours string, availability
 Continuing Professional Development credit a professional earns from Courses.
 _Avoid_: Credits, points
 
+**Content type**:
+The kind of a Magazine Item: an article or a video.
+_Avoid_: Media type, format
+
 **Course**:
 A training offering from a Training Provider, possibly carrying CPD.
 _Avoid_: Class, program
 
 **Magazine Item**:
-An article or video published by a Verified Medic.
+An article or video published by a Verified Medic, of one Content type.
 _Avoid_: Post, blog
 
 **Job**:

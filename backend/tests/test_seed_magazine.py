@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from app.config import Settings
 from app.repositories.database import Base
 from app.repositories.magazine import MagazineArticle
-from app.scripts.seed_magazine import ARTICLES, seed
+from app.scripts.seed_magazine import ARTICLES, VIDEOS, seed
 from app.utils.logger import configure_logging
 from app.utils.state import AppState
 
@@ -36,10 +36,10 @@ async def test_seed_is_idempotent_and_writes_unpublished_rows() -> None:
 
         await seed(state)
         first = await _count_by_status(state)
-        assert sum(first.values()) == len(ARTICLES)
+        assert sum(first.values()) == len(ARTICLES) + len(VIDEOS)
         # Drafts and scheduled stories are seeded on purpose, so the API has
         # something to prove it never serves them.
-        assert first["published"] == 12
+        assert first["published"] == 14
         assert first["draft"] == 1
         assert first["scheduled"] == 1
 
