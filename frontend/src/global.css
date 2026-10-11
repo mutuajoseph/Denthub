@@ -1,13 +1,5 @@
 @import "tailwindcss";
 
-/*
- * Light-only (docs/design/DESIGN.md). Nothing sets `.dark` any more, so the
- * `dark:` utilities still left in not-yet-revamped screens never apply. Keep
- * this binding until the last revamp phase removes them: without it Tailwind
- * would fall back to prefers-color-scheme and switch them back on.
- */
-@custom-variant dark (&:where(.dark, .dark *));
-
 @theme {
   /* Design system colours (docs/design/DESIGN.md). */
   --color-paper: #ffffff;
@@ -52,29 +44,6 @@
   --color-gray-900: var(--color-zinc-900);
   --color-gray-950: var(--color-zinc-950);
 
-  /*
-   * Revamp shim: screens not yet revamped still use the old orange/gold/navy
-   * names. They resolve to graphite and ink (an orange button becomes the
-   * design's graphite button), never to aqua, which is placed deliberately.
-   * Remove with the last revamp phase.
-   */
-  --color-orange-50: #f4f4f5;
-  --color-orange-100: #e4e4e7;
-  --color-orange-200: #d4d4d8;
-  --color-orange-300: #a1a1aa;
-  --color-orange-400: #3f3f46;
-  --color-orange-500: #27272a;
-  --color-orange-600: #18181b;
-  --color-orange-700: #09090b;
-  --color-gold-300: #3f3f46;
-  --color-gold-400: #27272a;
-  --color-gold-500: #18181b;
-  --color-navy-950: #ffffff;
-  --color-navy-900: #ffffff;
-  --color-navy-800: #f4f4f5;
-  --color-navy-700: #f4f4f5;
-  --color-navy-600: #d4d4d8;
-
   /* Type. Inter Tight stands in for Neo Grotesk (commercial). */
   --font-display: "Inter Tight", "Helvetica Neue", Arial, sans-serif;
   --font-heading: "Inter Tight", "Helvetica Neue", Arial, sans-serif;
@@ -108,27 +77,6 @@
     rgba(0, 0, 0, 0.16), 0 10px 42px -3.75px rgba(0, 0, 0, 0.06);
   --shadow-card-white: 0 2.77px 2.21px rgba(0, 0, 0, 0.02), 0 6.65px 5.32px rgba(0, 0, 0, 0.03);
   --shadow-edge: inset 0 0 0 2px rgba(255, 255, 255, 0.13);
-  /* Old name still used by screens not yet revamped. */
-  --shadow-gold: var(--shadow-card-white);
-  --shadow-gold-lg: var(--shadow-card-cloud);
-
-  /* Auth modal roles (revamped in phase 4; mapped to the palette meanwhile). */
-  --color-auth-surface: #ffffff;
-  --color-auth-heading: #18181b;
-  --color-auth-body: #3f3f46;
-  --color-auth-muted: #71717a;
-  --color-auth-label: #71717a;
-  --color-auth-icon: #71717a;
-  --color-auth-field: #f4f4f5;
-  --color-auth-field-border: #d4d4d8;
-  --color-auth-card: #f4f4f5;
-  --color-auth-card-hover: #e4e4e7;
-  --color-auth-chip-hover: #e4e4e7;
-  --color-auth-toggle: #d4d4d8;
-  --color-auth-toggle-hover: #a1a1aa;
-  --color-auth-accent: #27272a;
-  --color-auth-accent-strong: #18181b;
-  --color-auth-scrim: #18181b;
 }
 
 @layer base {
@@ -257,8 +205,7 @@
   }
 
   /* Faint drafting grid: the "technical paper" the design sits on. */
-  .construction-grid,
-  .tooth-pattern {
+  .construction-grid {
     background-image: linear-gradient(
         to right,
         color-mix(in srgb, var(--color-steel) 45%, transparent) 1px,
@@ -286,14 +233,5 @@
 
   .pb-safe-bottom {
     padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
-
-  /* Old helpers still used by screens not yet revamped. */
-  .hero-bg {
-    background-color: var(--color-paper);
-  }
-
-  .gold-gradient-text {
-    color: var(--color-ink);
   }
 }

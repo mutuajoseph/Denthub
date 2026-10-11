@@ -208,7 +208,7 @@ export function DentalChatbot() {
         aria-label={isOpen ? "Close dental assistant" : "Open dental assistant"}
         aria-expanded={isOpen}
         aria-controls="dental-chatbot-panel"
-        className="fixed bottom-[calc(9rem+env(safe-area-inset-bottom,0px))] right-3 z-[70] flex h-14 w-14 items-center justify-center rounded-full bg-gold-500 text-navy-900 shadow-lg shadow-gold-500/30 transition-transform hover:scale-105 hover:bg-gold-400 motion-reduce:transform-none motion-reduce:transition-none sm:right-4 md:bottom-24"
+        className="fixed bottom-[calc(9rem+env(safe-area-inset-bottom,0px))] right-3 z-[70] flex h-14 w-14 items-center justify-center rounded-full bg-ink text-paper shadow-card-graphite transition-transform hover:scale-105 hover:bg-graphite motion-reduce:transform-none motion-reduce:transition-none sm:right-4 md:bottom-24"
       >
         {isOpen ? (
           <X className="h-6 w-6" aria-hidden="true" />
@@ -230,20 +230,17 @@ export function DentalChatbot() {
           open
           id="dental-chatbot-panel"
           aria-labelledby="dental-chatbot-title"
-          className="fixed bottom-[calc(9rem+env(safe-area-inset-bottom,0px))] left-2 right-2 z-[70] m-0 flex max-w-none h-[min(70vh,32rem)] flex-col overflow-hidden rounded-2xl border border-gold-400/30 bg-navy-900 shadow-2xl sm:left-auto sm:right-4 sm:w-96 md:bottom-24"
+          className="fixed bottom-[calc(9rem+env(safe-area-inset-bottom,0px))] left-2 right-2 z-[70] m-0 flex max-w-none h-[min(70vh,32rem)] flex-col overflow-hidden rounded-card border border-steel bg-paper shadow-card-graphite sm:left-auto sm:right-4 sm:w-96 md:bottom-24"
         >
-          <header className="flex items-center gap-3 border-b border-navy-700 bg-navy-800 px-4 py-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gold-400/20 text-gold-300">
+          <header className="flex items-center gap-3 border-b border-steel bg-cloud px-4 py-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-paper text-ink">
               <Stethoscope className="h-5 w-5" aria-hidden="true" />
             </span>
             <div className="min-w-0 flex-1">
-              <h2
-                id="dental-chatbot-title"
-                className="font-heading text-sm font-semibold text-gray-100"
-              >
+              <h2 id="dental-chatbot-title" className="font-heading text-sm font-semibold text-ink">
                 Dr. Denta
               </h2>
-              <p className="flex items-center gap-1 text-[11px] text-gray-400">
+              <p className="flex items-center gap-1 text-[11px] text-slate">
                 <WifiOff className="h-3 w-3" aria-hidden="true" />
                 Offline dental guidance
               </p>
@@ -252,7 +249,7 @@ export function DentalChatbot() {
               type="button"
               onClick={clearHistory}
               aria-label="Clear dental chat history"
-              className="rounded-md p-2 text-gray-400 transition-colors hover:bg-navy-700 hover:text-gray-200"
+              className="rounded-button p-2 text-slate transition-colors hover:bg-paper hover:text-ink"
             >
               <Trash2 className="h-4 w-4" aria-hidden="true" />
             </button>
@@ -260,7 +257,7 @@ export function DentalChatbot() {
               type="button"
               onClick={() => setIsOpen(false)}
               aria-label="Close dental assistant"
-              className="rounded-md p-2 text-gray-400 transition-colors hover:bg-navy-700 hover:text-gray-200"
+              className="rounded-button p-2 text-slate transition-colors hover:bg-paper hover:text-ink"
             >
               <X className="h-4 w-4" aria-hidden="true" />
             </button>
@@ -281,10 +278,10 @@ export function DentalChatbot() {
             ))}
             {isTyping && (
               <output className="flex justify-start" aria-label="Dr. Denta is typing">
-                <div className="flex items-center gap-1 rounded-2xl rounded-bl-md bg-navy-700/80 px-3 py-2">
-                  <span className="h-2 w-2 animate-pulse rounded-full bg-gold-300/70" />
-                  <span className="h-2 w-2 animate-pulse rounded-full bg-gold-300/70 [animation-delay:150ms]" />
-                  <span className="h-2 w-2 animate-pulse rounded-full bg-gold-300/70 [animation-delay:300ms]" />
+                <div className="flex items-center gap-1 rounded-card rounded-bl-md bg-cloud px-3 py-2">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-charcoal/40" />
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-charcoal/40 [animation-delay:150ms]" />
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-charcoal/40 [animation-delay:300ms]" />
                 </div>
               </output>
             )}
@@ -298,7 +295,7 @@ export function DentalChatbot() {
                 type="button"
                 onClick={() => void sendMessage(chip)}
                 disabled={isTyping}
-                className="rounded-full border border-navy-600 bg-navy-800 px-3 py-1.5 text-[11px] text-gray-300 transition-colors hover:border-gold-400/50 hover:text-gold-300 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-button border border-steel bg-paper px-3 py-1.5 text-[11px] text-charcoal transition-colors hover:border-ink hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {chip}
               </button>
@@ -307,7 +304,7 @@ export function DentalChatbot() {
 
           <form
             onSubmit={handleSubmit}
-            className="flex items-center gap-2 border-t border-navy-700 bg-navy-800 px-3 py-2.5"
+            className="flex items-center gap-2 border-t border-steel bg-cloud px-3 py-2.5"
           >
             <label htmlFor="dental-chatbot-input" className="sr-only">
               Ask Dr. Denta a dental question
@@ -319,19 +316,19 @@ export function DentalChatbot() {
               onChange={(event) => setInput(event.target.value)}
               placeholder="Ask about teeth, gums, braces..."
               maxLength={500}
-              className="min-w-0 flex-1 rounded-full border border-navy-600 bg-navy-900 px-4 py-2 text-sm text-gray-100 placeholder:text-gray-500 focus:border-gold-400/60 focus:outline-none"
+              className="min-w-0 flex-1 rounded-button border border-steel bg-paper px-4 py-2 text-sm text-ink placeholder:text-slate focus:border-ink focus:outline-none"
             />
             <button
               type="submit"
               disabled={!input.trim() || isTyping}
               aria-label="Send message to dental assistant"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-orange-500 text-white transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-aqua-relay text-ink transition-colors hover:bg-aqua-relay-deep disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Send className="h-4 w-4" aria-hidden="true" />
             </button>
           </form>
 
-          <p className="bg-navy-800 px-3 pb-2 text-center text-[10px] leading-relaxed text-gray-500">
+          <p className="bg-cloud px-3 pb-2 text-center text-[10px] leading-relaxed text-slate">
             General information only. For urgent or severe symptoms, use Emergency care.
           </p>
         </dialog>
@@ -351,12 +348,12 @@ export function ChatMessageBubble({ message, onEmergencyClick }: ChatMessageBubb
   return (
     <div className={`flex w-full ${mine ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[85%] whitespace-pre-line rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed shadow-sm ${
+        className={`max-w-[85%] whitespace-pre-line rounded-card px-3.5 py-2.5 text-sm leading-relaxed shadow-card-white ${
           mine
-            ? "rounded-br-md bg-gold-500/20 text-gray-100"
+            ? "rounded-br-md bg-ink text-paper"
             : message.isEmergency
-              ? "rounded-bl-md border border-red-500/40 bg-red-500/10 text-red-50"
-              : "rounded-bl-md bg-navy-700/80 text-gray-200"
+              ? "rounded-bl-md border border-red-200 bg-red-50 text-red-900"
+              : "rounded-bl-md bg-cloud text-charcoal"
         }`}
       >
         <p>{message.body}</p>
@@ -364,14 +361,14 @@ export function ChatMessageBubble({ message, onEmergencyClick }: ChatMessageBubb
           <Link
             to="/emergency"
             onClick={onEmergencyClick}
-            className="mt-3 inline-flex min-h-[36px] items-center gap-2 rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-red-500"
+            className="mt-3 inline-flex min-h-[36px] items-center gap-2 rounded-button bg-red-700 px-3 py-2 text-xs font-semibold text-paper transition-colors hover:bg-red-800"
           >
             <AlertCircle className="h-4 w-4" aria-hidden="true" />
             Go to emergency help
           </Link>
         )}
         {message.disclaimer && (
-          <p className="mt-2 border-t border-navy-600/60 pt-1.5 text-[11px] italic text-gray-400">
+          <p className="mt-2 border-t border-steel pt-1.5 text-[11px] italic text-slate">
             {message.disclaimer}
           </p>
         )}

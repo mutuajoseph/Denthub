@@ -1,4 +1,4 @@
-import { LayoutGrid, List, SearchX, ShieldCheck, Stethoscope, TriangleAlert } from "lucide-react";
+import { LayoutGrid, List, SearchX, Stethoscope, TriangleAlert } from "lucide-react";
 import { useMemo, useState } from "react";
 import { DentistListingCard } from "../components/dentists/DentistListingCard";
 import {
@@ -54,18 +54,14 @@ export function FindDentist() {
   }
 
   return (
-    <div className="bg-slate-50 dark:bg-navy-950">
-      <section className="hero-bg border-b border-slate-200 py-12 dark:border-navy-600 sm:py-16">
+    <div className="bg-paper">
+      <section className="border-b border-steel py-12 sm:py-16">
         <div className="app-container">
           <div className="max-w-3xl">
-            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-orange-600 dark:text-gold-300">
-              <ShieldCheck className="h-4 w-4" aria-hidden="true" />
-              Verified directory
-            </p>
-            <h1 className="mt-3 font-display text-4xl font-bold text-slate-950 sm:text-5xl dark:text-white">
+            <h1 className="font-display text-4xl font-medium tracking-[-0.04em] text-ink sm:text-5xl">
               Find the right dental care
             </h1>
-            <p className="mt-4 text-lg text-slate-600 dark:text-gray-300">
+            <p className="mt-4 text-lg text-slate">
               Search specialist physicians and dental practices across countries, regions,
               specialties, and availability.
             </p>
@@ -95,31 +91,29 @@ export function FindDentist() {
           />
 
           <div className="min-w-0">
-            <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-end sm:justify-between dark:border-navy-600">
+            <div className="flex flex-col gap-4 border-b border-steel pb-5 sm:flex-row sm:items-end sm:justify-between">
               <div aria-live="polite">
-                <p className="font-heading text-2xl font-semibold text-slate-900 dark:text-white">
+                <p className="font-heading text-2xl font-semibold text-ink">
                   {isLoading && listings.length === 0
                     ? "Loading results…"
                     : `${results.length} ${results.length === 1 ? "result" : "results"}`}
                 </p>
-                <p className="mt-1 text-sm text-slate-500 dark:text-gray-400">
+                <p className="mt-1 text-sm text-slate">
                   {results.length > 0
                     ? "Compare specialties, fees, and opening status."
                     : "Adjust your search to see available providers."}
                 </p>
               </div>
 
-              <fieldset className="inline-flex w-fit rounded-xl border border-slate-200 bg-white p-1 dark:border-navy-600 dark:bg-navy-800">
+              <fieldset className="inline-flex w-fit rounded-button border border-steel bg-paper p-1">
                 <legend className="sr-only">Result layout</legend>
                 <button
                   type="button"
                   aria-label="Grid view"
                   aria-pressed={view === "grid"}
                   onClick={() => setView("grid")}
-                  className={`inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-semibold transition ${
-                    view === "grid"
-                      ? "bg-orange-500 text-white"
-                      : "text-slate-600 hover:bg-orange-50 dark:text-gray-300 dark:hover:bg-navy-700"
+                  className={`inline-flex min-h-11 items-center gap-2 rounded-button px-3 text-sm font-semibold transition ${
+                    view === "grid" ? "bg-ink text-paper" : "text-slate hover:bg-cloud"
                   }`}
                 >
                   <LayoutGrid className="h-4 w-4" aria-hidden="true" />
@@ -130,10 +124,8 @@ export function FindDentist() {
                   aria-label="List view"
                   aria-pressed={view === "list"}
                   onClick={() => setView("list")}
-                  className={`inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-semibold transition ${
-                    view === "list"
-                      ? "bg-orange-500 text-white"
-                      : "text-slate-600 hover:bg-orange-50 dark:text-gray-300 dark:hover:bg-navy-700"
+                  className={`inline-flex min-h-11 items-center gap-2 rounded-button px-3 text-sm font-semibold transition ${
+                    view === "list" ? "bg-ink text-paper" : "text-slate hover:bg-cloud"
                   }`}
                 >
                   <List className="h-4 w-4" aria-hidden="true" />
@@ -143,33 +135,28 @@ export function FindDentist() {
             </div>
 
             {isLoading && listings.length === 0 ? (
-              <output className="mt-6 rounded-2xl border border-slate-200 bg-white px-6 py-14 text-center dark:border-navy-600 dark:bg-navy-800">
-                <p className="font-heading text-lg font-semibold text-slate-900 dark:text-white">
+              <output className="mt-6 block rounded-card border border-steel bg-paper px-6 py-14 text-center">
+                <p className="font-heading text-lg font-semibold text-ink">
                   Loading dental providers…
                 </p>
-                <p className="mt-2 text-sm text-slate-500 dark:text-gray-400">
+                <p className="mt-2 text-sm text-slate">
                   Fetching listings for your selection from the directory.
                 </p>
               </output>
             ) : error && listings.length === 0 ? (
               <div
                 role="alert"
-                className="mt-6 rounded-2xl border border-red-200 bg-white px-6 py-14 text-center dark:border-red-500/30 dark:bg-navy-800"
+                className="mt-6 rounded-card border border-red-200 bg-paper px-6 py-14 text-center"
               >
-                <TriangleAlert
-                  className="mx-auto h-10 w-10 text-red-600 dark:text-red-400"
-                  aria-hidden="true"
-                />
-                <h3 className="mt-4 font-heading text-xl font-semibold text-slate-900 dark:text-white">
+                <TriangleAlert className="mx-auto h-10 w-10 text-red-600" aria-hidden="true" />
+                <h3 className="mt-4 font-heading text-xl font-semibold text-ink">
                   Directory unavailable
                 </h3>
-                <p className="mx-auto mt-2 max-w-md text-sm text-slate-600 dark:text-gray-300">
-                  {describeError(error)}
-                </p>
+                <p className="mx-auto mt-2 max-w-md text-sm text-slate">{describeError(error)}</p>
                 <button
                   type="button"
                   onClick={() => void refetch()}
-                  className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-orange-500 px-5 py-2.5 font-heading text-sm font-semibold text-white transition hover:bg-orange-600"
+                  className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-button bg-ink px-5 py-2.5 font-heading text-sm font-semibold text-paper transition hover:bg-graphite"
                 >
                   Try again
                 </button>
@@ -179,13 +166,13 @@ export function FindDentist() {
                 {error && (
                   <div
                     role="alert"
-                    className="mt-6 flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 sm:flex-row sm:items-center sm:justify-between dark:border-gold-400/30 dark:bg-gold-400/10 dark:text-gold-300"
+                    className="mt-6 flex flex-col gap-3 rounded-card border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <p>Could not refresh results — showing the last loaded listings.</p>
                     <button
                       type="button"
                       onClick={() => void refetch()}
-                      className="min-h-11 shrink-0 rounded-lg border border-amber-300 px-4 font-heading text-sm font-semibold transition hover:border-amber-400 dark:border-gold-400/40"
+                      className="min-h-11 shrink-0 rounded-button border border-amber-300 px-4 font-heading text-sm font-semibold transition hover:border-amber-400"
                     >
                       Try again
                     </button>
@@ -205,21 +192,21 @@ export function FindDentist() {
                 </div>
               </>
             ) : (
-              <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center dark:border-navy-500 dark:bg-navy-800">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-50 text-orange-600 dark:bg-navy-700 dark:text-gold-300">
+              <div className="mt-6 rounded-card border border-dashed border-steel bg-paper px-6 py-14 text-center">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-card bg-cloud text-charcoal">
                   <SearchX className="h-7 w-7" aria-hidden="true" />
                 </div>
-                <h3 className="mt-5 font-heading text-xl font-semibold text-slate-900 dark:text-white">
+                <h3 className="mt-5 font-heading text-xl font-semibold text-ink">
                   No dental providers match
                 </h3>
-                <p className="mx-auto mt-2 max-w-md text-sm text-slate-600 dark:text-gray-300">
+                <p className="mx-auto mt-2 max-w-md text-sm text-slate">
                   Try a broader location, remove a specialty filter, or include closed providers by
                   turning off Open now.
                 </p>
                 <button
                   type="button"
                   onClick={clearFilters}
-                  className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-orange-500 px-5 py-2.5 font-heading text-sm font-semibold text-white transition hover:bg-orange-600"
+                  className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-button bg-ink px-5 py-2.5 font-heading text-sm font-semibold text-paper transition hover:bg-graphite"
                 >
                   <Stethoscope className="h-4 w-4" aria-hidden="true" />
                   Clear all filters

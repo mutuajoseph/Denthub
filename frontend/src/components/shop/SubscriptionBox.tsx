@@ -3,6 +3,7 @@ import { CheckCircle2 } from "lucide-react";
 import { useSiteContentStore } from "../../store/siteContentStore";
 import { cn } from "../../utils/cn";
 import { formatPrice } from "../../utils/formatCurrency";
+import Badge from "../ui/Badge";
 import Button from "../ui/Button";
 
 interface SubscriptionBoxProps {
@@ -26,47 +27,33 @@ export default function SubscriptionBox({ currency }: SubscriptionBoxProps) {
 
   return (
     <section className="mt-16" aria-labelledby="subscription-heading">
-      <h2
-        id="subscription-heading"
-        className="mb-2 font-display text-2xl font-bold text-[#172b4d] dark:text-white"
-      >
+      <h2 id="subscription-heading" className="mb-2 font-display text-2xl font-semibold text-ink">
         {title}
       </h2>
-      <p className="mb-8 text-slate-600 dark:text-gray-400">{subtitle}</p>
+      <p className="mb-8 text-slate">{subtitle}</p>
 
       <div className="grid gap-6 md:grid-cols-3">
         {tiers.map((tier) => (
           <div
             key={tier.id}
             className={cn(
-              "card-hover rounded-xl border bg-white p-6 dark:bg-navy-800",
-              tier.popular
-                ? "border-gold-400 shadow-gold dark:border-gold-400"
-                : "border-slate-200 dark:border-navy-600",
+              "card-hover rounded-card border bg-paper p-6",
+              tier.popular ? "border-ink" : "border-steel",
             )}
           >
-            {tier.popular && (
-              <span className="font-mono text-xs uppercase tracking-wider text-orange-500 dark:text-gold-400">
-                Most Popular
-              </span>
-            )}
+            {tier.popular && <Badge variant="ink">Most Popular</Badge>}
 
-            <h3 className="mt-2 font-heading text-xl font-bold text-[#172b4d] dark:text-white">
-              {tier.name}
-            </h3>
+            <h3 className="mt-2 font-heading text-xl font-semibold text-ink">{tier.name}</h3>
 
-            <p className="mt-2 text-2xl font-bold text-orange-500 dark:text-gold-400">
+            <p className="mt-2 text-2xl font-semibold text-ink">
               {formatPrice(tier.price, currency)}
-              <span className="text-sm font-normal text-slate-500 dark:text-gray-400">/mo</span>
+              <span className="text-sm font-normal text-slate">/mo</span>
             </p>
 
-            <ul className="mt-4 space-y-2 text-sm text-slate-600 dark:text-gray-300">
+            <ul className="mt-4 space-y-2 text-sm text-charcoal">
               {tier.features.map((feature) => (
                 <li key={feature} className="flex items-center gap-2">
-                  <CheckCircle2
-                    className="h-4 w-4 shrink-0 text-orange-500 dark:text-gold-400"
-                    aria-hidden="true"
-                  />
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-charcoal" aria-hidden="true" />
                   {feature}
                 </li>
               ))}

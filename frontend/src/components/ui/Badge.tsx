@@ -15,12 +15,6 @@ const tones = {
 
 const variants = {
   ...tones,
-  // Old palette names, still used by screens not yet revamped (#11).
-  gold: tones.ink,
-  orange: tones.graphite,
-  navy: tones.neutral,
-  green: tones.success,
-  red: tones.danger,
 };
 
 type Variant = keyof typeof variants;

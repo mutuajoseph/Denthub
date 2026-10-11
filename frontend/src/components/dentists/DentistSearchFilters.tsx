@@ -41,7 +41,8 @@ export interface DentistSearchFiltersProps {
 }
 
 const controlClass =
-  "mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 dark:border-navy-600 dark:bg-navy-900 dark:text-white";
+  "mt-1.5 w-full rounded-button border border-steel bg-paper px-3.5 py-2.5 text-sm text-ink outline-none transition focus:border-ink focus:ring-2 focus:ring-ink/20";
+const labelClass = "text-sm font-medium text-charcoal";
 
 export function DentistSearchFilters({
   value,
@@ -73,22 +74,19 @@ export function DentistSearchFilters({
 
   return (
     <aside
-      className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_14px_40px_rgba(15,23,42,0.06)] dark:border-navy-600 dark:bg-navy-800 lg:sticky lg:top-24"
+      className="rounded-card border border-steel bg-paper p-5 shadow-card-white lg:sticky lg:top-24"
       aria-labelledby={`${searchId}-heading`}
     >
-      <div className="flex items-center justify-between gap-3 border-b border-slate-200 pb-4 dark:border-navy-600">
+      <div className="flex items-center justify-between gap-3 border-b border-steel pb-4">
         <h2
           id={`${searchId}-heading`}
-          className="flex items-center gap-2 font-heading text-base font-semibold text-slate-900 dark:text-white"
+          className="flex items-center gap-2 font-heading text-base font-semibold text-ink"
         >
-          <SlidersHorizontal
-            className="h-4 w-4 text-orange-500 dark:text-gold-400"
-            aria-hidden="true"
-          />
+          <SlidersHorizontal className="h-4 w-4 text-charcoal" aria-hidden="true" />
           Refine results
         </h2>
         {activeFilterCount > 0 && (
-          <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-700 dark:bg-gold-400/10 dark:text-gold-300">
+          <span className="rounded-full bg-ink px-2 py-0.5 text-xs font-semibold text-paper">
             {activeFilterCount} active
           </span>
         )}
@@ -96,15 +94,12 @@ export function DentistSearchFilters({
 
       <div className="mt-5 space-y-5">
         <div>
-          <label
-            htmlFor={searchId}
-            className="text-sm font-medium text-slate-700 dark:text-gray-300"
-          >
+          <label htmlFor={searchId} className={labelClass}>
             Search dentists and practices
           </label>
           <div className="relative">
             <Search
-              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate"
               aria-hidden="true"
             />
             <input
@@ -119,10 +114,7 @@ export function DentistSearchFilters({
         </div>
 
         <div>
-          <label
-            htmlFor={countryId}
-            className="text-sm font-medium text-slate-700 dark:text-gray-300"
-          >
+          <label htmlFor={countryId} className={labelClass}>
             Country
           </label>
           <select
@@ -145,10 +137,7 @@ export function DentistSearchFilters({
         </div>
 
         <div>
-          <label
-            htmlFor={subdivisionId}
-            className="text-sm font-medium text-slate-700 dark:text-gray-300"
-          >
+          <label htmlFor={subdivisionId} className={labelClass}>
             Region or subdivision
           </label>
           <select
@@ -167,10 +156,7 @@ export function DentistSearchFilters({
         </div>
 
         <div>
-          <label
-            htmlFor={listingTypeId}
-            className="text-sm font-medium text-slate-700 dark:text-gray-300"
-          >
+          <label htmlFor={listingTypeId} className={labelClass}>
             Listing type
           </label>
           <select
@@ -188,10 +174,7 @@ export function DentistSearchFilters({
         </div>
 
         <div>
-          <label
-            htmlFor={specialtyId}
-            className="text-sm font-medium text-slate-700 dark:text-gray-300"
-          >
+          <label htmlFor={specialtyId} className={labelClass}>
             Specialty or procedure
           </label>
           <select
@@ -211,16 +194,10 @@ export function DentistSearchFilters({
 
         <div>
           <div className="flex items-center justify-between gap-3">
-            <label
-              htmlFor={ratingId}
-              className="text-sm font-medium text-slate-700 dark:text-gray-300"
-            >
+            <label htmlFor={ratingId} className={labelClass}>
               Minimum rating
             </label>
-            <output
-              htmlFor={ratingId}
-              className="text-xs font-semibold text-orange-600 dark:text-gold-300"
-            >
+            <output htmlFor={ratingId} className="text-xs font-semibold text-charcoal">
               {value.minRating === 0 ? "Any" : `${value.minRating.toFixed(1)}+`}
             </output>
           </div>
@@ -232,26 +209,26 @@ export function DentistSearchFilters({
             step="0.5"
             value={value.minRating}
             onChange={(event) => update("minRating", Number(event.currentTarget.value))}
-            className="mt-3 w-full accent-orange-500 dark:accent-gold-400"
+            className="mt-3 w-full accent-ink"
           />
-          <div className="mt-1 flex justify-between text-[11px] text-slate-400 dark:text-gray-400">
+          <div className="mt-1 flex justify-between text-[11px] text-slate">
             <span>Any</span>
             <span>5.0</span>
           </div>
         </div>
 
-        <label className="flex min-h-11 cursor-pointer items-center justify-between gap-3 rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-medium text-slate-700 transition hover:border-orange-300 dark:border-navy-600 dark:text-gray-300 dark:hover:border-gold-400/40">
+        <label className="flex min-h-11 cursor-pointer items-center justify-between gap-3 rounded-button border border-steel px-3.5 py-2.5 text-sm font-medium text-charcoal transition hover:border-ink">
           <span>Open now</span>
           <input
             type="checkbox"
             checked={value.openNow}
             onChange={(event) => update("openNow", event.currentTarget.checked)}
-            className="h-4 w-4 rounded border-slate-300 text-orange-500 accent-orange-500 focus:ring-orange-500 dark:border-navy-500 dark:bg-navy-900"
+            className="h-4 w-4 rounded border-steel text-ink accent-ink focus:ring-ink"
           />
         </label>
 
         <div>
-          <label htmlFor={sortId} className="text-sm font-medium text-slate-700 dark:text-gray-300">
+          <label htmlFor={sortId} className={labelClass}>
             Sort results
           </label>
           <select
@@ -271,7 +248,7 @@ export function DentistSearchFilters({
           type="button"
           onClick={onClear}
           disabled={activeFilterCount === 0}
-          className="min-h-11 w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-orange-400 hover:text-orange-600 disabled:cursor-not-allowed disabled:opacity-40 dark:border-navy-500 dark:text-gray-300 dark:hover:border-gold-400 dark:hover:text-gold-300"
+          className="min-h-11 w-full rounded-button border border-steel px-4 py-2.5 text-sm font-semibold text-charcoal transition hover:border-ink hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
         >
           Clear filters
         </button>

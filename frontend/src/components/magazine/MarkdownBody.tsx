@@ -62,7 +62,7 @@ function renderInline(text: string, keyCounter: () => number): ReactNode[] {
             href={target}
             target={target.startsWith("/") || target.startsWith("#") ? undefined : "_blank"}
             rel={target.startsWith("/") || target.startsWith("#") ? undefined : "noreferrer"}
-            className="font-medium text-orange-500 underline underline-offset-2 hover:text-orange-600 dark:text-gold-300"
+            className="font-medium text-charcoal underline underline-offset-2 hover:text-ink"
           >
             {escapeHtml(link[1])}
           </a>,
@@ -100,10 +100,7 @@ function renderBlocks(body: string): ReactNode[] {
 
     if (line.startsWith("### ")) {
       nodes.push(
-        <h3
-          key={nextKey()}
-          className="mt-6 font-display text-lg font-bold text-gray-900 dark:text-white"
-        >
+        <h3 key={nextKey()} className="mt-6 font-display text-lg font-semibold text-ink">
           {renderInline(line.slice(4).trim(), nextKey)}
         </h3>,
       );
@@ -113,10 +110,7 @@ function renderBlocks(body: string): ReactNode[] {
 
     if (line.startsWith("## ")) {
       nodes.push(
-        <h2
-          key={nextKey()}
-          className="mt-6 font-display text-xl font-bold text-gray-900 dark:text-white"
-        >
+        <h2 key={nextKey()} className="mt-6 font-display text-xl font-semibold text-ink">
           {renderInline(line.slice(3).trim(), nextKey)}
         </h2>,
       );
@@ -170,7 +164,7 @@ function renderBlocks(body: string): ReactNode[] {
     }
 
     nodes.push(
-      <p key={nextKey()} className="mt-4 leading-7 text-gray-600 dark:text-gray-300">
+      <p key={nextKey()} className="mt-4 leading-7 text-charcoal">
         {renderInline(paragraph.join(" "), nextKey)}
       </p>,
     );

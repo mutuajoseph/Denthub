@@ -49,7 +49,7 @@ export default function OralCareShopPage() {
       {catalog.error ? (
         <div
           role="alert"
-          className="flex items-start gap-3 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300"
+          className="flex items-start gap-3 rounded-card border border-red-300 bg-red-50 p-4 text-sm text-red-700"
         >
           <AlertCircle className="h-5 w-5 shrink-0" aria-hidden="true" />
           <div>
@@ -60,7 +60,7 @@ export default function OralCareShopPage() {
       ) : (
         <>
           <div className="mb-4 flex items-baseline justify-between">
-            <p className="text-sm text-slate-600 dark:text-gray-400" aria-live="polite">
+            <p className="text-sm text-slate" aria-live="polite">
               {catalog.isLoading
                 ? "Loading products..."
                 : `${catalog.total} ${catalog.total === 1 ? "product" : "products"}`}

@@ -27,7 +27,8 @@ const EMPTY_PREVIEW: AppointmentPreview = {
 };
 
 const fieldClass =
-  "mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 dark:border-navy-600 dark:bg-navy-900 dark:text-white";
+  "mt-1.5 w-full rounded-button border border-steel bg-paper px-3.5 py-2.5 text-sm text-ink outline-none transition focus:border-ink focus:ring-2 focus:ring-ink/20";
+const labelClass = "text-sm font-medium text-charcoal";
 
 export function AppointmentRequestPreview({ provider }: AppointmentRequestPreviewProps) {
   const headingId = useId();
@@ -53,11 +54,9 @@ export function AppointmentRequestPreview({ provider }: AppointmentRequestPrevie
 
   if (!isOpen) {
     return (
-      <div className="rounded-2xl border border-orange-200 bg-orange-50 p-5 dark:border-gold-400/30 dark:bg-navy-800">
-        <h2 className="font-heading text-lg font-semibold text-slate-900 dark:text-white">
-          Plan your next visit
-        </h2>
-        <p className="mt-2 text-sm text-slate-600 dark:text-gray-300">
+      <div className="rounded-card border border-steel bg-cloud p-5">
+        <h2 className="font-heading text-lg font-semibold text-ink">Plan your next visit</h2>
+        <p className="mt-2 text-sm text-charcoal">
           Build an appointment message for {provider.name} and review it before contacting the
           provider.
         </p>
@@ -70,38 +69,30 @@ export function AppointmentRequestPreview({ provider }: AppointmentRequestPrevie
 
   return (
     <section
-      className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_14px_40px_rgba(15,23,42,0.06)] sm:p-6 dark:border-navy-600 dark:bg-navy-800"
+      className="rounded-card border border-steel bg-paper p-5 shadow-card-white sm:p-6"
       aria-labelledby={headingId}
     >
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-600 dark:text-gold-300">
-            Frontend preview
-          </p>
-          <h2
-            id={headingId}
-            className="mt-1 font-heading text-xl font-semibold text-slate-900 dark:text-white"
-          >
-            Appointment request preview
-          </h2>
-        </div>
+        <h2 id={headingId} className="font-heading text-xl font-semibold text-ink">
+          Appointment request preview
+        </h2>
         <button
           type="button"
           onClick={reset}
           aria-label="Close appointment request preview"
-          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:text-gray-300 dark:hover:bg-navy-700 dark:hover:text-white"
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-button text-slate transition hover:bg-cloud hover:text-ink"
         >
           <X className="h-5 w-5" aria-hidden="true" />
         </button>
       </div>
 
-      <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-950 dark:border-gold-400/30 dark:bg-gold-400/10 dark:text-gold-300">
+      <p className="mt-3 rounded-button border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-950">
         Preview only. Nothing is sent or saved, and no appointment is reserved.
       </p>
 
       {preview ? (
         <output className="mt-5 block" aria-live="polite">
-          <div className="flex items-start gap-3 rounded-xl bg-green-50 p-4 text-green-950 dark:bg-green-500/10 dark:text-green-300">
+          <div className="flex items-start gap-3 rounded-button bg-green-50 p-4 text-green-950">
             <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
             <div>
               <h3 className="font-heading font-semibold">
@@ -112,29 +103,23 @@ export function AppointmentRequestPreview({ provider }: AppointmentRequestPrevie
               </p>
             </div>
           </div>
-          <dl className="mt-5 divide-y divide-slate-200 rounded-xl border border-slate-200 dark:divide-navy-600 dark:border-navy-600">
+          <dl className="mt-5 divide-y divide-steel rounded-button border border-steel">
             <div className="grid gap-1 p-4 sm:grid-cols-[9rem_1fr]">
-              <dt className="text-sm font-medium text-slate-500 dark:text-gray-400">Patient</dt>
-              <dd className="text-sm text-slate-900 dark:text-white">{preview.patientName}</dd>
+              <dt className="text-sm font-medium text-slate">Patient</dt>
+              <dd className="text-sm text-ink">{preview.patientName}</dd>
             </div>
             <div className="grid gap-1 p-4 sm:grid-cols-[9rem_1fr]">
-              <dt className="text-sm font-medium text-slate-500 dark:text-gray-400">Email</dt>
-              <dd className="text-sm break-words text-slate-900 dark:text-white">
-                {preview.email}
-              </dd>
+              <dt className="text-sm font-medium text-slate">Email</dt>
+              <dd className="text-sm break-words text-ink">{preview.email}</dd>
             </div>
             <div className="grid gap-1 p-4 sm:grid-cols-[9rem_1fr]">
-              <dt className="text-sm font-medium text-slate-500 dark:text-gray-400">
-                Preferred date
-              </dt>
-              <dd className="text-sm text-slate-900 dark:text-white">{preview.preferredDate}</dd>
+              <dt className="text-sm font-medium text-slate">Preferred date</dt>
+              <dd className="text-sm text-ink">{preview.preferredDate}</dd>
             </div>
             {preview.note && (
               <div className="grid gap-1 p-4 sm:grid-cols-[9rem_1fr]">
-                <dt className="text-sm font-medium text-slate-500 dark:text-gray-400">Note</dt>
-                <dd className="text-sm whitespace-pre-wrap text-slate-900 dark:text-white">
-                  {preview.note}
-                </dd>
+                <dt className="text-sm font-medium text-slate">Note</dt>
+                <dd className="text-sm whitespace-pre-wrap text-ink">{preview.note}</dd>
               </div>
             )}
           </dl>
@@ -142,7 +127,7 @@ export function AppointmentRequestPreview({ provider }: AppointmentRequestPrevie
             {provider.phone && (
               <a
                 href={`tel:${provider.phone}`}
-                className="inline-flex min-h-11 items-center justify-center rounded-lg bg-red-600 px-5 py-2.5 font-heading text-sm font-semibold text-white transition hover:bg-red-700"
+                className="inline-flex min-h-11 items-center justify-center rounded-button bg-ink px-5 py-2.5 font-heading text-sm font-semibold text-paper transition hover:bg-graphite"
               >
                 Call to request appointment
               </a>
@@ -155,10 +140,7 @@ export function AppointmentRequestPreview({ provider }: AppointmentRequestPrevie
       ) : (
         <form className="mt-5 grid gap-4 sm:grid-cols-2" onSubmit={handleSubmit}>
           <div className="sm:col-span-2">
-            <label
-              htmlFor={`${headingId}-name`}
-              className="text-sm font-medium text-slate-700 dark:text-gray-300"
-            >
+            <label htmlFor={`${headingId}-name`} className={labelClass}>
               Patient name
             </label>
             <input
@@ -171,10 +153,7 @@ export function AppointmentRequestPreview({ provider }: AppointmentRequestPrevie
             />
           </div>
           <div>
-            <label
-              htmlFor={`${headingId}-email`}
-              className="text-sm font-medium text-slate-700 dark:text-gray-300"
-            >
+            <label htmlFor={`${headingId}-email`} className={labelClass}>
               Email address
             </label>
             <input
@@ -188,10 +167,7 @@ export function AppointmentRequestPreview({ provider }: AppointmentRequestPrevie
             />
           </div>
           <div>
-            <label
-              htmlFor={`${headingId}-date`}
-              className="text-sm font-medium text-slate-700 dark:text-gray-300"
-            >
+            <label htmlFor={`${headingId}-date`} className={labelClass}>
               Preferred date
             </label>
             <input
@@ -204,11 +180,8 @@ export function AppointmentRequestPreview({ provider }: AppointmentRequestPrevie
             />
           </div>
           <div className="sm:col-span-2">
-            <label
-              htmlFor={`${headingId}-note`}
-              className="text-sm font-medium text-slate-700 dark:text-gray-300"
-            >
-              Note to the provider <span className="font-normal text-slate-400">(optional)</span>
+            <label htmlFor={`${headingId}-note`} className={labelClass}>
+              Note to the provider <span className="font-normal text-slate">(optional)</span>
             </label>
             <textarea
               id={`${headingId}-note`}
