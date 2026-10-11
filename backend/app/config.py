@@ -28,16 +28,44 @@ class Settings:
 
     @classmethod
     def from_env(cls) -> Settings:
-        origins = os.getenv("CORS_ORIGINS", "http://localhost:5173")
+        origins = os.getenv(
+            "CORS_ORIGINS",
+            "http://localhost:5173",
+        )
+
+        database_url = os.getenv(
+            "DATABASE_URL",
+            "sqlite+aiosqlite:///denthub.db",
+        )
+
+        # Ensure PostgreSQL uses SQLAlchemy's async driver.
+        if database_url.startswith("postgres://"):
+            database_url = database_url.replace(
+                "postgres://",
+                "postgresql+asyncpg://",
+                1,
+            )
+        elif database_url.startswith("postgresql://"):
+            database_url = database_url.replace(
+                "postgresql://",
+                "postgresql+asyncpg://",
+                1,
+            )
+
         return cls(
             app_name=APP_NAME,
             environment=os.getenv("ENVIRONMENT", "local"),
             dev_mode=os.getenv("DEV_MODE", "1") == "1",
             log_level=os.getenv("LOG_LEVEL", "INFO"),
-            cors_origins=tuple(o.strip() for o in origins.split(",") if o.strip()),
-            database_url=os.getenv("DATABASE_URL", "sqlite+aiosqlite:///denthub.db"),
+            cors_origins=tuple(
+                origin.strip()
+                for origin in origins.split(",")
+                if origin.strip()
+            ),
+            database_url=database_url,
             jwt_secret_key=os.getenv(
-                "JWT_SECRET_KEY", "denthub-super-secret-dev-key-change-in-prod"
+                "JWT_SECRET_KEY",
+                "denthub-super-secret-dev-key-change-in-prod",
             ),
             jwt_algorithm=os.getenv("JWT_ALGORITHM", "HS256"),
         )
