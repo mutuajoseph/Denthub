@@ -12,12 +12,12 @@ interface ProductGridProps {
 
 function SkeletonCard() {
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-navy-600 dark:bg-navy-800">
-      <div className="h-40 animate-pulse bg-slate-200 dark:bg-navy-700" />
+    <div className="overflow-hidden rounded-card border border-steel bg-paper">
+      <div className="h-40 animate-pulse bg-cloud" />
       <div className="space-y-2 p-4">
-        <div className="h-3 w-16 animate-pulse rounded bg-slate-200 dark:bg-navy-700" />
-        <div className="h-4 w-3/4 animate-pulse rounded bg-slate-200 dark:bg-navy-700" />
-        <div className="h-6 w-20 animate-pulse rounded bg-slate-200 dark:bg-navy-700" />
+        <div className="h-3 w-16 animate-pulse rounded bg-cloud" />
+        <div className="h-4 w-3/4 animate-pulse rounded bg-cloud" />
+        <div className="h-6 w-20 animate-pulse rounded bg-cloud" />
       </div>
     </div>
   );
@@ -43,11 +43,11 @@ export default function ProductGrid({
   if (products.length === 0) {
     return (
       <div
-        className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-slate-300 py-16 text-center dark:border-navy-600"
+        className="flex flex-col items-center gap-3 rounded-card border border-dashed border-steel py-16 text-center"
         aria-live="polite"
       >
-        <SearchX className="h-8 w-8 text-slate-400" aria-hidden="true" />
-        <p className="text-sm text-slate-600 dark:text-gray-400">{emptyMessage}</p>
+        <SearchX className="h-8 w-8 text-slate" aria-hidden="true" />
+        <p className="text-sm text-slate">{emptyMessage}</p>
       </div>
     );
   }

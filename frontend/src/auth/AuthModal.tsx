@@ -43,36 +43,13 @@ export function AuthModal({ onClose, onLoginSuccess }: AuthModalProps) {
 
   return (
     <div
-      className="
-        fixed
-        inset-0
-        z-[100]
-        flex
-        items-center
-        justify-center
-        overflow-hidden
-        bg-auth-scrim/60
-        p-4
-        backdrop-blur-[6px]
-      "
+      className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-ink/60 p-4 backdrop-blur-[6px]"
       role="presentation"
       onMouseDown={onClose}
     >
       <dialog
         open
-        className="
-          relative
-          w-full
-          max-w-[400px]
-          max-h-[90vh]
-          overflow-hidden
-          rounded-[16px]
-          bg-auth-surface
-          px-6
-          py-5
-          text-auth-heading
-          shadow-[0_20px_45px_rgba(0,0,0,0.22)]
-        "
+        className="relative max-h-[90vh] w-full max-w-[400px] overflow-hidden rounded-card border border-steel bg-paper px-6 py-5 text-ink shadow-card-cloud"
         aria-labelledby="auth-title"
         onMouseDown={(event) => event.stopPropagation()}
       >
@@ -81,22 +58,7 @@ export function AuthModal({ onClose, onLoginSuccess }: AuthModalProps) {
           type="button"
           aria-label="Close authentication"
           onClick={onClose}
-          className="
-            absolute
-            right-3
-            top-3
-            flex
-            h-7
-            w-7
-            items-center
-            justify-center
-            rounded-md
-            border-0
-            bg-transparent
-            text-auth-icon
-            transition
-            hover:text-auth-body
-          "
+          className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-button text-slate transition hover:bg-cloud hover:text-ink"
         >
           <X className="h-5 w-5" strokeWidth={1.8} />
         </button>
@@ -105,17 +67,10 @@ export function AuthModal({ onClose, onLoginSuccess }: AuthModalProps) {
         <div className="mb-5 flex justify-center">
           <h1
             id="auth-title"
-            className="
-              m-0
-              text-[27px]
-              font-bold
-              leading-none
-              tracking-tight
-              text-auth-heading
-            "
+            className="m-0 font-display text-[27px] leading-none font-semibold tracking-[-0.03em] text-ink"
           >
             Dent
-            <span className="text-auth-accent-strong">Hub Kenya</span>
+            <span className="font-normal text-charcoal">Hub Kenya</span>
           </h1>
         </div>
 

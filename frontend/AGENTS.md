@@ -74,10 +74,9 @@ for design work is [`PRODUCT.md`](PRODUCT.md). The UI is **light-only**.
   secondary / graphite / translucent, `Card` tones white / cloud / graphite).
   Pills (`rounded-full`) are for status chips only.
 - Headings carry their own weight: no eyebrow or kicker labels above them.
-- `src/global.css` holds a **revamp shim** that maps the old `orange-*`,
-  `gold-*` and `navy-*` names to graphite/ink while screens are revamped phase
-  by phase (#11). New code uses the design tokens; a revamped file contains no
-  `orange-*`/`gold-*`/`navy-*` classes and no `dark:` variants.
+- The revamp (#11) is complete: the `@theme` block holds the design tokens
+  only. There are no `orange-*`/`gold-*`/`navy-*` classes, no `dark:` variants,
+  and no legacy `hero-bg`/`gold-gradient-text` helpers left in any screen.
 - Animations keep the `prefers-reduced-motion: reduce` kill-switch in
   `global.css`; one authored motion moment per surface.
 

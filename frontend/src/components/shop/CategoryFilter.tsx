@@ -13,7 +13,8 @@ interface CategoryFilterProps {
  * Horizontal category scroller.
  *
  * Rendered as a single-select group: the buttons carry `aria-pressed` so the
- * active one is announced, which the source version omitted.
+ * active one is announced, which the source version omitted. The selected item
+ * is marked with the aqua signal (DESIGN.md "Use-Case Filter Row").
  */
 export default function CategoryFilter({
   categories,
@@ -25,10 +26,7 @@ export default function CategoryFilter({
     return (
       <div className="mb-6 flex gap-2 overflow-x-auto pb-2" aria-hidden="true" aria-busy="true">
         {[0, 1, 2, 3].map((i) => (
-          <div
-            key={i}
-            className="h-9 w-24 shrink-0 animate-pulse rounded-full bg-slate-200 dark:bg-navy-700"
-          />
+          <div key={i} className="h-9 w-24 shrink-0 animate-pulse rounded-button bg-cloud" />
         ))}
       </div>
     );
@@ -49,11 +47,9 @@ export default function CategoryFilter({
             onClick={() => onChange(category)}
             aria-pressed={isActive}
             className={cn(
-              "flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all",
-              "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-400",
-              isActive
-                ? "bg-gold-400 text-navy-900"
-                : "border border-navy-600 bg-navy-800 text-gray-300 hover:border-gold-400/50",
+              "flex shrink-0 items-center gap-2 rounded-button px-4 py-2 text-sm font-medium transition-colors",
+              "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink",
+              isActive ? "bg-aqua-relay text-ink" : "text-slate hover:bg-cloud hover:text-ink",
             )}
           >
             {!isAll && <Icon className="h-4 w-4" aria-hidden="true" />}

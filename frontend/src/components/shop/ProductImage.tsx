@@ -17,7 +17,7 @@ const CATEGORY_GRADIENTS: Record<string, string> = {
   toothpaste: "from-teal-500 to-emerald-700",
   floss: "from-cyan-500 to-sky-700",
   mouthwash: "from-sky-400 to-cyan-700",
-  whitening: "from-amber-400 to-orange-600",
+  whitening: "from-amber-400 to-amber-600",
   children: "from-rose-400 to-pink-600",
   specialty: "from-violet-500 to-purple-800",
 };
@@ -82,7 +82,7 @@ export default function ProductImage({ src, alt, category, className }: ProductI
 /** Small square thumbnail used by cart lines. */
 export function ProductThumbnail(props: Omit<ProductImageProps, "className">) {
   return (
-    <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg">
+    <div className="h-16 w-16 shrink-0 overflow-hidden rounded-button">
       <ProductImage {...props} />
     </div>
   );

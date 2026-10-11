@@ -40,20 +40,12 @@ function CartLine({
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            {item.brand && (
-              <p className="font-mono text-[10px] text-slate-500 dark:text-gray-400">
-                {item.brand}
-              </p>
-            )}
-            <p className="truncate text-sm font-medium text-[#172b4d] dark:text-white">
-              {item.name}
-            </p>
+            {item.brand && <p className="font-mono text-[10px] text-slate">{item.brand}</p>}
+            <p className="truncate text-sm font-medium text-ink">{item.name}</p>
             <p
               className={cn(
                 "text-[11px] font-medium",
-                item.purchaseMode === "wholesale"
-                  ? "text-orange-500 dark:text-gold-300"
-                  : "text-slate-500 dark:text-gray-400",
+                item.purchaseMode === "wholesale" ? "text-charcoal" : "text-slate",
               )}
             >
               {item.purchaseMode === "wholesale" ? "Wholesale" : "Retail"}
@@ -64,19 +56,19 @@ function CartLine({
             type="button"
             onClick={() => removeItem(item.cartLineId)}
             aria-label={`Remove ${item.name} from cart`}
-            className="shrink-0 rounded p-1 text-slate-400 transition-colors hover:text-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-400"
+            className="shrink-0 rounded-button p-1 text-slate transition-colors hover:text-red-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
           >
             <Trash2 className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
 
         <div className="mt-2 flex items-center justify-between">
-          <div className="flex items-center gap-1 rounded-lg border border-slate-200 dark:border-navy-600">
+          <div className="flex items-center gap-1 rounded-button border border-steel">
             <button
               type="button"
               onClick={() => updateQuantity(item.cartLineId, item.quantity - 1)}
               aria-label={`Decrease ${item.name} quantity`}
-              className="p-1.5 text-slate-600 transition-colors hover:text-orange-500 dark:text-gray-300"
+              className="p-1.5 text-charcoal transition-colors hover:text-ink"
             >
               <Minus className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
@@ -93,22 +85,19 @@ function CartLine({
               type="button"
               onClick={() => updateQuantity(item.cartLineId, item.quantity + 1)}
               aria-label={`Increase ${item.name} quantity`}
-              className="p-1.5 text-slate-600 transition-colors hover:text-orange-500 dark:text-gray-300"
+              className="p-1.5 text-charcoal transition-colors hover:text-ink"
             >
               <Plus className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
           </div>
 
-          <p className="text-sm font-semibold text-[#172b4d] dark:text-white">
+          <p className="text-sm font-semibold text-ink">
             {formatPrice(toCents(item.unitPrice * item.quantity), currency)}
           </p>
         </div>
 
         {belowMinimum && (
-          <output
-            className="mt-1 block text-[11px] text-orange-500 dark:text-gold-300"
-            aria-live="polite"
-          >
+          <output className="mt-1 block text-[11px] text-charcoal" aria-live="polite">
             Wholesale starts at {minQty} units — add {minQty - item.quantity} more.
           </output>
         )}
@@ -177,7 +166,7 @@ export default function CartDrawer() {
             aria-hidden="true"
             onClick={closeCartDrawer}
             // Above the sticky header (z-50) so the nav is inert while open.
-            className="fixed inset-0 z-[90] cursor-default bg-navy-950/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[90] cursor-default bg-ink/60 backdrop-blur-sm"
           />
 
           <motion.div
@@ -193,13 +182,13 @@ export default function CartDrawer() {
               aria-label="Shopping cart"
               ref={panelRef}
               tabIndex={-1}
-              className="m-0 flex h-full max-h-none w-full flex-col border-l border-slate-200 bg-white p-0 text-[#172b4d] shadow-xl outline-none dark:border-navy-600 dark:bg-navy-900 dark:text-white"
+              className="m-0 flex h-full max-h-none w-full flex-col border-l border-steel bg-paper p-0 text-ink shadow-xl outline-none"
             >
-              <div className="flex items-center justify-between border-b border-slate-200 p-4 dark:border-navy-600">
-                <h2 className="font-display text-lg font-bold text-[#172b4d] dark:text-white">
+              <div className="flex items-center justify-between border-b border-steel p-4">
+                <h2 className="font-display text-lg font-semibold text-ink">
                   Your Cart
                   {items.length > 0 && (
-                    <span className="ml-2 text-sm font-normal text-slate-500 dark:text-gray-400">
+                    <span className="ml-2 text-sm font-normal text-slate">
                       ({items.length} {items.length === 1 ? "line" : "lines"})
                     </span>
                   )}
@@ -209,7 +198,7 @@ export default function CartDrawer() {
                   type="button"
                   onClick={closeCartDrawer}
                   aria-label="Close cart"
-                  className="rounded p-1.5 text-slate-500 transition-colors hover:text-[#172b4d] dark:text-gray-400 dark:hover:text-white"
+                  className="rounded-button p-1.5 text-slate transition-colors hover:text-ink"
                 >
                   <X className="h-5 w-5" aria-hidden="true" />
                 </button>
@@ -217,54 +206,48 @@ export default function CartDrawer() {
 
               {items.length === 0 ? (
                 <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
-                  <ShoppingBag
-                    className="h-10 w-10 text-slate-300 dark:text-navy-600"
-                    aria-hidden="true"
-                  />
-                  <p className="text-sm text-slate-600 dark:text-gray-400">
+                  <ShoppingBag className="h-10 w-10 text-steel" aria-hidden="true" />
+                  <p className="text-sm text-slate">
                     Your cart is empty. Add some oral care essentials.
                   </p>
                   <button
                     type="button"
                     onClick={closeCartDrawer}
-                    className="mt-2 rounded-lg border border-navy-600 px-4 py-2 text-sm font-medium text-gray-300 transition-colors hover:border-gold-400/50 hover:text-gold-400"
+                    className="mt-2 rounded-button border border-steel px-4 py-2 text-sm font-medium text-charcoal transition-colors hover:bg-cloud"
                   >
                     Continue shopping
                   </button>
                 </div>
               ) : (
                 <>
-                  <ul className="flex-1 divide-y divide-slate-200 overflow-y-auto px-4 dark:divide-navy-600">
+                  <ul className="flex-1 divide-y divide-steel overflow-y-auto px-4">
                     {items.map((item) => (
                       <CartLine key={item.cartLineId} item={item} currency={currency} />
                     ))}
                   </ul>
 
-                  <div className="space-y-3 border-t border-slate-200 p-4 dark:border-navy-600">
+                  <div className="space-y-3 border-t border-steel p-4">
                     {hasWholesale && (
-                      <output
-                        className="block text-[11px] text-orange-500 dark:text-gold-300"
-                        aria-live="polite"
-                      >
+                      <output className="block text-[11px] text-charcoal" aria-live="polite">
                         Wholesale lines need a clinic account. Final pricing is confirmed at
                         checkout.
                       </output>
                     )}
 
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-600 dark:text-gray-400">Subtotal</span>
-                      <span className="text-lg font-bold text-[#172b4d] dark:text-white">
+                      <span className="text-sm text-slate">Subtotal</span>
+                      <span className="text-lg font-semibold text-ink">
                         {formatPrice(toCents(subtotal), currency)}
                       </span>
                     </div>
 
-                    <p className="text-[11px] text-slate-500 dark:text-gray-400">
+                    <p className="text-[11px] text-slate">
                       Taxes and delivery are calculated at checkout.
                     </p>
 
                     <button
                       type="button"
-                      className="w-full rounded-lg bg-orange-500 py-3 text-sm font-semibold text-white transition-colors hover:bg-orange-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-400"
+                      className="w-full rounded-card bg-aqua-relay py-3 text-sm font-semibold text-ink transition-colors hover:bg-aqua-relay-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                     >
                       Checkout
                     </button>
@@ -272,7 +255,7 @@ export default function CartDrawer() {
                     <button
                       type="button"
                       onClick={clearCart}
-                      className="w-full text-center text-[11px] text-slate-500 underline transition-colors hover:text-red-500 dark:text-gray-400"
+                      className="w-full text-center text-[11px] text-slate underline transition-colors hover:text-red-600"
                     >
                       Clear cart
                     </button>

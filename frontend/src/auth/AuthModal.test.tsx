@@ -70,24 +70,33 @@ describe("AuthModal theming", () => {
     }
   });
 
-  it("paints the modal surfaces with theme-aware tokens", () => {
+  it("paints the modal surfaces with design tokens", () => {
     const { container } = render(<AuthModal onClose={vi.fn()} />);
     const dialog = container.querySelector("dialog");
 
-    expect(dialog?.className).toContain("bg-auth-surface");
-    expect(container.firstElementChild?.className).toContain("bg-auth-scrim");
+    expect(dialog?.className).toContain("bg-paper");
+    expect(container.firstElementChild?.className).toContain("bg-ink/60");
   });
 
-  it("defines every auth token once, as a light-theme colour", () => {
+  it("uses the design tokens and leaves no interim auth-theming shim behind", () => {
     const css = readGlobalCss();
     const theme = blockOf(css, "@theme");
 
-    const declared = [...theme.matchAll(/--color-auth-([a-z-]+):\s*([^;]+);/g)];
-
-    expect(declared.length).toBeGreaterThan(0);
-    for (const [, token, value] of declared) {
-      expect(value, `--color-auth-${token} is not a hex colour`).toMatch(/^#[0-9a-f]{3,8}$/i);
+    for (const token of [
+      "paper",
+      "ink",
+      "graphite",
+      "cloud",
+      "steel",
+      "slate",
+      "charcoal",
+      "aqua-relay",
+    ]) {
+      const declared = new RegExp(`--color-${token}:\\s*([^;]+);`).exec(theme);
+      expect(declared?.[1], `--color-${token} should be a hex colour`).toMatch(/^#[0-9a-f]{3,8}$/i);
     }
+    // The auth revamp moved off the interim auth-* tokens (#11 phase 4).
+    expect(theme).not.toMatch(/--color-auth-/);
     // Light-only (docs/design/DESIGN.md): no dark palette to fall out of sync.
     expect(css).not.toMatch(/^\.dark\s*\{/m);
   });

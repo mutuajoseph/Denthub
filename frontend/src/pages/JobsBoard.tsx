@@ -10,6 +10,9 @@ import { useRegion } from "../hooks/useRegion";
 import { useSpecialties } from "../hooks/useSpecialties";
 import { useSiteContentStore } from "../store/siteContentStore";
 
+const SELECT_CLASS =
+  "mt-1 w-full rounded-button border border-steel bg-paper px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-ink/20 disabled:opacity-50";
+
 export function JobsBoard() {
   const { locale } = useRegion();
   const { apiCountry, regions, subdivisionLabel } = useCountryConfig();
@@ -54,31 +57,28 @@ export function JobsBoard() {
   }
 
   return (
-    <div className="app-container py-8 text-gray-900 lg:py-12 dark:text-white">
+    <div className="app-container py-8 text-ink lg:py-12">
       <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-50 text-orange-500 dark:bg-gold-400/10 dark:text-gold-400">
+            <span className="flex h-11 w-11 items-center justify-center rounded-button bg-cloud text-charcoal">
               <Briefcase className="h-5 w-5" aria-hidden="true" />
             </span>
-            <h1 className="font-display text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="font-display text-3xl font-medium tracking-[-0.03em] text-ink">
               {title}
             </h1>
           </div>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">{subtitle}</p>
+          <p className="mt-2 text-slate">{subtitle}</p>
         </div>
       </header>
 
       <div className="grid gap-8 lg:grid-cols-4">
         <aside
-          className="h-fit space-y-4 rounded-xl border border-gray-200 bg-white p-5 dark:border-navy-600 dark:bg-navy-800"
+          className="h-fit space-y-4 rounded-card border border-steel bg-paper p-5"
           aria-label="Filter dental jobs"
         >
           <div>
-            <label
-              className="text-xs text-gray-500 dark:text-gray-400"
-              htmlFor="jobs-filter-employment"
-            >
+            <label className="text-sm font-medium text-charcoal" htmlFor="jobs-filter-employment">
               Employment Type
             </label>
             <select
@@ -88,7 +88,7 @@ export function JobsBoard() {
                 setEmployment(event.target.value);
                 resetPagination();
               }}
-              className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 dark:border-navy-600 dark:bg-navy-900 dark:text-white"
+              className={SELECT_CLASS}
             >
               <option value="">All Types</option>
               {JOB_EMPLOYMENT_TYPES.map((option) => (
@@ -100,10 +100,7 @@ export function JobsBoard() {
           </div>
 
           <div>
-            <label
-              className="text-xs text-gray-500 dark:text-gray-400"
-              htmlFor="jobs-filter-specialty"
-            >
+            <label className="text-sm font-medium text-charcoal" htmlFor="jobs-filter-specialty">
               Specialty
             </label>
             <select
@@ -114,7 +111,7 @@ export function JobsBoard() {
                 resetPagination();
               }}
               disabled={specialtyOptions.length === 0}
-              className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 disabled:opacity-50 dark:border-navy-600 dark:bg-navy-900 dark:text-white"
+              className={SELECT_CLASS}
             >
               <option value="">All Specialties</option>
               {specialtyOptions.map((option) => (
@@ -126,10 +123,7 @@ export function JobsBoard() {
           </div>
 
           <div>
-            <label
-              className="text-xs text-gray-500 dark:text-gray-400"
-              htmlFor="jobs-filter-subdivision"
-            >
+            <label className="text-sm font-medium text-charcoal" htmlFor="jobs-filter-subdivision">
               {subdivisionLabel}
             </label>
             <select
@@ -140,7 +134,7 @@ export function JobsBoard() {
                 resetPagination();
               }}
               disabled={subdivisions.length === 0}
-              className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 disabled:opacity-50 dark:border-navy-600 dark:bg-navy-900 dark:text-white"
+              className={SELECT_CLASS}
             >
               <option value="">All</option>
               {subdivisions.map((option) => (
@@ -155,16 +149,14 @@ export function JobsBoard() {
         <div className="grid gap-6 md:grid-cols-2 lg:col-span-3">
           {isLoading && jobs.length === 0 ? (
             <div className="py-16 text-center md:col-span-2" aria-busy="true">
-              <p className="font-heading text-lg font-semibold text-gray-700 dark:text-gray-200">
-                Loading jobs…
-              </p>
+              <p className="font-heading text-lg font-semibold text-charcoal">Loading jobs…</p>
             </div>
           ) : error && jobs.length === 0 ? (
             <div className="py-16 text-center md:col-span-2" role="alert">
-              <p className="font-heading text-lg font-semibold text-red-600 dark:text-red-400">
+              <p className="font-heading text-lg font-semibold text-red-600">
                 Could not load the jobs board.
               </p>
-              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{error.message}</p>
+              <p className="mt-2 text-sm text-slate">{error.message}</p>
               <Button variant="secondary" className="mt-4" onClick={() => void refetch()}>
                 Try again
               </Button>
@@ -173,10 +165,10 @@ export function JobsBoard() {
             visible.map((job) => <JobCard key={job.id} job={job} locale={locale} />)
           ) : (
             <div className="py-16 text-center md:col-span-2">
-              <p className="font-heading text-lg font-semibold text-gray-700 dark:text-gray-200">
+              <p className="font-heading text-lg font-semibold text-charcoal">
                 {hasFilters ? "No jobs match those filters." : "No jobs listed in your region yet."}
               </p>
-              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              <p className="mt-2 text-sm text-slate">
                 {hasFilters
                   ? "Try widening your employment, specialty, or region filter."
                   : "Try another country, or check back as new roles are posted."}
@@ -195,7 +187,7 @@ export function JobsBoard() {
       )}
 
       {isFetching && jobs.length > 0 && (
-        <p className="mt-6 text-center text-sm text-gray-400 dark:text-gray-500">Refreshing…</p>
+        <p className="mt-6 text-center text-sm text-slate">Refreshing…</p>
       )}
     </div>
   );

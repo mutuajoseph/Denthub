@@ -8,6 +8,7 @@ import type { PurchaseMode } from "../../store/cartStore";
 import { useCartStore } from "../../store/cartStore";
 import { cn } from "../../utils/cn";
 import { formatPrice } from "../../utils/formatCurrency";
+import Badge from "../ui/Badge";
 import Button from "../ui/Button";
 import ProductImage from "./ProductImage";
 
@@ -57,46 +58,38 @@ export default function ProductCard({ product }: ProductCardProps) {
       layout
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="card-hover group relative flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-navy-600 dark:bg-navy-800"
+      className="card-hover group relative flex flex-col overflow-hidden rounded-card border border-steel bg-paper"
     >
       <div className="relative h-40 overflow-hidden">
         <ProductImage src={product.imageUrl} alt={product.name} category={product.category} />
 
         {wholesaleAvailable && (
-          <span className="absolute left-2 top-2 flex items-center gap-1 rounded-md border border-orange-300 bg-white/90 px-2 py-0.5 text-[10px] font-semibold text-orange-600 dark:border-gold-400/30 dark:bg-navy-900/80 dark:text-gold-300">
+          <Badge variant="neutral" className="absolute left-2 top-2">
             <Package className="h-3 w-3" aria-hidden="true" />
             Wholesale
-          </span>
+          </Badge>
         )}
       </div>
 
       <div className="flex flex-1 flex-col gap-2 p-4">
-        {product.dentistRecommended && (
-          <span className="self-start rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-0.5 font-mono text-xs font-medium text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
-            Dentist Recommended
-          </span>
-        )}
+        {product.dentistRecommended && <Badge variant="success">Dentist Recommended</Badge>}
 
-        {product.brand && (
-          <p className="font-mono text-xs text-slate-500 dark:text-gray-400">{product.brand}</p>
-        )}
+        {product.brand && <p className="font-mono text-xs text-slate">{product.brand}</p>}
 
-        <h3 className="font-heading text-sm font-semibold leading-tight text-[#172b4d] dark:text-white">
+        <h3 className="font-heading text-sm font-semibold leading-tight text-ink">
           {product.name}
         </h3>
 
         {product.description && (
-          <p className="line-clamp-2 text-xs text-slate-600 dark:text-gray-400">
-            {product.description}
-          </p>
+          <p className="line-clamp-2 text-xs text-slate">{product.description}</p>
         )}
 
-        <p className="text-[11px] text-slate-500 dark:text-gray-400">
-          Sold by <span className="font-medium">{product.supplier.name}</span>
+        <p className="text-[11px] text-slate">
+          Sold by <span className="font-medium text-charcoal">{product.supplier.name}</span>
         </p>
 
         {wholesaleAvailable && (
-          <fieldset className="flex rounded-lg border border-slate-200 p-0.5 text-xs dark:border-navy-600">
+          <fieldset className="flex rounded-button border border-steel bg-cloud p-0.5 text-xs">
             <legend className="sr-only">Purchase mode for {product.name}</legend>
             {MODES.map((option) => {
               const isActive = option === mode;
@@ -108,11 +101,9 @@ export default function ProductCard({ product }: ProductCardProps) {
                   onClick={() => setMode(option)}
                   aria-pressed={isActive}
                   className={cn(
-                    "flex-1 rounded-md py-1.5 font-medium capitalize transition-colors",
-                    "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-gold-400",
-                    isActive
-                      ? "bg-orange-100 text-orange-600 dark:bg-gold-400/20 dark:text-gold-300"
-                      : "text-slate-500 hover:text-[#172b4d] dark:text-gray-400 dark:hover:text-white",
+                    "flex-1 rounded-button py-1.5 font-medium capitalize transition-colors",
+                    "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ink",
+                    isActive ? "bg-ink text-paper" : "text-slate hover:text-ink",
                   )}
                 >
                   {option}
@@ -123,12 +114,10 @@ export default function ProductCard({ product }: ProductCardProps) {
         )}
 
         <div className="mt-auto pt-1">
-          <p className="text-lg font-bold text-orange-500 dark:text-gold-400">
-            {formatPrice(activePrice, currency)}
-          </p>
+          <p className="text-lg font-semibold text-ink">{formatPrice(activePrice, currency)}</p>
 
           {wholesaleAvailable && wholesalePrice !== null && (
-            <p className="mt-0.5 text-[11px] text-slate-500 dark:text-gray-400">
+            <p className="mt-0.5 text-[11px] text-slate">
               {mode === "wholesale"
                 ? `Min order ${minQty} units · clinics & bulk buyers`
                 : `Wholesale from ${formatPrice(wholesalePrice, currency)} · min ${minQty} units`}
@@ -139,6 +128,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         <div className="pt-2">
           <Button
             size="sm"
+            variant="graphite"
             icon={ShoppingCart}
             onClick={handleAdd}
             className="w-full"
