@@ -23,7 +23,7 @@ services:
     autoDeploy: false
     buildCommand: pip install uv && uv sync --frozen
     preDeployCommand: uv run alembic upgrade head
-    startCommand: uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    startCommand: uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT && uv run python -m app.scripts.seed_products && uv run python -m app.scripts.seed_countries && uv run python -m app.scripts.seed_listings && uv run python -m app.scripts.seed_jobs && uv run python -m app.scripts.seed_magazine && uv run python -m app.scripts.seed_training
     healthCheckPath: /api/v1/health
     envVars:
       - key: ENVIRONMENT
