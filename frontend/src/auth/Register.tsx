@@ -12,7 +12,6 @@ import {
   Plane,
   Stethoscope,
   User,
-  X,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -150,242 +149,200 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-ink/40 p-4 backdrop-blur-[10px]"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) {
-          onClose();
-        }
-      }}
-    >
-      <dialog
-        open
-        aria-labelledby="register-title"
-        className="relative max-h-[88vh] w-full max-w-[560px] overflow-y-auto rounded-card border border-steel bg-paper shadow-card-cloud"
-      >
-        {/* Close */}
-        <button
-          type="button"
-          aria-label="Close registration"
-          onClick={onClose}
-          className="absolute top-4 right-4 z-20 flex h-8 w-8 cursor-pointer items-center justify-center rounded-button text-slate transition hover:bg-cloud hover:text-ink"
-        >
-          <X className="h-4 w-4" strokeWidth={2} />
-        </button>
-
-        <div className="px-6 py-6">
-          {/* Brand */}
+    <div className="w-full">
+      {/* =========================
+          STEP 1 - ACCOUNT TYPE
+      ========================== */}
+      {step === 1 && (
+        <>
           <div className="mb-5 text-center">
-            <h1
-              id="register-title"
-              className="font-display text-[24px] font-semibold tracking-[-0.03em] text-ink"
-            >
-              Dent
-              <span className="font-normal text-charcoal">Hub Kenya</span>
-            </h1>
+            <h2 className="font-heading text-[20px] font-semibold text-ink">Join DentHub Kenya</h2>
+
+            <p className="mt-1 text-[13px] text-slate">Choose how you'll use DentHub</p>
           </div>
 
-          {/* =========================
-              STEP 1 - ACCOUNT TYPE
-          ========================== */}
-          {step === 1 && (
-            <>
-              <div className="mb-5 text-center">
-                <h2 className="font-heading text-[20px] font-semibold text-ink">
-                  Join DentHub Kenya
-                </h2>
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+            {ACCOUNT_TYPES.map((account) => {
+              const Icon = account.icon;
 
-                <p className="mt-1 text-[13px] text-slate">Choose how you'll use DentHub</p>
-              </div>
-
-              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-                {ACCOUNT_TYPES.map((account) => {
-                  const Icon = account.icon;
-
-                  return (
-                    <button
-                      key={account.id}
-                      type="button"
-                      onClick={() => selectAccount(account.id)}
-                      className="group flex items-start gap-3 rounded-button border border-steel bg-cloud p-3 text-left transition hover:border-ink hover:bg-paper"
-                    >
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-button bg-paper text-charcoal shadow-card-white transition group-hover:bg-cloud">
-                        <Icon className="h-4 w-4" strokeWidth={1.7} />
-                      </div>
-
-                      <div>
-                        <h3 className="text-[13px] font-semibold text-ink">{account.label}</h3>
-
-                        <p className="mt-0.5 text-[11px] leading-4 text-slate">
-                          {account.description}
-                        </p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </>
-          )}
-
-          {/* =========================
-              STEP 2 - REGISTRATION
-          ========================== */}
-          {step === 2 && (
-            <>
-              <div className="mb-5 text-center">
-                <h2 className="font-heading text-[20px] font-semibold text-ink">
-                  Create your account
-                </h2>
-
-                <p className="mt-1 text-[13px] text-slate">{selectedAccount?.label} · Kenya</p>
-              </div>
-
-              <form className="flex flex-col gap-1.5" onSubmit={handleSubmit}>
-                {/* Full Name */}
-                <label htmlFor="full-name" className={labelClass}>
-                  Full name
-                </label>
-
-                <div className={fieldShellClass}>
-                  <User className="h-4 w-4 text-slate" />
-
-                  <input
-                    id="full-name"
-                    name="full_name"
-                    type="text"
-                    placeholder="Jane Doe"
-                    required
-                    autoComplete="name"
-                    value={fullName}
-                    onChange={(event) => setFullName(event.target.value)}
-                    className={inputClass}
-                  />
-                </div>
-
-                {/* Email */}
-                <label htmlFor="email" className={`${labelClass} mt-1.5`}>
-                  Email
-                </label>
-
-                <div className={fieldShellClass}>
-                  <Mail className="h-4 w-4 text-slate" />
-
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    placeholder="Enter your email"
-                    required
-                    autoComplete="email"
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    className={inputClass}
-                  />
-                </div>
-
-                {/* Phone */}
-                <label htmlFor="phone" className={`${labelClass} mt-1.5`}>
-                  Phone <span className="font-normal text-slate">(optional)</span>
-                </label>
-
-                <div className={fieldShellClass}>
-                  <Phone className="h-4 w-4 text-slate" />
-
-                  <input
-                    id="phone"
-                    name="phone"
-                    type="tel"
-                    placeholder="+254 712 345 678"
-                    autoComplete="tel"
-                    value={phone}
-                    onChange={(event) => setPhone(event.target.value)}
-                    className={inputClass}
-                  />
-                </div>
-
-                {/* Password */}
-                <label htmlFor="password" className={`${labelClass} mt-1.5`}>
-                  Password
-                </label>
-
-                <div className={fieldShellClass}>
-                  <Lock className="h-4 w-4 text-slate" />
-
-                  <input
-                    id="password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="At least 8 characters"
-                    minLength={8}
-                    required
-                    autoComplete="new-password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    className={inputClass}
-                  />
-
-                  <button
-                    type="button"
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                    onClick={() => setShowPassword((value) => !value)}
-                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] border-0 bg-ink p-0 text-paper transition hover:bg-graphite"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-3.5 w-3.5" strokeWidth={1.8} />
-                    ) : (
-                      <Eye className="h-3.5 w-3.5" strokeWidth={1.8} />
-                    )}
-                  </button>
-                </div>
-
-                {/* Error */}
-                {error && (
-                  <div
-                    role="alert"
-                    className="mt-2 rounded-button border border-red-200 bg-red-50 px-3 py-2 text-center text-xs text-red-700"
-                  >
-                    {error}
-                  </div>
-                )}
-
-                {/* Create Account */}
+              return (
                 <button
-                  type="submit"
-                  disabled={loading}
-                  className="mt-2 min-h-[44px] w-full rounded-button border-0 bg-aqua-relay px-4 text-sm font-semibold text-ink transition hover:bg-aqua-relay-deep active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {loading ? "Creating account..." : "Create account"}
-                </button>
-
-                {/* Back */}
-                <button
+                  key={account.id}
                   type="button"
-                  disabled={loading}
-                  onClick={() => {
-                    setError("");
-                    setStep(1);
-                  }}
-                  className="mx-auto mt-1 border-0 bg-transparent p-0 text-[12px] font-medium text-charcoal transition hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => selectAccount(account.id)}
+                  className="group flex items-start gap-3 rounded-button border border-steel bg-cloud p-3 text-left transition hover:border-ink hover:bg-paper"
                 >
-                  ← Change account type
-                </button>
-              </form>
-            </>
-          )}
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-button bg-paper text-charcoal shadow-card-white transition group-hover:bg-cloud">
+                    <Icon className="h-4 w-4" strokeWidth={1.7} />
+                  </div>
 
-          {/* Sign In */}
-          <p className="mt-4 text-center text-[12px] text-slate">
-            Already have an account?{" "}
+                  <div>
+                    <h3 className="text-[13px] font-semibold text-ink">{account.label}</h3>
+
+                    <p className="mt-0.5 text-[11px] leading-4 text-slate">{account.description}</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {/* =========================
+          STEP 2 - REGISTRATION
+      ========================== */}
+      {step === 2 && (
+        <>
+          <div className="mb-5 text-center">
+            <h2 className="font-heading text-[20px] font-semibold text-ink">Create your account</h2>
+
+            <p className="mt-1 text-[13px] text-slate">{selectedAccount?.label} · Kenya</p>
+          </div>
+
+          <form className="flex flex-col gap-1.5" onSubmit={handleSubmit}>
+            {/* Full Name */}
+            <label htmlFor="full-name" className={labelClass}>
+              Full name
+            </label>
+
+            <div className={fieldShellClass}>
+              <User className="h-4 w-4 text-slate" />
+
+              <input
+                id="full-name"
+                name="full_name"
+                type="text"
+                placeholder="Jane Doe"
+                required
+                autoComplete="name"
+                value={fullName}
+                onChange={(event) => setFullName(event.target.value)}
+                className={inputClass}
+              />
+            </div>
+
+            {/* Email */}
+            <label htmlFor="email" className={`${labelClass} mt-1.5`}>
+              Email
+            </label>
+
+            <div className={fieldShellClass}>
+              <Mail className="h-4 w-4 text-slate" />
+
+              <input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="Enter your email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                className={inputClass}
+              />
+            </div>
+
+            {/* Phone */}
+            <label htmlFor="phone" className={`${labelClass} mt-1.5`}>
+              Phone <span className="font-normal text-slate">(optional)</span>
+            </label>
+
+            <div className={fieldShellClass}>
+              <Phone className="h-4 w-4 text-slate" />
+
+              <input
+                id="phone"
+                name="phone"
+                type="tel"
+                placeholder="+254 712 345 678"
+                autoComplete="tel"
+                value={phone}
+                onChange={(event) => setPhone(event.target.value)}
+                className={inputClass}
+              />
+            </div>
+
+            {/* Password */}
+            <label htmlFor="password" className={`${labelClass} mt-1.5`}>
+              Password
+            </label>
+
+            <div className={fieldShellClass}>
+              <Lock className="h-4 w-4 text-slate" />
+
+              <input
+                id="password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="At least 8 characters"
+                minLength={8}
+                required
+                autoComplete="new-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className={inputClass}
+              />
+
+              <button
+                type="button"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                onClick={() => setShowPassword((value) => !value)}
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] border-0 bg-ink p-0 text-paper transition hover:bg-graphite"
+              >
+                {showPassword ? (
+                  <EyeOff className="h-3.5 w-3.5" strokeWidth={1.8} />
+                ) : (
+                  <Eye className="h-3.5 w-3.5" strokeWidth={1.8} />
+                )}
+              </button>
+            </div>
+
+            {/* Error */}
+            {error && (
+              <div
+                role="alert"
+                className="mt-2 rounded-button border border-red-200 bg-red-50 px-3 py-2 text-center text-xs text-red-700"
+              >
+                {error}
+              </div>
+            )}
+
+            {/* Create Account */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="mt-2 min-h-[44px] w-full rounded-button border-0 bg-aqua-relay px-4 text-sm font-semibold text-ink transition hover:bg-aqua-relay-deep active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loading ? "Creating account..." : "Create account"}
+            </button>
+
+            {/* Back */}
             <button
               type="button"
-              onClick={onSignIn}
-              className="border-0 bg-transparent p-0 font-semibold text-ink transition hover:text-charcoal"
+              disabled={loading}
+              onClick={() => {
+                setError("");
+                setStep(1);
+              }}
+              className="mx-auto mt-1 border-0 bg-transparent p-0 text-[12px] font-medium text-charcoal transition hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Sign in
+              ← Change account type
             </button>
-          </p>
-        </div>
-      </dialog>
+          </form>
+        </>
+      )}
+
+      {/* Sign In */}
+      <p className="mt-4 text-center text-[12px] text-slate">
+        Already have an account?{" "}
+        <button
+          type="button"
+          onClick={onSignIn}
+          className="border-0 bg-transparent p-0 font-semibold text-ink transition hover:text-charcoal"
+        >
+          Sign in
+        </button>
+      </p>
     </div>
   );
 }

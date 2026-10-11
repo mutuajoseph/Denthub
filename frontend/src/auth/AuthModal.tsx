@@ -7,6 +7,7 @@ import Register from "./Register";
 import { SignIn } from "./SignIn";
 
 import type { AuthResponse } from "../lib/auth";
+import { cn } from "../utils/cn";
 
 type AuthView = "signin" | "register" | "forgot" | "phone";
 
@@ -49,7 +50,10 @@ export function AuthModal({ onClose, onLoginSuccess }: AuthModalProps) {
     >
       <dialog
         open
-        className="relative max-h-[90vh] w-full max-w-[400px] overflow-hidden rounded-card border border-steel bg-paper px-6 py-5 text-ink shadow-card-cloud"
+        className={cn(
+          "relative max-h-[90vh] w-full overflow-y-auto overscroll-contain rounded-card border border-steel bg-paper px-6 py-5 text-ink shadow-card-cloud",
+          view === "register" ? "max-w-[560px]" : "max-w-[400px]",
+        )}
         aria-labelledby="auth-title"
         onMouseDown={(event) => event.stopPropagation()}
       >
