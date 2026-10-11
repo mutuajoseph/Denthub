@@ -2,9 +2,8 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
-// Dev-time proxy: the browser talks to the Vite origin only, and `/api`
-// requests are forwarded to the FastAPI backend.
-const backendPort = process.env.BACKEND_PORT ?? "8000";
+// Backend URL from env var, for both dev proxy and production awareness.
+const backendUrl = process.env.VITE_BACKEND_URL;
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
@@ -14,7 +13,7 @@ export default defineConfig({
 
     proxy: {
       "/api": {
-        target: `http://localhost:${backendPort}`,
+        target: backendUrl || "http://localhost:8000",
         changeOrigin: true,
       },
     },

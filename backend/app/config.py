@@ -57,11 +57,7 @@ class Settings:
             environment=os.getenv("ENVIRONMENT", "local"),
             dev_mode=os.getenv("DEV_MODE", "1") == "1",
             log_level=os.getenv("LOG_LEVEL", "INFO"),
-            cors_origins=tuple(
-                origin.strip()
-                for origin in origins.split(",")
-                if origin.strip()
-            ),
+            cors_origins=tuple(origin.strip() for origin in origins.split(",") if origin.strip()),
             database_url=database_url,
             jwt_secret_key=os.getenv(
                 "JWT_SECRET_KEY",
