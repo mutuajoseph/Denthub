@@ -1,3 +1,5 @@
+import { useCountryConfigStore } from "../store/countryConfigStore";
+
 /**
  * Formats an amount in the active market's currency.
  *
@@ -6,18 +8,9 @@
  * amount renders as a plain decimal number rather than pretending to know the
  * currency.
  */
-function isValidLocale(locale: string): boolean {
-  if (!locale || locale.trim() === "") return false;
-  // BCP-47 language tags: optional script/region after language code
-  // e.g., "en", "en-KE", "tr-TR", "en-US"
-  const tag = locale.trim().toLowerCase();
-  return /^[a-z]{2,3}(-[a-z0-9]+)*$/.test(tag);
-}
-
 export function formatMoney(amount: number): string {
   const config = useCountryConfigStore.getState().config;
-  const locale = isValidLocale(config?.locale) ? config.locale : undefined;
-  return formatPrice(amount, config?.currency ?? "", locale);
+  return formatPrice(amount, config?.currency ?? "", config?.locale);
 }
 
 /**
@@ -26,8 +19,7 @@ export function formatMoney(amount: number): string {
  * browser is currently set to.
  */
 export function formatMoneyAs(amount: number, locale: string, currency: string): string {
-  const resolvedLocale = isValidLocale(locale) ? locale : undefined;
-  return new Intl.NumberFormat(resolvedLocale, {
+  return new Intl.NumberFormat(locale, {
     style: "currency",
     currency,
     minimumFractionDigits: 0,
@@ -59,8 +51,7 @@ export function formatPrice(amount: number, currency: string, locale?: string): 
         maximumFractionDigits: hasCents ? 2 : 0,
       };
 
-  const resolvedLocale = isValidLocale(locale) ? locale : undefined;
-  return new Intl.NumberFormat(resolvedLocale, options).format(amount);
+  return new Intl.NumberFormat(locale || undefined, options).format(amount);
 }
 
 /**
@@ -98,6 +89,5 @@ export function formatListingPrice(
         maximumFractionDigits: hasCents ? 2 : 0,
       };
 
-  const resolvedLocale = isValidLocale(locale) ? locale : undefined;
-  return new Intl.NumberFormat(resolvedLocale, options).format(value);
+  return new Intl.NumberFormat(locale || undefined, options).format(value);
 }
