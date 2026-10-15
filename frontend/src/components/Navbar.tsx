@@ -46,15 +46,18 @@ type AccountLink = { label: string; href: string };
 
 /**
  * Account destinations the signed-in user may open, in menu order. Screens land
- * here as their routes appear (#67); only the account shell exists so far, and
- * only public accounts have one. See #58 and #75.
+ * here as their routes appear (#67); public accounts get the account shell and
+ * the messaging inbox so far, and staff accounts none. See #58, #75 and #77.
  */
 function accountLinksFor(user: AuthUser): AccountLink[] {
   if (!isPublicRole(user)) {
     return [];
   }
 
-  return [{ label: "Dashboard", href: "/dashboard" }];
+  return [
+    { label: "Dashboard", href: "/dashboard" },
+    { label: "Messages", href: "/messages" },
+  ];
 }
 
 function Avatar({ name }: { name: string }) {

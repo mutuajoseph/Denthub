@@ -18,6 +18,7 @@ import Home from "./pages/Home";
 import { International } from "./pages/International";
 import { JobsBoard } from "./pages/JobsBoard";
 import { Magazine } from "./pages/Magazine";
+import { Messages } from "./pages/Messages";
 import NotFound from "./pages/NotFound";
 import OralCareShopPage from "./pages/OralCareShopPage";
 import { SignInPage } from "./pages/SignInPage";
@@ -67,6 +68,14 @@ const App = () => {
             element={
               <RouteGuard user={user} allowedRoles={PUBLIC_ROLES} unauthorizedPath="/">
                 <Dashboard user={user} />
+              </RouteGuard>
+            }
+          />
+          <Route
+            path="/messages"
+            element={
+              <RouteGuard user={user} allowedRoles={PUBLIC_ROLES} unauthorizedPath="/">
+                <Messages user={user} />
               </RouteGuard>
             }
           />
