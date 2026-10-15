@@ -93,9 +93,14 @@ re-running the failed run from the Actions UI.
 4. Service → **Settings → Deploy Hook** → copy the URL.
 5. Confirm the health check is `/api/v1/health`.
 
-> The blueprint sets `preDeployCommand: uv run alembic upgrade head`, so migrations
-> apply before the new build goes live. If you change the database URL after the first
-> deploy, run `alembic upgrade head` against it once by hand.
+> The blueprint's `preDeployCommand` runs `alembic upgrade head` and then the demo
+> seed scripts (`seed_products` → `seed_countries` → `seed_listings` → `seed_jobs` →
+> `seed_magazine` → `seed_training`) before the new build goes live. Migrations and
+> data therefore land before the service serves traffic. The seeds are idempotent and
+> run on every deploy. Do **not** move them to `startCommand`: it runs `uvicorn`, which
+> blocks forever, so commands chained after it never run. If you change the database
+> URL after the first deploy, run `alembic upgrade head` (and the seeds, if it is a new
+> database) against it once by hand.
 
 ### 2. Vercel (frontend)
 
@@ -141,6 +146,8 @@ curl -fsS https://<your-vercel-domain>/api/v1/health          # same, via the re
 A **404** from the Render URL means the service was never created or the name in
 `frontend/vercel.json` doesn't match it. A **health 200 but `/api/v1/products` 500**
 means migrations didn't run — check the deploy log for the `preDeployCommand` step.
+A **health 200 and empty pages** means the seeds didn't run — check the same
+`preDeployCommand` step for the `seed.*` log lines (`seed.done`, `seed.listings.done`).
 
 
 ---

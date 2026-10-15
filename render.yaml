@@ -7,11 +7,17 @@
 # uv manages the Python toolchain: `pip install uv` bootstraps it, then
 # `uv sync` provisions Python 3.12+ (per backend/pyproject.toml) and the deps.
 #
-# preDeployCommand runs migrations *before* the new build goes live, so a
-# release that adds a migration can never serve code that expects a table the
-# database doesn't have. Migrations are forward-only here: pair every schema
-# change with a deploy step that tolerates the old shape (or use
-# `expand -> migrate -> contract` across two releases).
+# preDeployCommand runs migrations and the demo-data seeds *before* the new build
+# goes live, so a release that adds a migration can never serve code that expects
+# a table the database doesn't have, and a fresh deploy is never served an empty
+# catalogue. It must not be appended to startCommand: startCommand runs uvicorn,
+# which blocks forever, so anything chained after it never executes.
+#
+# The seeds are idempotent and order-dependent (countries before listings before
+# jobs), so they run on every deploy; re-running updates the same rows.
+# Migrations are forward-only here: pair every schema change with a deploy step
+# that tolerates the old shape (or use `expand -> migrate -> contract` across two
+# releases).
 services:
   - type: web
     name: denthub-backend
@@ -22,8 +28,8 @@ services:
     branch: main
     autoDeploy: false
     buildCommand: pip install uv && uv sync --frozen
-    preDeployCommand: uv run alembic upgrade head
-    startCommand: uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT && uv run python -m app.scripts.seed_products && uv run python -m app.scripts.seed_countries && uv run python -m app.scripts.seed_listings && uv run python -m app.scripts.seed_jobs && uv run python -m app.scripts.seed_magazine && uv run python -m app.scripts.seed_training
+    preDeployCommand: uv run alembic upgrade head && uv run python -m app.scripts.seed_products && uv run python -m app.scripts.seed_countries && uv run python -m app.scripts.seed_listings && uv run python -m app.scripts.seed_jobs && uv run python -m app.scripts.seed_magazine && uv run python -m app.scripts.seed_training
+    startCommand: uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/v1/health
     envVars:
       - key: ENVIRONMENT
