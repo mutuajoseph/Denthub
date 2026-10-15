@@ -80,8 +80,8 @@ A breaking change to a `v1` response gets a `v2` route; `v1` keeps its shape.
   Request strings get `max_length` matching their column.
 - Logging is structlog through `state.logger`. Event names are `area.event`
   (`db.init`, `app.startup`, `seed.done`) with context as keyword fields. Pass
-  URLs through `describe_url()` (in `app/scripts/seed_products.py`; move it to
-  `utils/` on first reuse) so credentials stay out of logs.
+  URLs through `describe_url()` (in `app/utils/urls.py`) so credentials stay
+  out of logs.
 
 ## Money
 
