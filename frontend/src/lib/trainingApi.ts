@@ -35,6 +35,8 @@ export interface TrainingCourseWire {
   delivery_mode: TrainingDeliveryMode;
   price: string | null;
   currency: string | null;
+  /** CPD credit the course grants. */
+  cpd_points: number;
 }
 
 /** One page of courses, plus the market it is priced in. */
@@ -55,6 +57,8 @@ export interface TrainingWebinarWire {
   provider: { name: string; is_verified: boolean };
   join_url: string;
   scheduled_start: string;
+  /** CPD credit the webinar grants. */
+  cpd_points: number;
 }
 
 /** One page of webinars, plus the market it belongs to. */
@@ -157,6 +161,7 @@ export interface CourseView {
   price: string | null;
   /** Present exactly when `price` is (per-row currency). */
   currency: string | null;
+  cpdPoints: number;
 }
 
 /** One webinar as the UI reads it. */
@@ -168,6 +173,7 @@ export interface WebinarView {
   providerVerified: boolean;
   joinUrl: string;
   scheduledStart: string;
+  cpdPoints: number;
 }
 
 /** One page of courses as the UI reads it. */
@@ -204,6 +210,7 @@ export function mapCourse(wire: TrainingCourseWire): CourseView {
     deliveryMode: wire.delivery_mode,
     price: wire.price,
     currency: wire.currency,
+    cpdPoints: wire.cpd_points,
   };
 }
 
@@ -216,6 +223,7 @@ export function mapWebinar(wire: TrainingWebinarWire): WebinarView {
     providerVerified: wire.provider.is_verified,
     joinUrl: wire.join_url,
     scheduledStart: wire.scheduled_start,
+    cpdPoints: wire.cpd_points,
   };
 }
 

@@ -64,6 +64,7 @@ function buildCourse(overrides: Partial<TrainingCourseWire> = {}): TrainingCours
     delivery_mode: "in_person",
     price: "12500.00",
     currency: "KES",
+    cpd_points: 6,
     ...overrides,
   };
 }
@@ -88,6 +89,7 @@ function buildWebinar(overrides: Partial<TrainingWebinarWire> = {}): TrainingWeb
     provider: { name: "Nairobi Dental Academy", is_verified: true },
     join_url: "https://forms.example.com/join",
     scheduled_start: new Date(Date.now() + 2 * 86_400_000).toISOString(),
+    cpd_points: 2,
     ...overrides,
   };
 }

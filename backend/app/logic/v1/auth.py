@@ -67,6 +67,10 @@ PATIENT_ROLES: frozenset[str] = frozenset({"patient", "international_patient"})
 #: the set is confirmed with the maintainer per route group, #78).
 SUPPLIER_ROLES: frozenset[str] = frozenset({"supplier"})
 
+#: Roles that own a Training Provider and its CPD programme (root AGENTS.md,
+#: "Auth and security" — confirmed with the maintainer per route group, #79).
+TRAINING_PROVIDER_ROLES: frozenset[str] = frozenset({"training_provider"})
+
 
 def is_staff_role(role: str) -> bool:
     """Whether a stored role is a staff role rather than a public one."""

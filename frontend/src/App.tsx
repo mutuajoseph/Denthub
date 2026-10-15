@@ -3,7 +3,12 @@ import { Route, Routes } from "react-router-dom";
 
 import { AuthModal } from "./auth/AuthModal";
 import RouteGuard from "./auth/RouteGuard";
-import { FACILITY_ROLES, PUBLIC_ROLES, SUPPLIER_ROLES } from "./auth/roles";
+import {
+  FACILITY_ROLES,
+  PUBLIC_ROLES,
+  SUPPLIER_ROLES,
+  TRAINING_PROVIDER_ROLES,
+} from "./auth/roles";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AppShell } from "./components/layout/AppShell";
 import { usePageMeta } from "./hooks/usePageMeta";
@@ -26,6 +31,7 @@ import { StaffAccessPage } from "./pages/StaffAccessPage";
 import { SupplierDashboard } from "./pages/SupplierDashboard";
 import Suppliers from "./pages/Suppliers";
 import { Training } from "./pages/Training";
+import { TrainingDashboard } from "./pages/TrainingDashboard";
 
 const App = () => {
   usePageMeta();
@@ -90,6 +96,14 @@ const App = () => {
             element={
               <RouteGuard user={user} allowedRoles={SUPPLIER_ROLES} unauthorizedPath="/">
                 <SupplierDashboard />
+              </RouteGuard>
+            }
+          />
+          <Route
+            path="/dashboard/training"
+            element={
+              <RouteGuard user={user} allowedRoles={TRAINING_PROVIDER_ROLES} unauthorizedPath="/">
+                <TrainingDashboard />
               </RouteGuard>
             }
           />

@@ -73,6 +73,7 @@ class TrainingCourseResponse(BaseModel):
     delivery_mode: DeliveryMode
     price: Decimal | None
     currency: str | None
+    cpd_points: int
 
 
 class TrainingCoursePage(BaseModel):
@@ -95,6 +96,7 @@ class TrainingWebinarResponse(BaseModel):
     provider: TrainingProviderResponse
     join_url: str
     scheduled_start: datetime
+    cpd_points: int
 
 
 class TrainingWebinarPage(BaseModel):
@@ -134,6 +136,7 @@ def _serialize_course(course: TrainingCourse) -> TrainingCourseResponse:
         delivery_mode=cast(DeliveryMode, course.delivery_mode),
         price=None if course.price is None else quantize_money(Decimal(course.price)),
         currency=course.currency,
+        cpd_points=course.cpd_points,
     )
 
 
@@ -145,6 +148,7 @@ def _serialize_webinar(webinar: TrainingWebinar) -> TrainingWebinarResponse:
         provider=_serialize_provider(webinar.provider),
         join_url=webinar.join_url,
         scheduled_start=webinar.scheduled_start,
+        cpd_points=webinar.cpd_points,
     )
 
 

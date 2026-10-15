@@ -808,6 +808,7 @@ def build_training(
                 delivery_mode="in_person",
                 price=Decimal("45000"),
                 currency="KES",
+                cpd_points=6,
             ),
             TrainingCourse(
                 title="Clear Aligner Case Planning",
@@ -817,6 +818,7 @@ def build_training(
                 delivery_mode="in_person",
                 price=Decimal("78000"),
                 currency="KES",
+                cpd_points=4,
             ),
         ],
         webinars=[
@@ -826,6 +828,7 @@ def build_training(
                 country_code="KE",
                 join_url="https://denthub.test/webinar/articulation",
                 scheduled_start=base - timedelta(days=5),
+                cpd_points=1,
             ),
             TrainingWebinar(
                 title="Infection Control Update 2026",
@@ -833,6 +836,7 @@ def build_training(
                 country_code="KE",
                 join_url="https://denthub.test/webinar/infection-control",
                 scheduled_start=base + timedelta(days=7),
+                cpd_points=2,
             ),
         ],
     )
@@ -850,6 +854,7 @@ def build_training(
                 delivery_mode="online",
                 price=Decimal("32000"),
                 currency="KES",
+                cpd_points=8,
             ),
             TrainingCourse(
                 title="Digital Impressions & CAD/CAM",
@@ -859,6 +864,7 @@ def build_training(
                 delivery_mode="online",
                 price=Decimal("24000"),
                 currency="KES",
+                cpd_points=5,
             ),
         ],
         webinars=[
@@ -868,6 +874,7 @@ def build_training(
                 country_code="KE",
                 join_url="https://denthub.test/webinar/practice-management",
                 scheduled_start=base + timedelta(days=21),
+                cpd_points=3,
             ),
         ],
     )
@@ -885,6 +892,7 @@ def build_training(
                 delivery_mode="blended",
                 price=None,
                 currency=None,
+                cpd_points=2,
             ),
         ],
     )

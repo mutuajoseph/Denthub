@@ -40,8 +40,8 @@ PROVIDERS: list[tuple[str, str, bool]] = [
 ]
 
 #: (provider, country, subdivision, title, description, delivery_mode,
-#:  (currency, price)|None)
-COURSE_ROWS: list[tuple[str, str, str, str, str, str, tuple[str, str] | None]] = [
+#:  (currency, price)|None, cpd_points)
+COURSE_ROWS: list[tuple[str, str, str, str, str, str, tuple[str, str] | None, int]] = [
     (
         "Nairobi Dental Academy",
         "KE",
@@ -50,6 +50,7 @@ COURSE_ROWS: list[tuple[str, str, str, str, str, str, tuple[str, str] | None]] =
         "Two days of hands-on rotary endodontics with fresh cases.",
         "in_person",
         ("KES", "45000"),
+        6,
     ),
     (
         "Nairobi Dental Academy",
@@ -59,6 +60,7 @@ COURSE_ROWS: list[tuple[str, str, str, str, str, str, tuple[str, str] | None]] =
         "Selection, staging, and retention of aligner cases.",
         "in_person",
         ("KES", "78000"),
+        4,
     ),
     (
         "DentHub Learning",
@@ -68,6 +70,7 @@ COURSE_ROWS: list[tuple[str, str, str, str, str, str, tuple[str, str] | None]] =
         "A six-week online course on assessment and planning for implants.",
         "online",
         ("KES", "32000"),
+        8,
     ),
     (
         "DentHub Learning",
@@ -77,6 +80,7 @@ COURSE_ROWS: list[tuple[str, str, str, str, str, str, tuple[str, str] | None]] =
         "Scan-to-mill workflows for the modern practice.",
         "online",
         ("KES", "24000"),
+        5,
     ),
     (
         "Coast Dental Institute",
@@ -86,11 +90,12 @@ COURSE_ROWS: list[tuple[str, str, str, str, str, str, tuple[str, str] | None]] =
         "Free CPD: knot-tying and soft-tissue closure drills.",
         "blended",
         None,
+        2,
     ),
 ]
 
-#: (provider, country, title, description, days_from_now, join_url)
-WEBINAR_ROWS: list[tuple[str, str, str, str, int, str]] = [
+#: (provider, country, title, description, days_from_now, join_url, cpd_points)
+WEBINAR_ROWS: list[tuple[str, str, str, str, int, str, int]] = [
     (
         "Nairobi Dental Academy",
         "KE",
@@ -98,6 +103,7 @@ WEBINAR_ROWS: list[tuple[str, str, str, str, int, str]] = [
         "Recording and transferring jaw relations predictably.",
         -5,
         "https://denthub.test/webinar/articulation",
+        1,
     ),
     (
         "Nairobi Dental Academy",
@@ -106,6 +112,7 @@ WEBINAR_ROWS: list[tuple[str, str, str, str, int, str]] = [
         "The year's changes in sterilisation and disinfection.",
         7,
         "https://denthub.test/webinar/infection-control",
+        2,
     ),
     (
         "DentHub Learning",
@@ -114,6 +121,7 @@ WEBINAR_ROWS: list[tuple[str, str, str, str, int, str]] = [
         "Scheduling, pricing, and retention for growing clinics.",
         21,
         "https://denthub.test/webinar/practice-management",
+        3,
     ),
 ]
 
@@ -163,6 +171,7 @@ async def seed(state: AppState) -> None:
             description,
             delivery_mode,
             money,
+            cpd_points,
         ) in COURSE_ROWS:
             provider = providers[(provider_name, country_code)]
             course = await TrainingRepository.find_course(
@@ -176,6 +185,7 @@ async def seed(state: AppState) -> None:
                 "delivery_mode": delivery_mode,
                 "price": Decimal(money[1]) if money else None,
                 "currency": money[0] if money else None,
+                "cpd_points": cpd_points,
             }
 
             if course is None:
@@ -192,6 +202,7 @@ async def seed(state: AppState) -> None:
             description,
             days_from_now,
             join_url,
+            cpd_points,
         ) in WEBINAR_ROWS:
             provider = providers[(provider_name, country_code)]
             webinar = await TrainingRepository.find_webinar(
@@ -203,6 +214,7 @@ async def seed(state: AppState) -> None:
                 "country_code": country_code,
                 "join_url": join_url,
                 "scheduled_start": now + timedelta(days=days_from_now),
+                "cpd_points": cpd_points,
             }
 
             if webinar is None:
