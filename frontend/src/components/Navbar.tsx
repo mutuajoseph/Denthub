@@ -1,16 +1,12 @@
-import type { LucideIcon } from "lucide-react";
 import {
   ArrowRight,
   BookOpen,
   Briefcase,
-  Building2,
   ChevronDown,
   GraduationCap,
   Home,
-  LayoutDashboard,
   LogOut,
   Menu,
-  MessageCircle,
   Newspaper,
   ShoppingBag,
   ShoppingCart,
@@ -18,16 +14,8 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { NavLink } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 
-import {
-  ROLE,
-  canAccessFacility,
-  getDashboardPath,
-  isStaffUser,
-  isSupplierUser,
-  isTrainingProviderUser,
-} from "../auth/roles";
 import { useRegion } from "../hooks/useRegion";
 import type { AuthUser } from "../lib/auth";
 import { selectCartCount, useCartStore } from "../store/cartStore";
@@ -52,35 +40,13 @@ export const NAV_LINKS = [
   { label: "Magazine", href: "/magazine", icon: Newspaper },
 ];
 
-type AccountLink = { label: string; href: string; icon: LucideIcon };
+type AccountLink = { label: string; href: string };
 
-/** Account destinations the signed-in user may open, in menu order. */
-function accountLinksFor(user: AuthUser): AccountLink[] {
-  const links: AccountLink[] = [
-    { label: "Dashboard", href: getDashboardPath(ROLE.PATIENT), icon: LayoutDashboard },
-  ];
-  if (canAccessFacility(user)) {
-    links.push({
-      label: "Facility",
-      href: getDashboardPath(ROLE.FACILITY_OWNER),
-      icon: Building2,
-    });
-  }
-  if (isTrainingProviderUser(user)) {
-    links.push({
-      label: "Training",
-      href: getDashboardPath(ROLE.TRAINING_PROVIDER),
-      icon: GraduationCap,
-    });
-  }
-  if (isSupplierUser(user)) {
-    links.push({ label: "My store", href: getDashboardPath(ROLE.SUPPLIER), icon: ShoppingBag });
-  }
-  if (!isStaffUser(user)) {
-    links.push({ label: "Messages", href: "/messages", icon: MessageCircle });
-  }
-  return links;
-}
+// Account destinations (dashboard, messages) are withheld until their screens
+// exist (#67); linking to them would send every signed-in user to NotFound. The
+// menu shows identity + sign out only. Restore this list — with the role helpers
+// in auth/roles.ts — when those routes land. See #58.
+const ACCOUNT_LINKS: readonly AccountLink[] = [];
 
 /** Splits "DentHub USA" into the wordmark and its Country suffix. */
 function splitBrand(brandName: string): { mark: string; suffix: string } {
@@ -112,7 +78,7 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
   const openCartDrawer = useCartUiStore((s) => s.openCartDrawer);
   const { brandName } = useRegion();
   const { mark, suffix } = splitBrand(brandName);
-  const accountLinks = user ? accountLinksFor(user) : [];
+  const accountLinks = ACCOUNT_LINKS;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -248,17 +214,16 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
                     <p className="text-xs font-medium text-slate">Signed in as</p>
                     <p className="mt-1 truncate text-sm font-medium text-ink">{user.full_name}</p>
                   </div>
-                  {accountLinks.map(({ label, href, icon: Icon }) => (
-                    <a
+                  {accountLinks.map(({ label, href }) => (
+                    <Link
                       key={label}
-                      href={href}
+                      to={href}
                       role="menuitem"
                       onClick={() => setUserMenuOpen(false)}
                       className="flex w-full items-center gap-3 rounded-button px-3 py-2.5 text-sm font-medium text-charcoal transition-colors hover:bg-cloud hover:text-ink"
                     >
-                      <Icon className="h-4 w-4" strokeWidth={1.7} aria-hidden="true" />
                       {label}
-                    </a>
+                    </Link>
                   ))}
                   <div className="my-1 h-px bg-steel" aria-hidden="true" />
                   <button
@@ -336,16 +301,15 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
                     <p className="truncate text-sm font-medium text-ink">{user.full_name}</p>
                   </div>
                 </div>
-                {accountLinks.map(({ label, href, icon: Icon }) => (
-                  <a
+                {accountLinks.map(({ label, href }) => (
+                  <Link
                     key={label}
-                    href={href}
+                    to={href}
                     onClick={closeMenus}
                     className="flex min-h-11 w-full items-center gap-3 rounded-button px-3 text-sm font-medium text-charcoal transition-colors hover:bg-cloud hover:text-ink"
                   >
-                    <Icon className="h-[18px] w-[18px]" strokeWidth={1.7} aria-hidden="true" />
                     {label}
-                  </a>
+                  </Link>
                 ))}
                 <button
                   type="button"
