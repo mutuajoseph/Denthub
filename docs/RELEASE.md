@@ -90,8 +90,14 @@ re-running the failed run from the Actions UI.
    (use the *internal* URL, e.g. `postgresql+asyncpg://…`, so traffic stays on
    Render's private network). It is declared `sync: false` in `render.yaml` and must
    never be committed.
-4. Service → **Settings → Deploy Hook** → copy the URL.
-5. Confirm the health check is `/api/v1/health`.
+4. Service → **Environment** → add `JWT_SECRET_KEY` = a fresh random value
+   (`python -c "import secrets; print(secrets.token_urlsafe(48))"`). It is declared
+   `sync: false` and must never be committed. **The app refuses to start in
+   production if it is missing or left at the public dev default**, so a release
+   without it fails at `preDeployCommand`/startup rather than serving forgeable
+   tokens. Rotating the key invalidates every existing session.
+5. Service → **Settings → Deploy Hook** → copy the URL.
+6. Confirm the health check is `/api/v1/health`.
 
 > The blueprint's `preDeployCommand` runs `alembic upgrade head` and then the demo
 > seed scripts (`seed_products` → `seed_countries` → `seed_listings` → `seed_jobs` →

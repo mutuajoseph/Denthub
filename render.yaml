@@ -42,6 +42,13 @@ services:
       # Render dashboard, not committed here.
       - key: CORS_ORIGINS
         sync: false
+      # Signs every HS256 JWT (app/logic/v1/auth.py). Set a real random value in
+      # the Render dashboard (sync: false) — do NOT commit it. If it is unset (or
+      # left at the public dev default), the app refuses to start in production
+      # (see app/config.py). Rotating it invalidates all existing sessions.
+      # Generate one with: python -c "import secrets; print(secrets.token_urlsafe(48))"
+      - key: JWT_SECRET_KEY
+        sync: false
       # Set this in the Render dashboard (sync: false) — do NOT commit a
       # connection string. It must be a real Postgres URL, not SQLite: the free
       # plan's filesystem is ephemeral, so a local .db file is wiped on every

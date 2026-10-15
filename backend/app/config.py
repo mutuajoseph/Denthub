@@ -12,6 +12,10 @@ from dataclasses import dataclass
 APP_NAME = "DentistHub"
 API_V1_PREFIX = "/api/v1"
 
+# Public-source fallback for local development only. Production must supply a
+# real JWT_SECRET_KEY; this literal must never sign a production token.
+DEV_JWT_SECRET_KEY = "denthub-super-secret-dev-key-change-in-prod"
+
 
 @dataclass(frozen=True)
 class Settings:
@@ -33,6 +37,8 @@ class Settings:
             "http://localhost:5173",
         )
 
+        environment = os.getenv("ENVIRONMENT", "local")
+
         database_url = os.getenv(
             "DATABASE_URL",
             "sqlite+aiosqlite:///denthub.db",
@@ -52,16 +58,24 @@ class Settings:
                 1,
             )
 
+        jwt_secret_key = os.getenv("JWT_SECRET_KEY", DEV_JWT_SECRET_KEY)
+
+        # Refuse to start production on the public dev default (root AGENTS.md,
+        # "Auth and security"): a leaked secret lets anyone mint valid tokens.
+        if environment == "production" and jwt_secret_key == DEV_JWT_SECRET_KEY:
+            raise RuntimeError(
+                "JWT_SECRET_KEY must be set to a real secret in production; "
+                "refusing to start with the development default. Set it in the "
+                "Render dashboard (render.yaml marks it sync: false)."
+            )
+
         return cls(
             app_name=APP_NAME,
-            environment=os.getenv("ENVIRONMENT", "local"),
+            environment=environment,
             dev_mode=os.getenv("DEV_MODE", "1") == "1",
             log_level=os.getenv("LOG_LEVEL", "INFO"),
             cors_origins=tuple(origin.strip() for origin in origins.split(",") if origin.strip()),
             database_url=database_url,
-            jwt_secret_key=os.getenv(
-                "JWT_SECRET_KEY",
-                "denthub-super-secret-dev-key-change-in-prod",
-            ),
+            jwt_secret_key=jwt_secret_key,
             jwt_algorithm=os.getenv("JWT_ALGORITHM", "HS256"),
         )
