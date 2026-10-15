@@ -10,11 +10,12 @@ const quickLinks = [
   { label: "Emergency Dental Care", to: "/emergency" },
 ];
 
+// "Dentist Dashboard" (/dashboard) is withheld until that screen exists (#67);
+// linking to it would send users to NotFound. Restore it when the route lands. #58
 const professionalLinks = [
   { label: "CPD Training", to: "/training" },
   { label: "Suppliers", to: "/suppliers" },
   { label: "International Patients", to: "/international" },
-  { label: "Dentist Dashboard", to: "/dashboard" },
 ];
 
 const linkClass =
