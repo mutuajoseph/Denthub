@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import type { AuthUser } from "../lib/auth";
 import RouteGuard, { type GuardScope } from "./RouteGuard";
-import { ROLE, type Role } from "./roles";
+import { PUBLIC_ROLES, ROLE, type Role } from "./roles";
 
 function makeUser(role: Role): AuthUser {
   return {
@@ -104,5 +104,31 @@ describe("RouteGuard", () => {
 
     expect(screen.getByTestId("location-path")).toHaveTextContent("/admin");
     expect(screen.queryByText("Private content")).not.toBeInTheDocument();
+  });
+
+  it("uses unauthorizedPath for a wrong-role user instead of their canonical dashboard", () => {
+    render(
+      <MemoryRouter initialEntries={["/account"]}>
+        <Routes>
+          <Route
+            path="/account"
+            element={
+              <RouteGuard
+                user={makeUser(ROLE.STAFF)}
+                allowedRoles={PUBLIC_ROLES}
+                unauthorizedPath="/"
+              >
+                <p>Account content</p>
+              </RouteGuard>
+            }
+          />
+          <Route path="/" element={<LocationView />} />
+          <Route path="/admin" element={<LocationView />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId("location-path")).toHaveTextContent("/");
+    expect(screen.queryByText("Account content")).not.toBeInTheDocument();
   });
 });

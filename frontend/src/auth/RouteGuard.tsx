@@ -36,6 +36,13 @@ export type RouteGuardProps = {
   requiredRoles?: readonly Role[];
   signInPath?: string;
   staffAccessPath?: string;
+  /**
+   * Where to send a signed-in user who is missing the required role. Defaults to
+   * the user's canonical dashboard, falling back to "/" when that would loop.
+   * Set it to a known-working page (e.g. "/") when the canonical dashboards for
+   * the excluded roles are not routed yet, so the redirect never hits NotFound.
+   */
+  unauthorizedPath?: string;
 };
 
 function canonicalRoles(roles: readonly Role[], scope: GuardScope): readonly Role[] {
@@ -79,6 +86,7 @@ export default function RouteGuard({
   requiredRoles,
   signInPath = "/sign-in",
   staffAccessPath = "/staff/access",
+  unauthorizedPath,
 }: RouteGuardProps) {
   const location = useLocation();
   const currentUser = user === undefined ? (getStoredAuth()?.user ?? null) : user;
@@ -106,8 +114,11 @@ export default function RouteGuard({
 
   if (!roleMatches(currentUser, roles)) {
     const dashboardPath = getDashboardPath(currentUser);
-    const target =
-      dashboardPath && !samePath(dashboardPath, location.pathname) ? dashboardPath : "/";
+    const target = unauthorizedPath
+      ? safeInternalPath(unauthorizedPath, "/")
+      : dashboardPath && !samePath(dashboardPath, location.pathname)
+        ? dashboardPath
+        : "/";
 
     return (
       <Navigate

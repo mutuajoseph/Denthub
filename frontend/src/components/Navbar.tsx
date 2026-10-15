@@ -16,6 +16,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 
+import { isPublicRole } from "../auth/roles";
 import { useRegion } from "../hooks/useRegion";
 import type { AuthUser } from "../lib/auth";
 import { selectCartCount, useCartStore } from "../store/cartStore";
@@ -42,11 +43,18 @@ export const NAV_LINKS = [
 
 type AccountLink = { label: string; href: string };
 
-// Account destinations (dashboard, messages) are withheld until their screens
-// exist (#67); linking to them would send every signed-in user to NotFound. The
-// menu shows identity + sign out only. Restore this list — with the role helpers
-// in auth/roles.ts — when those routes land. See #58.
-const ACCOUNT_LINKS: readonly AccountLink[] = [];
+/**
+ * Account destinations the signed-in user may open, in menu order. Screens land
+ * here as their routes appear (#67); only the account shell exists so far, and
+ * only public accounts have one. See #58 and #75.
+ */
+function accountLinksFor(user: AuthUser): AccountLink[] {
+  if (!isPublicRole(user)) {
+    return [];
+  }
+
+  return [{ label: "Dashboard", href: "/dashboard" }];
+}
 
 /** Splits "DentHub USA" into the wordmark and its Country suffix. */
 function splitBrand(brandName: string): { mark: string; suffix: string } {
@@ -78,7 +86,7 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
   const openCartDrawer = useCartUiStore((s) => s.openCartDrawer);
   const { brandName } = useRegion();
   const { mark, suffix } = splitBrand(brandName);
-  const accountLinks = ACCOUNT_LINKS;
+  const accountLinks = user ? accountLinksFor(user) : [];
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
