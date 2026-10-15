@@ -1,15 +1,10 @@
 import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { ForgotPassword } from "./ForgotPassword";
-import { PhoneLogin } from "./PhoneLogin";
-import Register from "./Register";
-import { SignIn } from "./SignIn";
+import { AuthPanel, type AuthView } from "./AuthPanel";
 
 import type { AuthResponse } from "../lib/auth";
 import { cn } from "../utils/cn";
-
-type AuthView = "signin" | "register" | "forgot" | "phone";
 
 type AuthModalProps = {
   onClose: () => void;
@@ -78,30 +73,12 @@ export function AuthModal({ onClose, onLoginSuccess }: AuthModalProps) {
           </h1>
         </div>
 
-        {/* Sign in */}
-        {view === "signin" && (
-          <SignIn
-            onLoginSuccess={handleLoginSuccess}
-            onRegister={() => setView("register")}
-            onForgotPassword={() => setView("forgot")}
-            onPhoneLogin={() => setView("phone")}
-          />
-        )}
-
-        {/* Register */}
-        {view === "register" && (
-          <Register
-            onClose={onClose}
-            onSignIn={() => setView("signin")}
-            onRegisterSuccess={handleLoginSuccess}
-          />
-        )}
-
-        {/* Forgot password */}
-        {view === "forgot" && <ForgotPassword onBack={() => setView("signin")} />}
-
-        {/* Phone login */}
-        {view === "phone" && <PhoneLogin onBack={() => setView("signin")} />}
+        <AuthPanel
+          view={view}
+          onViewChange={setView}
+          onSuccess={handleLoginSuccess}
+          onClose={onClose}
+        />
       </dialog>
     </div>
   );

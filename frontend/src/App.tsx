@@ -2,12 +2,15 @@ import { useState } from "react";
 import { Route, Routes } from "react-router-dom";
 
 import { AuthModal } from "./auth/AuthModal";
+import RouteGuard from "./auth/RouteGuard";
+import { PUBLIC_ROLES } from "./auth/roles";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AppShell } from "./components/layout/AppShell";
 import { usePageMeta } from "./hooks/usePageMeta";
 import { clearStoredAuth, getStoredAuth } from "./lib/auth";
 import type { AuthResponse } from "./lib/auth";
 import { About } from "./pages/About";
+import { Dashboard } from "./pages/Dashboard";
 import { DentistProfile } from "./pages/DentistProfile";
 import { Emergency } from "./pages/Emergency";
 import { FindDentist } from "./pages/FindDentist";
@@ -17,6 +20,7 @@ import { JobsBoard } from "./pages/JobsBoard";
 import { Magazine } from "./pages/Magazine";
 import NotFound from "./pages/NotFound";
 import OralCareShopPage from "./pages/OralCareShopPage";
+import { SignInPage } from "./pages/SignInPage";
 import { Training } from "./pages/Training";
 
 const App = () => {
@@ -54,6 +58,15 @@ const App = () => {
           <Route path="/training" element={<Training />} />
           <Route path="/magazine" element={<Magazine />} />
           <Route path="/shop" element={<OralCareShopPage />} />
+          <Route path="/sign-in" element={<SignInPage onSuccess={handleLoginSuccess} />} />
+          <Route
+            path="/dashboard"
+            element={
+              <RouteGuard user={user} allowedRoles={PUBLIC_ROLES} unauthorizedPath="/">
+                <Dashboard user={user} />
+              </RouteGuard>
+            }
+          />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </AppShell>

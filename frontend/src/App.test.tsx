@@ -4,9 +4,11 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
+import { ROLE, type Role } from "./auth/roles";
 import { NAV_LINKS } from "./components/Navbar";
 import { getPageMeta } from "./hooks/usePageMeta";
 import { ApiError } from "./lib/apiClient";
+import { AUTH_STORAGE_KEY, type AuthResponse } from "./lib/auth";
 import {
   type CountryConfig,
   fetchCountries,
@@ -121,9 +123,27 @@ function renderApp(path: string) {
   );
 }
 
+function seedAuth(role: Role): void {
+  const auth: AuthResponse = {
+    access_token: "test-token",
+    token_type: "bearer",
+    user: {
+      id: "user-1",
+      email: "user@example.com",
+      full_name: "Test User",
+      role,
+      is_staff: role === ROLE.STAFF,
+      account_status: "active",
+    },
+  };
+
+  window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth));
+}
+
 describe("App routes", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    window.localStorage.clear();
     fetchListingSearchMock.mockResolvedValue([]);
     fetchCountriesMock.mockResolvedValue({ items: [], default_country_code: "KE" });
     fetchCountryConfigMock.mockImplementation(async (code) => makeConfig(code ?? "KE"));
@@ -216,5 +236,31 @@ describe("App routes", () => {
     for (const path of ["/dentists/facility/f-1", "/dentists/sp-1", "/dentist/sp-1"]) {
       expect(getPageMeta(path, "DentHub").title).toMatch(/dentist profile/i);
     }
+  });
+
+  it("sends a guest from /dashboard to the routed sign-in page", () => {
+    renderApp("/dashboard");
+
+    expect(screen.getByRole("heading", { name: /sign in to your account/i })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /page not found/i })).toBeNull();
+  });
+
+  it("renders the account shell for a signed-in patient", () => {
+    seedAuth(ROLE.PATIENT);
+
+    renderApp("/dashboard");
+
+    expect(screen.getByRole("heading", { name: /your account/i })).toBeInTheDocument();
+    expect(screen.getByText("user@example.com")).toBeInTheDocument();
+  });
+
+  it("keeps a signed-in staff user off /dashboard without a 404", () => {
+    seedAuth(ROLE.STAFF);
+
+    const { container } = renderApp("/dashboard");
+
+    expect(container.querySelector("#hero-heading")).not.toBeNull();
+    expect(screen.queryByRole("heading", { name: /your account/i })).toBeNull();
+    expect(screen.queryByRole("heading", { name: /page not found/i })).toBeNull();
   });
 });
