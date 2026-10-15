@@ -12,12 +12,15 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
+import { isPatientRole } from "../auth/roles";
 import { AppointmentRequestPreview } from "../components/dentists/AppointmentRequestPreview";
+import { BookAppointmentInline } from "../components/dentists/BookAppointmentInline";
 import Badge from "../components/ui/Badge";
 import Button from "../components/ui/Button";
 import StarRating from "../components/ui/StarRating";
 import { useCountryConfig } from "../hooks/useCountryConfig";
 import { useListingDetail } from "../hooks/useListingDetail";
+import type { AuthUser } from "../lib/auth";
 import type { ListingType } from "../lib/listingApi";
 import { formatListingPrice } from "../utils/formatCurrency";
 import { summarizeHours } from "../utils/hours";
@@ -27,7 +30,7 @@ function describeError(error: unknown): string {
   return error instanceof Error ? error.message : "Something went wrong loading this profile.";
 }
 
-export function DentistProfile() {
+export function DentistProfile({ user }: { user: AuthUser | null }) {
   const params = useParams();
   // Typed route carries both segments; the legacy routes carry only `id`.
   const rawType = params.listingType;
@@ -250,7 +253,6 @@ export function DentistProfile() {
                 </p>
               </div>
             </div>
-
             <aside
               className="space-y-5 lg:sticky lg:top-24 lg:self-start"
               aria-label="Contact and fees"
@@ -270,6 +272,13 @@ export function DentistProfile() {
                 </div>
               )}
 
+              <BookAppointmentInline
+                listingType={listing.listingType}
+                listingId={listing.id}
+                listingName={listing.name}
+                user={user}
+              />
+
               {listing.phone && (
                 <a
                   href={`tel:${listing.phone}`}
@@ -280,12 +289,17 @@ export function DentistProfile() {
                   Call {listing.clinic ?? listing.name}
                 </a>
               )}
-            </aside>
+            </aside>{" "}
           </div>
         </article>
 
         <div className="mt-6">
-          <AppointmentRequestPreview provider={{ name: listing.name, phone: listing.phone }} />
+          {/* The real booking form replaces the preview for whoever can use it:
+              two appointment affordances on one page, and two aqua buttons,
+              would fight each other. */}
+          {!isPatientRole(user) && (
+            <AppointmentRequestPreview provider={{ name: listing.name, phone: listing.phone }} />
+          )}
         </div>
       </div>
     </div>

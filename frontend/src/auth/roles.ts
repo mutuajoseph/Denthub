@@ -34,6 +34,11 @@ export const CANONICAL_ROLES = [
   ROLE.PLATFORM_OPERATOR,
 ] as const satisfies readonly Role[];
 
+export const PATIENT_ROLES = [
+  ROLE.PATIENT,
+  ROLE.INTERNATIONAL_PATIENT,
+] as const satisfies readonly Role[];
+
 export const FACILITY_ROLES = [
   ROLE.FACILITY_OWNER,
   ROLE.FRONT_OFFICE,
@@ -174,6 +179,10 @@ export function isStaffRole(subject: unknown): boolean {
 }
 
 export const isStaffUser = isStaffRole;
+
+export function isPatientRole(subject: unknown): boolean {
+  return roleMatches(subject, PATIENT_ROLES);
+}
 
 export function isFacilityRole(subject: unknown): boolean {
   return roleMatches(subject, FACILITY_ROLES);

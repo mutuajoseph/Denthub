@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "../lib/apiClient";
+import type { AuthUser } from "../lib/auth";
 import { type CountryConfig, fetchCountryConfig, fetchSpecialties } from "../lib/countryConfigApi";
 import {
   type DentistListing,
@@ -144,6 +145,15 @@ const specialistDetail: SpecialistDetail = {
   ],
 };
 
+const patient: AuthUser = {
+  id: "p1",
+  email: "amina@example.com",
+  full_name: "Amina Otieno",
+  role: "patient",
+  is_staff: false,
+  account_status: "active",
+};
+
 function makeConfig(code: string): CountryConfig {
   return {
     code,
@@ -160,7 +170,7 @@ function makeConfig(code: string): CountryConfig {
   };
 }
 
-function renderProfile(path: string) {
+function renderProfile(path: string, user: AuthUser | null = null) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: 0, gcTime: 0 } },
   });
@@ -169,9 +179,9 @@ function renderProfile(path: string) {
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[path]}>
         <Routes>
-          <Route path="/dentists/:listingType/:id" element={<DentistProfile />} />
-          <Route path="/dentists/:id" element={<DentistProfile />} />
-          <Route path="/dentist/:id" element={<DentistProfile />} />
+          <Route path="/dentists/:listingType/:id" element={<DentistProfile user={user} />} />
+          <Route path="/dentists/:id" element={<DentistProfile user={user} />} />
+          <Route path="/dentist/:id" element={<DentistProfile user={user} />} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -318,5 +328,28 @@ describe("DentistProfile", () => {
 
     expect(await screen.findByRole("heading", { name: "Dr. Wanjiku Kamau" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /call/i })).not.toBeInTheDocument();
+  });
+
+  it("offers booking to a signed-in patient", async () => {
+    renderProfile("/dentists/facility/f-1", patient);
+
+    expect(await screen.findByRole("button", { name: /book now/i })).toBeInTheDocument();
+  });
+
+  it("replaces the preview with the real booking flow for a patient", async () => {
+    renderProfile("/dentists/facility/f-1", patient);
+
+    expect(await screen.findByRole("button", { name: /book now/i })).toBeInTheDocument();
+    expect(screen.queryByText(/plan your next visit/i)).not.toBeInTheDocument();
+  });
+
+  it("does not offer booking to a signed-out visitor", async () => {
+    renderProfile("/dentists/facility/f-1", null);
+
+    expect(
+      await screen.findByRole("heading", { name: "SmileCare Dental Centre" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /book now/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/plan your next visit/i)).toBeInTheDocument();
   });
 });

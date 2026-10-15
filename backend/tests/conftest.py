@@ -20,6 +20,7 @@ from app.repositories.database import Base
 from app.utils.logger import configure_logging
 from app.utils.state import AppState
 from tests.factories import (
+    build_appointments,
     build_countries,
     build_jobs,
     build_listings,
@@ -27,6 +28,7 @@ from tests.factories import (
     build_products,
     build_specialties,
     build_training,
+    build_users,
 )
 
 
@@ -56,6 +58,16 @@ async def session_maker() -> AsyncIterator[async_sessionmaker[AsyncSession]]:
             facilities, specialists = build_listings(specialties)
             for listing in [*facilities, *specialists]:
                 session.add(listing)
+            # Flush so ids exist before rows that reference a listing by id.
+            await session.flush()
+
+            users = build_users()
+            for user in users:
+                session.add(user)
+            await session.flush()
+
+            for appointment in build_appointments(users, facilities, specialists):
+                session.add(appointment)
 
             for posting in build_jobs(specialties, facilities):
                 session.add(posting)

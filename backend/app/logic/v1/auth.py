@@ -45,6 +45,11 @@ STAFF_ROLES: frozenset[str] = frozenset({"staff", "admin", "super_admin", "platf
 #: Roles that may perform a user-admin action such as approving an account.
 ADMIN_ROLES: frozenset[str] = frozenset({"admin", "super_admin"})
 
+#: Roles that are Patients (PRD §2): a person seeking care, including one
+#: travelling across borders for it. Only they may book and read their own
+#: Appointments; every other account type is a provider or a platform role.
+PATIENT_ROLES: frozenset[str] = frozenset({"patient", "international_patient"})
+
 
 def is_staff_role(role: str) -> bool:
     """Whether a stored role is a staff role rather than a public one."""
