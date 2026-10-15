@@ -15,6 +15,7 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
@@ -35,9 +36,14 @@ class Supplier(Base):
 
     Introduced alongside ``Product`` because a product is always sold by exactly
     one supplier, and the storefront pages need the supplier's display fields.
+
+    ``owner_user_id`` links the business to its supplier account: one account
+    owns at most one store, and the account creates its own store from
+    ``/dashboard/supplier`` (#78).
     """
 
     __tablename__ = "suppliers"
+    __table_args__ = (Index("uq_suppliers_owner_user_id", "owner_user_id", unique=True),)
 
     id: Mapped[str] = mapped_column(
         String(36),
@@ -50,6 +56,11 @@ class Supplier(Base):
     scope: Mapped[str] = mapped_column(String(20), default="local", nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    owner_user_id: Mapped[str | None] = mapped_column(
+        String(36),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )
@@ -103,6 +114,40 @@ class Product(Base):
     )
 
     supplier: Mapped[Supplier] = relationship(back_populates="products")
+
+
+class SupplierRepository:
+    """Repository for supplier (storefront) persistence operations."""
+
+    @staticmethod
+    async def get_by_owner(session: AsyncSession, owner_user_id: str) -> Supplier | None:
+        """Return the store owned by ``owner_user_id``, or ``None``."""
+        stmt = select(Supplier).where(Supplier.owner_user_id == owner_user_id)
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def get_by_slug(session: AsyncSession, slug: str) -> Supplier | None:
+        """Return the store whose slug is ``slug``, or ``None``."""
+        stmt = select(Supplier).where(Supplier.slug == slug)
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def create(session: AsyncSession, **kwargs: Any) -> Supplier:
+        """Create and persist a new store, loading server-side defaults back."""
+        supplier = Supplier(**kwargs)
+        session.add(supplier)
+        await session.flush()
+        await session.refresh(supplier)
+        return supplier
+
+    @staticmethod
+    async def count_products(session: AsyncSession, supplier_id: str) -> int:
+        """Count the products a store sells, for the dashboard's headline."""
+        stmt = select(func.count()).select_from(Product).where(Product.supplier_id == supplier_id)
+        result = await session.execute(stmt)
+        return int(result.scalar_one())
 
 
 class ProductFilters:
@@ -206,8 +251,57 @@ class ProductRepository:
 
     @staticmethod
     async def create(session: AsyncSession, **kwargs: Any) -> Product:
-        """Create and persist a new product."""
+        """Create and persist a new product, loading server defaults back.
+
+        ``created_at`` is a server default, so the object is refreshed before
+        it is handed to a serializer — otherwise the attribute is still unset.
+        """
         product = Product(**kwargs)
         session.add(product)
         await session.flush()
+        await session.refresh(product)
         return product
+
+    @staticmethod
+    async def list_for_supplier(
+        session: AsyncSession,
+        supplier_id: str,
+        *,
+        limit: int = 48,
+        offset: int = 0,
+    ) -> list[Product]:
+        """Return one page of a store's own products, ordered by name."""
+        stmt = (
+            select(Product)
+            .where(Product.supplier_id == supplier_id)
+            .order_by(Product.name.asc())
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await session.execute(stmt)
+        return list(result.scalars().all())
+
+    @staticmethod
+    async def count_for_supplier(session: AsyncSession, supplier_id: str) -> int:
+        """Count a store's products with the same scope as the list."""
+        stmt = select(func.count()).select_from(Product).where(Product.supplier_id == supplier_id)
+        result = await session.execute(stmt)
+        return int(result.scalar_one())
+
+    @staticmethod
+    async def get_for_supplier(
+        session: AsyncSession,
+        product_id: str,
+        supplier_id: str,
+    ) -> Product | None:
+        """Fetch a product only when it belongs to ``supplier_id``.
+
+        Anything else reads as "not found", so one store can never observe
+        another store's records through this path.
+        """
+        stmt = select(Product).where(
+            Product.id == product_id,
+            Product.supplier_id == supplier_id,
+        )
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()

@@ -63,6 +63,10 @@ ADMIN_ROLES: frozenset[str] = frozenset({"admin", "super_admin"})
 #: Appointments; every other account type is a provider or a platform role.
 PATIENT_ROLES: frozenset[str] = frozenset({"patient", "international_patient"})
 
+#: Roles that own a Supplier storefront (root AGENTS.md, "Auth and security" —
+#: the set is confirmed with the maintainer per route group, #78).
+SUPPLIER_ROLES: frozenset[str] = frozenset({"supplier"})
+
 
 def is_staff_role(role: str) -> bool:
     """Whether a stored role is a staff role rather than a public one."""

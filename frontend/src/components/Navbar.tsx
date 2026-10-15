@@ -16,7 +16,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 
-import { isFacilityRole, isPublicRole } from "../auth/roles";
+import { isFacilityRole, isPublicRole, isSupplierRole } from "../auth/roles";
 import { splitBrand } from "../config/regions";
 import { useRegion } from "../hooks/useRegion";
 import type { AuthUser } from "../lib/auth";
@@ -59,7 +59,13 @@ function accountLinksFor(user: AuthUser): AccountLink[] {
     return [];
   }
 
-  return [{ label: "Dashboard", href: "/dashboard" }];
+  const links: AccountLink[] = [{ label: "Dashboard", href: "/dashboard" }];
+
+  if (isSupplierRole(user)) {
+    links.push({ label: "My store", href: "/dashboard/supplier" });
+  }
+
+  return links;
 }
 
 function Avatar({ name }: { name: string }) {
