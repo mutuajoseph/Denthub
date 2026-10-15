@@ -52,8 +52,9 @@ type AccountLink = { label: string; href: string };
 /**
  * Account destinations the signed-in user may open, in menu order. Screens land
  * here as their routes appear (#67). Facility accounts get their own "Facility"
- * entry to the clinic dashboard (#81); every other public account lands on the
- * account shell. See #58 and #75.
+ * entry to the clinic dashboard (#81); public accounts get the account shell,
+ * the messaging inbox (#77) and, where it applies, their supplier store or
+ * training dashboard. See #58 and #75.
  */
 function accountLinksFor(user: AuthUser): AccountLink[] {
   if (isFacilityRole(user)) {
@@ -64,7 +65,10 @@ function accountLinksFor(user: AuthUser): AccountLink[] {
     return [];
   }
 
-  const links: AccountLink[] = [{ label: "Dashboard", href: "/dashboard" }];
+  const links: AccountLink[] = [
+    { label: "Dashboard", href: "/dashboard" },
+    { label: "Messages", href: "/messages" },
+  ];
 
   if (isSupplierRole(user)) {
     links.push({ label: "My store", href: "/dashboard/supplier" });

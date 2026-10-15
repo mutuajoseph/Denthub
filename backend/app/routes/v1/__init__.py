@@ -19,6 +19,7 @@ from app.routes.v1 import (
     jobs,
     listing,
     magazine,
+    messages,
     products,
     suppliers,
     training,
@@ -36,6 +37,7 @@ v1_router.include_router(listing.router)
 v1_router.include_router(home.router)
 v1_router.include_router(users.router)
 v1_router.include_router(jobs.router)
+v1_router.include_router(messages.router)
 v1_router.include_router(magazine.router)
 v1_router.include_router(training.router)
 v1_router.include_router(appointments.router)
