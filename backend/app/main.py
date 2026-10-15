@@ -22,6 +22,7 @@ from app.middleware.logging import RequestLoggingMiddleware
 from app.routes.v1 import v1_router
 from app.utils.logger import configure_logging
 from app.utils.state import AppState
+from app.utils.urls import describe_url
 
 
 def create_app() -> FastAPI:
@@ -32,7 +33,7 @@ def create_app() -> FastAPI:
         logger = configure_logging(dev_mode=settings.dev_mode, log_level=settings.log_level)
 
         # Initialize async database engine and session maker
-        logger.info("db.init", url=settings.database_url)
+        logger.info("db.init", url=describe_url(settings.database_url))
         engine = create_async_engine(settings.database_url, echo=settings.dev_mode)
         db_session_maker = async_sessionmaker(bind=engine, expire_on_commit=False)
 
