@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -197,17 +197,26 @@ describe("App routes", () => {
     fetchMyProviderDashboardMock.mockResolvedValue(null);
   });
 
-  it("renders the home page at /", () => {
-    const { container } = renderApp("/");
+  // Route screens are lazily imported (issue #66), so the first render commits
+  // the Suspense fallback before the chunk resolves. Keep this first: the lazy
+  // import cache means a route already rendered earlier shows no fallback.
+  it("shows the route loading fallback while the screen chunk loads", () => {
+    renderApp("/about");
 
-    expect(container.querySelector("#hero-heading")).not.toBeNull();
+    expect(screen.getByRole("status", { name: /loading/i })).toBeInTheDocument();
   });
 
-  it.each(["/dentists", "/find-dentist"])("renders dentist discovery at %s", (path) => {
+  it("renders the home page at /", async () => {
+    const { container } = renderApp("/");
+
+    await waitFor(() => expect(container.querySelector("#hero-heading")).not.toBeNull());
+  });
+
+  it.each(["/dentists", "/find-dentist"])("renders dentist discovery at %s", async (path) => {
     renderApp(path);
 
     expect(
-      screen.getByRole("heading", { name: /find the right dental care/i }),
+      await screen.findByRole("heading", { name: /find the right dental care/i }),
     ).toBeInTheDocument();
   });
 
@@ -237,31 +246,37 @@ describe("App routes", () => {
     },
   );
 
-  it("renders the international patient page", () => {
+  it("renders the international patient page", async () => {
     renderApp("/international");
 
-    expect(screen.getByRole("heading", { name: /plan your dental journey/i })).toBeInTheDocument();
-  });
-
-  it("renders the emergency page", () => {
-    renderApp("/emergency");
-
     expect(
-      screen.getByRole("heading", { name: /find emergency dental care now/i }),
+      await screen.findByRole("heading", { name: /plan your dental journey/i }),
     ).toBeInTheDocument();
   });
 
-  it("renders NotFound for unknown routes", () => {
+  it("renders the emergency page", async () => {
+    renderApp("/emergency");
+
+    expect(
+      await screen.findByRole("heading", { name: /find emergency dental care now/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("renders NotFound for unknown routes", async () => {
     renderApp("/definitely-not-a-page");
 
-    expect(screen.getByRole("heading", { name: /page not found/i })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /page not found/i })).toBeInTheDocument();
   });
 
   // Regression guard: every public navbar link used to fall through to NotFound.
   it.each(NAV_LINKS.map((link) => [link.label, link.href] as const))(
     "routes the %s nav link (%s) to a real page",
-    (_label, href) => {
+    async (_label, href) => {
       renderApp(href);
+
+      // Wait for the lazy screen to replace the Suspense fallback, so the
+      // assertion below runs against the rendered page, not a blank loading view.
+      await waitFor(() => expect(screen.queryByRole("status", { name: /loading/i })).toBeNull());
 
       expect(screen.queryByRole("heading", { name: /page not found/i })).toBeNull();
     },
@@ -283,37 +298,39 @@ describe("App routes", () => {
     }
   });
 
-  it("sends a guest from /dashboard to the routed sign-in page", () => {
+  it("sends a guest from /dashboard to the routed sign-in page", async () => {
     renderApp("/dashboard");
 
-    expect(screen.getByRole("heading", { name: /sign in to your account/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: /sign in to your account/i }),
+    ).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: /page not found/i })).toBeNull();
   });
 
-  it("renders the standalone staff surface at /staff/access", () => {
+  it("renders the standalone staff surface at /staff/access", async () => {
     renderApp("/staff/access");
 
-    expect(screen.getByRole("heading", { name: /staff sign in/i })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /staff sign in/i })).toBeInTheDocument();
     // The public login must not leak into the staff surface.
     expect(screen.queryByRole("heading", { name: /sign in to your account/i })).toBeNull();
     expect(screen.queryByRole("heading", { name: /page not found/i })).toBeNull();
   });
 
-  it("renders the account shell for a signed-in patient", () => {
+  it("renders the account shell for a signed-in patient", async () => {
     seedAuth(ROLE.PATIENT);
 
     renderApp("/dashboard");
 
-    expect(screen.getByRole("heading", { name: /your account/i })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /your account/i })).toBeInTheDocument();
     expect(screen.getByText("user@example.com")).toBeInTheDocument();
   });
 
-  it("keeps a signed-in staff user off /dashboard without a 404", () => {
+  it("keeps a signed-in staff user off /dashboard without a 404", async () => {
     seedAuth(ROLE.STAFF);
 
     const { container } = renderApp("/dashboard");
 
-    expect(container.querySelector("#hero-heading")).not.toBeNull();
+    await waitFor(() => expect(container.querySelector("#hero-heading")).not.toBeNull());
     expect(screen.queryByRole("heading", { name: /your account/i })).toBeNull();
     expect(screen.queryByRole("heading", { name: /page not found/i })).toBeNull();
   });
