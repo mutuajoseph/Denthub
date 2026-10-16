@@ -4,7 +4,7 @@ import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { type CountryConfig } from "../lib/countryConfigApi";
+import type { CountryConfig } from "../lib/countryConfigApi";
 import { useCountryConfigStore } from "../store/countryConfigStore";
 import { useRegionStore } from "../store/regionStore";
 import { AuthModal } from "./AuthModal";
