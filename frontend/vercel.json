@@ -6,7 +6,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://denthub-i7q5.onrender.com/api/:path*"
+      "destination": "https://denthub-backend.onrender.com/api/:path*"
     },
     {
       "source": "/((?!assets/).*)",
