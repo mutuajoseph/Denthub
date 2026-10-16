@@ -17,6 +17,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 
 import { isPublicRole } from "../auth/roles";
+import { splitBrand } from "../config/regions";
 import { useRegion } from "../hooks/useRegion";
 import type { AuthUser } from "../lib/auth";
 import { selectCartCount, useCartStore } from "../store/cartStore";
@@ -54,16 +55,6 @@ function accountLinksFor(user: AuthUser): AccountLink[] {
   }
 
   return [{ label: "Dashboard", href: "/dashboard" }];
-}
-
-/** Splits "DentHub USA" into the wordmark and its Country suffix. */
-function splitBrand(brandName: string): { mark: string; suffix: string } {
-  const end = brandName.indexOf("Hub");
-  if (end < 0) return { mark: brandName, suffix: "" };
-  return {
-    mark: brandName.slice(0, end + 3),
-    suffix: brandName.slice(end + 3).trim(),
-  };
 }
 
 function Avatar({ name }: { name: string }) {

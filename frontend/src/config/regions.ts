@@ -78,6 +78,21 @@ export function getBrandName(region?: Region | null): string {
   return `DentHub ${region.brandSuffix}`;
 }
 
+/**
+ * Split a brand into the wordmark and its optional country suffix, e.g.
+ * "DentHub USA" into `{ mark: "DentHub", suffix: "USA" }`. Shared so the navbar
+ * and the auth modal render the same wordmark from the same source.
+ */
+export function splitBrand(brandName: string): { mark: string; suffix: string } {
+  const end = brandName.indexOf("Hub");
+  if (end < 0) return { mark: brandName, suffix: "" };
+
+  return {
+    mark: brandName.slice(0, end + 3),
+    suffix: brandName.slice(end + 3).trim(),
+  };
+}
+
 export function getRegionByCode(code: string): Region {
   return REGIONS[code] || REGIONS.GLOBAL;
 }

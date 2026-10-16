@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 
 import { AuthPanel, type AuthView } from "./AuthPanel";
 
+import { splitBrand } from "../config/regions";
+import { useRegion } from "../hooks/useRegion";
 import type { AuthResponse } from "../lib/auth";
 import { cn } from "../utils/cn";
 
@@ -13,6 +15,7 @@ type AuthModalProps = {
 
 export function AuthModal({ onClose, onLoginSuccess }: AuthModalProps) {
   const [view, setView] = useState<AuthView>("signin");
+  const { mark, suffix } = splitBrand(useRegion().brandName);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -68,8 +71,8 @@ export function AuthModal({ onClose, onLoginSuccess }: AuthModalProps) {
             id="auth-title"
             className="m-0 font-display text-[27px] leading-none font-semibold tracking-[-0.03em] text-ink"
           >
-            Dent
-            <span className="font-normal text-charcoal">Hub Kenya</span>
+            {mark}
+            {suffix && <span className="font-normal text-charcoal"> {suffix}</span>}
           </h1>
         </div>
 

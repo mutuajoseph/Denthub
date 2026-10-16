@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
+import { useRegion } from "../hooks/useRegion";
 import { type AuthResponse, register } from "../lib/auth";
 import { ROLE } from "./roles";
 
@@ -92,6 +93,7 @@ const inputClass =
 const labelClass = "text-xs font-medium text-charcoal";
 
 export default function Register({ onClose, onSignIn, onRegisterSuccess }: RegisterProps) {
+  const { brandName, countryName } = useRegion();
   const [step, setStep] = useState(1);
   const [accountType, setAccountType] = useState<AccountTypeId | "">("");
 
@@ -156,7 +158,7 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
       {step === 1 && (
         <>
           <div className="mb-5 text-center">
-            <h2 className="font-heading text-[20px] font-semibold text-ink">Join DentHub Kenya</h2>
+            <h2 className="font-heading text-[20px] font-semibold text-ink">Join {brandName}</h2>
 
             <p className="mt-1 text-[13px] text-slate">Choose how you'll use DentHub</p>
           </div>
@@ -196,7 +198,9 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
           <div className="mb-5 text-center">
             <h2 className="font-heading text-[20px] font-semibold text-ink">Create your account</h2>
 
-            <p className="mt-1 text-[13px] text-slate">{selectedAccount?.label} · Kenya</p>
+            <p className="mt-1 text-[13px] text-slate">
+              {selectedAccount?.label} · {countryName}
+            </p>
           </div>
 
           <form className="flex flex-col gap-1.5" onSubmit={handleSubmit}>

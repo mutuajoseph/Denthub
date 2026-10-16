@@ -1,6 +1,7 @@
 import { ArrowRight, Eye, EyeOff, Lock, Mail, Phone } from "lucide-react";
 import { useState } from "react";
 
+import { useRegion } from "../hooks/useRegion";
 import { type AuthResponse, login } from "../lib/auth";
 
 type SignInProps = {
@@ -22,6 +23,7 @@ export function SignIn({
   onForgotPassword,
   onPhoneLogin,
 }: SignInProps) {
+  const { brandName } = useRegion();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -67,7 +69,7 @@ export function SignIn({
   return (
     <div className="w-full">
       {/* Welcome */}
-      <p className="mt-1 mb-4 text-center text-[13px] text-slate">Welcome back to DentHub Kenya</p>
+      <p className="mt-1 mb-4 text-center text-[13px] text-slate">Welcome back to {brandName}</p>
 
       <form className="flex flex-col gap-1.5" onSubmit={handleSubmit}>
         {/* Email */}
