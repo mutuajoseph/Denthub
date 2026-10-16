@@ -49,9 +49,9 @@ const App = () => {
           <Route path="/" element={<Home />} />
           <Route path="/dentists" element={<FindDentist />} />
           <Route path="/find-dentist" element={<FindDentist />} />
-          <Route path="/dentists/:listingType/:id" element={<DentistProfile />} />
-          <Route path="/dentist/:id" element={<DentistProfile />} />
-          <Route path="/dentists/:id" element={<DentistProfile />} />
+          <Route path="/dentists/:listingType/:id" element={<DentistProfile user={user} />} />
+          <Route path="/dentist/:id" element={<DentistProfile user={user} />} />
+          <Route path="/dentists/:id" element={<DentistProfile user={user} />} />
           <Route path="/international" element={<International />} />
           <Route path="/emergency" element={<Emergency />} />
           <Route path="/about" element={<About />} />

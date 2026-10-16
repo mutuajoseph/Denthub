@@ -9,6 +9,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from app.routes.v1 import (
+    appointments,
     auth,
     config,
     health,
@@ -32,3 +33,4 @@ v1_router.include_router(users.router)
 v1_router.include_router(jobs.router)
 v1_router.include_router(magazine.router)
 v1_router.include_router(training.router)
+v1_router.include_router(appointments.router)

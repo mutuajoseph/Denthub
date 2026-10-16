@@ -88,7 +88,9 @@ _Avoid_: Moderator
 
 **Appointment**:
 A booked visit between a Patient and a Facility or Specialist, moving through
-PENDING → CONFIRMED → IN_PROGRESS → COMPLETED.
+PENDING → CONFIRMED → IN_PROGRESS → COMPLETED. Its slot is wall-clock time in
+the Listing's Country — "9:00 on the 3rd" at that clinic — not an absolute
+instant, the same rule Opening Hours follow.
 _Avoid_: Booking, visit
 
 **Health Record**:

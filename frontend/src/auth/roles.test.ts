@@ -7,6 +7,7 @@ import {
   ROLE,
   getDashboardPath,
   isFacilityRole,
+  isPatientRole,
   isStaffUser,
   isSupplierRole,
   isTrainingProviderRole,
@@ -62,6 +63,10 @@ describe("canonical roles", () => {
     expect(isStaffUser("platform operator")).toBe(true);
     expect(isStaffUser("supplier")).toBe(false);
     expect(isStaffUser(null)).toBe(false);
+    expect(isPatientRole("patient")).toBe(true);
+    expect(isPatientRole("international patient")).toBe(true);
+    expect(isPatientRole("facility_admin")).toBe(false);
+    expect(isPatientRole(null)).toBe(false);
   });
 
   it("returns canonical dashboard paths and rejects unknown roles", () => {

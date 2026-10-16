@@ -10,6 +10,8 @@ from __future__ import annotations
 from datetime import datetime, time, timedelta, UTC
 from decimal import Decimal
 
+from app.logic.v1.auth import hash_password
+from app.repositories.appointment import Appointment
 from app.repositories.country import (
     Country,
     CountryFeature,
@@ -26,6 +28,7 @@ from app.repositories.training import (
     TrainingProvider,
     TrainingWebinar,
 )
+from app.repositories.user import User
 
 LOCAL_SUPPLIER = {
     "name": "Nairobi Dental Supplies",
@@ -342,6 +345,99 @@ def build_listings(specialties: list[Specialty]) -> tuple[list[Facility], list[S
     )
 
     return [smile_point, nyali, lagos_pearl], [amina, chidi]
+
+
+# --- Patients and appointments ------------------------------------------------
+#
+# Appointments are the one test fixture that needs a real owner: an Appointment
+# belongs to a Patient (``users.id``), so the rows below are built against the
+# users ``build_users`` makes. Times are fixed so the soonest-first ordering
+# assertion does not depend on when the suite runs; they are deliberately in the
+# past, because an Appointment is only ever *booked* in the future, but a
+# dashboard must still show the ones that have happened.
+
+#: The password every seeded account shares. The hash is computed once here
+#: rather than per fixture: bcrypt is deliberately slow, and a seeded suite does
+#: not need to pay for it on every test.
+SEEDED_PASSWORD = "correct horse battery staple"
+SEEDED_PASSWORD_HASH = hash_password(SEEDED_PASSWORD)
+
+PATIENTS: list[dict[str, str]] = [
+    {
+        "full_name": "Amina Yusuf",
+        "email": "amina.patient@example.com",
+        "role": "patient",
+    },
+    {
+        "full_name": "Chidi Traveller",
+        "email": "chidi.traveller@example.com",
+        "role": "international_patient",
+    },
+]
+
+
+def build_users() -> list[User]:
+    """Return the seeded Patient accounts an Appointment can belong to."""
+    return [
+        User(
+            full_name=row["full_name"],
+            email=row["email"],
+            role=row["role"],
+            password_hash=SEEDED_PASSWORD_HASH,
+        )
+        for row in PATIENTS
+    ]
+
+
+def build_appointments(
+    patients: list[User],
+    facilities: list[Facility],
+    specialists: list[Specialist],
+) -> list[Appointment]:
+    """Return Appointments across both Patients, Facilities, and a Specialist.
+
+    ``patients`` must be the flushed ``build_users`` rows, and ``facilities`` /
+    ``specialists`` the flushed ``build_listings`` rows, so every foreign key
+    resolves.
+    """
+    amina, chidi = patients
+    smile_point, nyali, lagos_pearl = facilities
+    amina_specialist, chidi_specialist = specialists
+
+    return [
+        Appointment(
+            patient_id=amina.id,
+            facility_id=smile_point.id,
+            country_code="KE",
+            scheduled_at=datetime(2026, 9, 14, 9, 30, 0),
+            status="COMPLETED",
+            note="Six-month check-up",
+        ),
+        Appointment(
+            patient_id=amina.id,
+            specialist_id=amina_specialist.id,
+            country_code="KE",
+            scheduled_at=datetime(2026, 10, 20, 14, 0, 0),
+            status="CONFIRMED",
+            note=None,
+        ),
+        Appointment(
+            patient_id=amina.id,
+            facility_id=nyali.id,
+            country_code="KE",
+            scheduled_at=datetime(2026, 11, 3, 8, 15, 0),
+            status="PENDING",
+            note="Sensitive tooth, morning slot please.",
+        ),
+        Appointment(
+            patient_id=chidi.id,
+            specialist_id=chidi_specialist.id,
+            country_code="NG",
+            scheduled_at=datetime(2026, 12, 1, 11, 0, 0),
+            status="PENDING",
+            note=None,
+        ),
+    ]
 
 
 # --- Magazine ----------------------------------------------------------------
@@ -745,6 +841,9 @@ def build_training(
 __all__ = [
     "INTERNATIONAL_PRODUCTS",
     "LOCAL_PRODUCTS",
+    "PATIENTS",
+    "SEEDED_PASSWORD",
+    "build_appointments",
     "build_countries",
     "build_jobs",
     "build_listings",
@@ -752,4 +851,5 @@ __all__ = [
     "build_products",
     "build_specialties",
     "build_training",
+    "build_users",
 ]
