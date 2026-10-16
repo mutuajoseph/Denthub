@@ -55,26 +55,22 @@ export function formatPrice(amount: number, currency: string, locale?: string): 
 }
 
 /**
- * Formats an exact decimal-string price the listings API returned (`list_price`).
+ * Formats an exact decimal-string amount. This is the string counterpart of
+ * {@link formatPrice}: the caller keeps money as the decimal string the API
+ * sent (see `utils/money.ts`) and only rendering goes through a number.
  *
  * The cents decision is made on the string, never on float arithmetic, so an
  * exact `NUMERIC(12,2)` value keeps its cents (`1500.50` → "KES 1,500.50")
- * while a whole amount reads clean (`1500.00` → "KES 1,500"). `null` passes
- * through so a caller can hide an unpriced tile.
+ * while a whole amount reads clean (`1500.00` → "KES 1,500"). A value that is
+ * not a finite number is passed through untouched.
  */
-export function formatListingPrice(
-  amount: string | null,
-  currency: string,
-  locale?: string,
-): string | null {
-  if (amount === null || amount.trim() === "") return null;
-
+export function formatPriceString(amount: string, currency: string, locale?: string): string {
   const [, fraction = ""] = amount.split(".");
   const hasCents = fraction.replace(/0+$/, "") !== "";
   // NUMERIC(12,2) holds at most 10 integer digits, so this is exact for every
   // value the column can store; only Intl's rendering goes through a number.
   const value = Number(amount);
-  if (!Number.isFinite(value)) return null;
+  if (!Number.isFinite(value)) return amount;
 
   const options: Intl.NumberFormatOptions = currency
     ? {
@@ -90,4 +86,21 @@ export function formatListingPrice(
       };
 
   return new Intl.NumberFormat(locale || undefined, options).format(value);
+}
+
+/**
+ * Formats an exact decimal-string price the listings API returned (`list_price`).
+ *
+ * `null` (or a blank string) passes through so a caller can hide an unpriced
+ * tile; everything else defers to {@link formatPriceString}.
+ */
+export function formatListingPrice(
+  amount: string | null,
+  currency: string,
+  locale?: string,
+): string | null {
+  if (amount === null || amount.trim() === "") return null;
+  if (!Number.isFinite(Number(amount))) return null;
+
+  return formatPriceString(amount, currency, locale);
 }

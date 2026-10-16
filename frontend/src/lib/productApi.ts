@@ -3,26 +3,27 @@
  * in `backend/app/logic/v1/products.py`.
  *
  * Money crosses the wire as a **JSON string** — Pydantic serialises `Decimal`
- * that way — so every amount is converted to a number once, here, and nothing
- * downstream has to think about it. Prices are *resolved by the server*: the
- * client asks for a quantity and reads back the tier, unit price and total. It
- * never derives a discount.
+ * that way — and stays an exact decimal string here (see `utils/money.ts`),
+ * so nothing downstream re-derives it through a float. Prices are *resolved by
+ * the server*: the client asks for a quantity and reads back the tier, unit
+ * price and total. It never derives a discount.
  */
 
+import { isMoneyAmount } from "../utils/money";
 import { getJson } from "./apiClient";
 
 export type PurchaseMode = "retail" | "wholesale";
 
-/** A product as the UI consumes it: money already parsed. */
+/** A product as the UI consumes it: money kept as exact decimal strings. */
 export interface ProductPricing {
   currency: string;
   quantity: number;
   purchaseMode: PurchaseMode;
-  unitPrice: number;
-  lineTotal: number;
-  retailPrice: number;
+  unitPrice: string;
+  lineTotal: string;
+  retailPrice: string;
   /** Effective wholesale unit price, or `null` when the product is retail-only. */
-  wholesalePrice: number | null;
+  wholesalePrice: string | null;
   wholesaleMinQty: number;
 }
 
@@ -134,17 +135,22 @@ interface WireCategoryList extends WireRecord {
  * must not turn into NaN and render "KSh NaN" on a card.
  * ------------------------------------------------------------------ */
 
-/** Parse API money. Returns `null` only when the value is absent. */
-export function toMoney(value: string | number | null | undefined): number | null {
+/**
+ * Keep API money as the exact decimal string it arrived as.
+ *
+ * Returns `null` only when the value is absent or not a decimal number, so a
+ * stray `null` cannot turn into `NaN` and render "KSh NaN" on a card.
+ */
+export function toMoney(value: string | number | null | undefined): string | null {
   if (value === null || value === undefined) return null;
 
-  const parsed = typeof value === "number" ? value : Number.parseFloat(value);
+  const raw = (typeof value === "number" ? String(value) : value).trim();
 
-  return Number.isFinite(parsed) ? parsed : null;
+  return isMoneyAmount(raw) ? raw : null;
 }
 
-function toMoneyOrZero(value: string | number | null | undefined): number {
-  return toMoney(value) ?? 0;
+function toMoneyOrZero(value: string | number | null | undefined): string {
+  return toMoney(value) ?? "0.00";
 }
 
 function toCount(value: unknown, fallback: number): number {
@@ -263,7 +269,7 @@ export function hasWholesale(product: Product): boolean {
  * This selects between two authoritative figures — it performs no arithmetic
  * and applies no discount of its own.
  */
-export function unitPriceForMode(product: Product, mode: PurchaseMode): number {
+export function unitPriceForMode(product: Product, mode: PurchaseMode): string {
   if (mode === "wholesale") {
     return product.pricing.wholesalePrice ?? product.pricing.retailPrice;
   }

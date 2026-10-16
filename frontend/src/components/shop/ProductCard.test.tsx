@@ -101,7 +101,7 @@ describe("ProductCard", () => {
     expect(line).toMatchObject({
       productId: "p-wholesale",
       purchaseMode: "retail",
-      unitPrice: 350,
+      unitPrice: "350.00",
       quantity: 1,
       wholesaleMinQty: 12,
     });
@@ -115,7 +115,7 @@ describe("ProductCard", () => {
     await user.click(screen.getByRole("button", { name: /add wholesale/i }));
 
     const [line] = useCartStore.getState().items;
-    expect(line).toMatchObject({ purchaseMode: "wholesale", unitPrice: 262.5 });
+    expect(line).toMatchObject({ purchaseMode: "wholesale", unitPrice: "262.50" });
   });
 
   it("keeps retail and wholesale as separate cart lines", async () => {

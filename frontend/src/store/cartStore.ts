@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+import { multiplyMoney, sumMoney } from "../utils/money";
+
 export type PurchaseMode = "retail" | "wholesale";
 
 export interface CartItem {
@@ -13,10 +15,11 @@ export interface CartItem {
   purchaseMode: PurchaseMode;
   quantity: number;
   /**
-   * Effective unit price for the line. The API resolves retail vs wholesale
-   * pricing, so this is never derived in the browser.
+   * Effective unit price for the line, as the exact decimal string the API
+   * returned. The API resolves retail vs wholesale pricing, so this is never
+   * derived in the browser, and the cart sums it without a float round-trip.
    */
-  unitPrice: number;
+  unitPrice: string;
   /** Quantity at which this product's wholesale tier starts, when it has one. */
   wholesaleMinQty?: number;
   /**
@@ -31,7 +34,7 @@ export interface CartItem {
 export interface AddCartItemInput {
   productId: string;
   name: string;
-  unitPrice: number;
+  unitPrice: string;
   purchaseMode: PurchaseMode;
   quantity?: number;
   brand?: string;
@@ -49,6 +52,9 @@ interface CartState {
   clearCart: () => void;
 }
 
+/** The subset of the store that is persisted, and the migrate() return type. */
+type PersistedCart = Pick<CartState, "items">;
+
 export function cartLineId(productId: string, purchaseMode: PurchaseMode): string {
   return `${productId}-${purchaseMode}`;
 }
@@ -56,8 +62,8 @@ export function cartLineId(productId: string, purchaseMode: PurchaseMode): strin
 export const selectCartCount = (items: CartItem[]): number =>
   items.reduce((sum, item) => sum + item.quantity, 0);
 
-export const selectCartSubtotal = (items: CartItem[]): number =>
-  items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+export const selectCartSubtotal = (items: CartItem[]): string =>
+  sumMoney(items.map((item) => multiplyMoney(item.unitPrice, item.quantity)));
 
 export const selectHasWholesaleLine = (items: CartItem[]): boolean =>
   items.some((item) => item.purchaseMode === "wholesale");
@@ -138,8 +144,25 @@ export const useCartStore = create<CartState>()(
       // `denthub-cart`. The new key deliberately orphans that payload rather
       // than migrating it, because the shapes are not compatible.
       name: "denthub-cart-v2",
-      version: 1,
+      // v1 stored `unitPrice` as a number; v2 keeps it as the exact decimal
+      // string the API returned, so a persisted cart must be converted on load.
+      version: 2,
       partialize: (state) => ({ items: state.items }),
+      migrate: (persisted, version) => {
+        if (version >= 2) return persisted as PersistedCart;
+
+        const previous = (persisted ?? {}) as {
+          items?: Array<Omit<CartItem, "unitPrice"> & { unitPrice: string | number }>;
+        };
+
+        return {
+          items: (previous.items ?? []).map((item) => ({
+            ...item,
+            unitPrice:
+              typeof item.unitPrice === "number" ? item.unitPrice.toFixed(2) : item.unitPrice,
+          })),
+        };
+      },
     },
   ),
 );
