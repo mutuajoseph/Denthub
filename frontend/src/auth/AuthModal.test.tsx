@@ -1,15 +1,32 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
+import { type CountryConfig } from "../lib/countryConfigApi";
+import { useCountryConfigStore } from "../store/countryConfigStore";
+import { useRegionStore } from "../store/regionStore";
 import { AuthModal } from "./AuthModal";
 
 vi.mock("../lib/auth", () => ({
   login: vi.fn(),
   register: vi.fn(),
 }));
+
+const ukConfig: CountryConfig = {
+  code: "GB",
+  name: "United Kingdom",
+  currency: "GBP",
+  currencySymbol: "£",
+  locale: "en-GB",
+  geography: { subdivisionLabel: "County", subdivisionPlural: "Counties", cityLabel: "City" },
+  features: {},
+  featureConfigs: {},
+  featureContexts: {},
+  insuranceProviders: [],
+  regions: [],
+};
 
 type StyleRule = { selector: string; className: string };
 
@@ -44,7 +61,7 @@ describe("AuthModal theming", () => {
     const { container } = render(<AuthModal onClose={vi.fn()} />);
 
     expect(container.querySelector("dialog")).not.toBeNull();
-    expect(screen.getByText("Welcome back to DentHub Kenya")).toBeInTheDocument();
+    expect(screen.getByText("Welcome back to DentHub")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /forgot password/i }));
     expect(screen.getByText("Forgot your password?")).toBeInTheDocument();
@@ -55,7 +72,7 @@ describe("AuthModal theming", () => {
 
     await user.click(screen.getByRole("button", { name: /back to sign in/i }));
     await user.click(screen.getByRole("button", { name: /^register$/i }));
-    expect(screen.getByText("Join DentHub Kenya")).toBeInTheDocument();
+    expect(screen.getByText("Join DentHub")).toBeInTheDocument();
 
     const styled = collectStyledElements(container);
 
@@ -109,5 +126,23 @@ describe("AuthModal theming", () => {
     await user.keyboard("{Escape}");
 
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("reflects the active region brand and contains no hardcoded country names", () => {
+    act(() => {
+      useRegionStore.setState({ regionCode: "GB", hasManualSelection: true });
+      useCountryConfigStore.setState({ config: ukConfig, regions: [], lastCountry: "GB" });
+    });
+
+    const { container } = render(<AuthModal onClose={vi.fn()} />);
+    const heading = screen.getByRole("heading", { level: 1 });
+
+    expect(heading).toHaveTextContent("DentHub");
+    expect(container.textContent).not.toMatch(/Kenya/i);
+
+    act(() => {
+      useRegionStore.setState({ regionCode: null, hasManualSelection: false });
+      useCountryConfigStore.setState({ config: null });
+    });
   });
 });
