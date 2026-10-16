@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Suspense, lazy, useState } from "react";
 import { Route, Routes } from "react-router-dom";
 
 import { AuthModal } from "./auth/AuthModal";
@@ -6,23 +6,57 @@ import RouteGuard from "./auth/RouteGuard";
 import { PUBLIC_ROLES } from "./auth/roles";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AppShell } from "./components/layout/AppShell";
+import LoadingSpinner from "./components/ui/LoadingSpinner";
 import { usePageMeta } from "./hooks/usePageMeta";
 import { clearStoredAuth, getStoredAuth } from "./lib/auth";
 import type { AuthResponse } from "./lib/auth";
-import { About } from "./pages/About";
-import { Dashboard } from "./pages/Dashboard";
-import { DentistProfile } from "./pages/DentistProfile";
-import { Emergency } from "./pages/Emergency";
-import { FindDentist } from "./pages/FindDentist";
-import Home from "./pages/Home";
-import { International } from "./pages/International";
-import { JobsBoard } from "./pages/JobsBoard";
-import { Magazine } from "./pages/Magazine";
-import NotFound from "./pages/NotFound";
-import OralCareShopPage from "./pages/OralCareShopPage";
-import { SignInPage } from "./pages/SignInPage";
-import Suppliers from "./pages/Suppliers";
-import { Training } from "./pages/Training";
+
+/*
+ * Route screens are code-split (issue #66) so the entry chunk ships only the
+ * shell — React, the router, the layout and this route table. Each screen is a
+ * separate chunk fetched on first navigation to it. Named exports become a
+ * default via the `.then()` shim; Home/NotFound/OralCareShopPage/Suppliers are
+ * already default exports.
+ */
+const About = lazy(() => import("./pages/About").then((module) => ({ default: module.About })));
+const Dashboard = lazy(() =>
+  import("./pages/Dashboard").then((module) => ({ default: module.Dashboard })),
+);
+const DentistProfile = lazy(() =>
+  import("./pages/DentistProfile").then((module) => ({ default: module.DentistProfile })),
+);
+const Emergency = lazy(() =>
+  import("./pages/Emergency").then((module) => ({ default: module.Emergency })),
+);
+const FindDentist = lazy(() =>
+  import("./pages/FindDentist").then((module) => ({ default: module.FindDentist })),
+);
+const Home = lazy(() => import("./pages/Home"));
+const International = lazy(() =>
+  import("./pages/International").then((module) => ({ default: module.International })),
+);
+const JobsBoard = lazy(() =>
+  import("./pages/JobsBoard").then((module) => ({ default: module.JobsBoard })),
+);
+const Magazine = lazy(() =>
+  import("./pages/Magazine").then((module) => ({ default: module.Magazine })),
+);
+const NotFound = lazy(() => import("./pages/NotFound"));
+const OralCareShopPage = lazy(() => import("./pages/OralCareShopPage"));
+const SignInPage = lazy(() =>
+  import("./pages/SignInPage").then((module) => ({ default: module.SignInPage })),
+);
+const Suppliers = lazy(() => import("./pages/Suppliers"));
+const Training = lazy(() =>
+  import("./pages/Training").then((module) => ({ default: module.Training })),
+);
+
+/** Fallback for a route chunk in flight; keeps layout height so the shell doesn't jump. */
+const routeFallback = (
+  <div className="flex min-h-[60vh] items-center justify-center py-16" aria-busy="true">
+    <LoadingSpinner size="lg" />
+  </div>
+);
 
 const App = () => {
   usePageMeta();
@@ -45,33 +79,35 @@ const App = () => {
   return (
     <ErrorBoundary>
       <AppShell onSignIn={() => setAuthOpen(true)} user={user} onLogout={handleLogout}>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/dentists" element={<FindDentist />} />
-          <Route path="/find-dentist" element={<FindDentist />} />
-          <Route path="/dentists/:listingType/:id" element={<DentistProfile user={user} />} />
-          <Route path="/dentist/:id" element={<DentistProfile user={user} />} />
-          <Route path="/dentists/:id" element={<DentistProfile user={user} />} />
-          <Route path="/international" element={<International />} />
-          <Route path="/emergency" element={<Emergency />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/jobs" element={<JobsBoard />} />
-          <Route path="/training" element={<Training />} />
-          <Route path="/magazine" element={<Magazine />} />
-          <Route path="/shop" element={<OralCareShopPage />} />
-          <Route path="/suppliers" element={<Suppliers />} />
-          <Route path="/suppliers/:slug" element={<Suppliers />} />
-          <Route path="/sign-in" element={<SignInPage onSuccess={handleLoginSuccess} />} />
-          <Route
-            path="/dashboard"
-            element={
-              <RouteGuard user={user} allowedRoles={PUBLIC_ROLES} unauthorizedPath="/">
-                <Dashboard user={user} />
-              </RouteGuard>
-            }
-          />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <Suspense fallback={routeFallback}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/dentists" element={<FindDentist />} />
+            <Route path="/find-dentist" element={<FindDentist />} />
+            <Route path="/dentists/:listingType/:id" element={<DentistProfile user={user} />} />
+            <Route path="/dentist/:id" element={<DentistProfile user={user} />} />
+            <Route path="/dentists/:id" element={<DentistProfile user={user} />} />
+            <Route path="/international" element={<International />} />
+            <Route path="/emergency" element={<Emergency />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/jobs" element={<JobsBoard />} />
+            <Route path="/training" element={<Training />} />
+            <Route path="/magazine" element={<Magazine />} />
+            <Route path="/shop" element={<OralCareShopPage />} />
+            <Route path="/suppliers" element={<Suppliers />} />
+            <Route path="/suppliers/:slug" element={<Suppliers />} />
+            <Route path="/sign-in" element={<SignInPage onSuccess={handleLoginSuccess} />} />
+            <Route
+              path="/dashboard"
+              element={
+                <RouteGuard user={user} allowedRoles={PUBLIC_ROLES} unauthorizedPath="/">
+                  <Dashboard user={user} />
+                </RouteGuard>
+              }
+            />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
       </AppShell>
 
       {authOpen && (
