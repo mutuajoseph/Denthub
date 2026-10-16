@@ -49,13 +49,13 @@ const wireProduct = {
 const getJsonMock = vi.mocked(getJson);
 
 describe("toMoney", () => {
-  it("parses the string amounts Pydantic emits for Decimal", () => {
-    expect(toMoney("260.00")).toBe(260);
-    expect(toMoney("337.50")).toBe(337.5);
+  it("keeps the exact string amounts Pydantic emits for Decimal", () => {
+    expect(toMoney("260.00")).toBe("260.00");
+    expect(toMoney("337.50")).toBe("337.50");
   });
 
-  it("passes numbers through", () => {
-    expect(toMoney(12.34)).toBe(12.34);
+  it("stringifies a number without deriving new precision", () => {
+    expect(toMoney(12.34)).toBe("12.34");
   });
 
   it("returns null for absent or unparseable values rather than NaN", () => {
@@ -66,7 +66,7 @@ describe("toMoney", () => {
 });
 
 describe("mapProduct", () => {
-  it("converts snake_case wire fields and parses money into numbers", () => {
+  it("converts snake_case wire fields and keeps money as exact strings", () => {
     const product = mapProduct(wireProduct);
 
     expect(product.name).toBe("Adult Medium Toothbrush");
@@ -74,9 +74,9 @@ describe("mapProduct", () => {
     expect(product.dentistRecommended).toBe(true);
     expect(product.imageUrl).toBeNull();
     expect(product.supplier.name).toBe("Nairobi Dental Supplies");
-    expect(product.pricing.unitPrice).toBe(260);
-    expect(product.pricing.lineTotal).toBe(6240);
-    expect(product.pricing.retailPrice).toBe(350);
+    expect(product.pricing.unitPrice).toBe("260.00");
+    expect(product.pricing.lineTotal).toBe("6240.00");
+    expect(product.pricing.retailPrice).toBe("350.00");
     expect(product.pricing.purchaseMode).toBe("wholesale");
     expect(product.pricing.wholesaleMinQty).toBe(12);
   });
@@ -87,7 +87,7 @@ describe("mapProduct", () => {
       pricing: { ...wireProduct.pricing, unit_price: "337.50", wholesale_price: "337.50" },
     });
 
-    expect(product.pricing.unitPrice).toBe(337.5);
+    expect(product.pricing.unitPrice).toBe("337.50");
   });
 
   it("keeps a retail-only product's wholesale price null", () => {
@@ -117,7 +117,7 @@ describe("mapProduct", () => {
 
     expect(product.brand).toBeNull();
     expect(product.supplier.name).toBe("");
-    expect(product.pricing.unitPrice).toBe(0);
+    expect(product.pricing.unitPrice).toBe("0.00");
   });
 });
 
@@ -143,11 +143,11 @@ describe("unitPriceForMode", () => {
   const product = mapProduct(wireProduct);
 
   it("selects the retail price already returned by the server", () => {
-    expect(unitPriceForMode(product, "retail")).toBe(350);
+    expect(unitPriceForMode(product, "retail")).toBe("350.00");
   });
 
   it("selects the wholesale price already returned by the server", () => {
-    expect(unitPriceForMode(product, "wholesale")).toBe(260);
+    expect(unitPriceForMode(product, "wholesale")).toBe("260.00");
   });
 
   it("falls back to retail when asking for wholesale on a retail-only product", () => {
@@ -156,7 +156,7 @@ describe("unitPriceForMode", () => {
       pricing: { ...wireProduct.pricing, wholesale_price: null, wholesale_min_qty: 0 },
     });
 
-    expect(unitPriceForMode(retailOnly, "wholesale")).toBe(350);
+    expect(unitPriceForMode(retailOnly, "wholesale")).toBe("350.00");
   });
 });
 

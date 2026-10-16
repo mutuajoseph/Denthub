@@ -7,7 +7,7 @@ import { type Product, hasWholesale, unitPriceForMode } from "../../lib/productA
 import type { PurchaseMode } from "../../store/cartStore";
 import { useCartStore } from "../../store/cartStore";
 import { cn } from "../../utils/cn";
-import { formatPrice } from "../../utils/formatCurrency";
+import { formatPriceString } from "../../utils/formatCurrency";
 import Badge from "../ui/Badge";
 import Button from "../ui/Button";
 import ProductImage from "./ProductImage";
@@ -114,13 +114,15 @@ export default function ProductCard({ product }: ProductCardProps) {
         )}
 
         <div className="mt-auto pt-1">
-          <p className="text-lg font-semibold text-ink">{formatPrice(activePrice, currency)}</p>
+          <p className="text-lg font-semibold text-ink">
+            {formatPriceString(activePrice, currency)}
+          </p>
 
           {wholesaleAvailable && wholesalePrice !== null && (
             <p className="mt-0.5 text-[11px] text-slate">
               {mode === "wholesale"
                 ? `Min order ${minQty} units · clinics & bulk buyers`
-                : `Wholesale from ${formatPrice(wholesalePrice, currency)} · min ${minQty} units`}
+                : `Wholesale from ${formatPriceString(wholesalePrice, currency)} · min ${minQty} units`}
             </p>
           )}
         </div>
