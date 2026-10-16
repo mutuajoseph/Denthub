@@ -23,7 +23,7 @@ export default function Suppliers() {
         coming soon.
       </p>
       <div className="mt-8">
-        <Button href="/" variant="graphite">
+        <Button to="/" variant="graphite">
           Back to home
         </Button>
       </div>
