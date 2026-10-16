@@ -61,7 +61,7 @@ describe("AppShell cart", () => {
     useCartStore.getState().addItem({
       productId: "p1",
       name: "Adult Medium Toothbrush",
-      unitPrice: 350,
+      unitPrice: "350.00",
       purchaseMode: "retail",
       currency: "KES",
     });
@@ -117,7 +117,7 @@ describe("AppShell cart", () => {
       useCartStore.getState().addItem({
         productId: "p1",
         name: "Adult Medium Toothbrush",
-        unitPrice: 350,
+        unitPrice: "350.00",
         purchaseMode: "retail",
         currency: "KES",
       });

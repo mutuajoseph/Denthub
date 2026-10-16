@@ -46,10 +46,10 @@ function buildProduct(overrides: Partial<ProductPage["items"][number]> = {}) {
       currency: "KES",
       quantity: 1,
       purchaseMode: "retail" as const,
-      unitPrice: 350,
-      lineTotal: 350,
-      retailPrice: 350,
-      wholesalePrice: 262.5,
+      unitPrice: "350.00",
+      lineTotal: "350.00",
+      retailPrice: "350.00",
+      wholesalePrice: "262.50",
       wholesaleMinQty: 12,
     },
     createdAt: "2026-09-27T07:21:09",
@@ -216,7 +216,7 @@ describe("OralCareShopPage", () => {
     // The line freezes the currency the API priced it in, so the global drawer
     // can label the cart from any page.
     expect(useCartStore.getState().items[0]).toMatchObject({
-      unitPrice: 350,
+      unitPrice: "350.00",
       currency: "KES",
     });
 

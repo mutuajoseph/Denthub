@@ -10,7 +10,7 @@ function addLine(overrides: Partial<AddCartItemInput> = {}) {
   useCartStore.getState().addItem({
     productId: "p1",
     name: "Adult Medium Toothbrush",
-    unitPrice: 350,
+    unitPrice: "350.00",
     purchaseMode: "retail",
     currency: "KES",
     ...overrides,
@@ -60,12 +60,12 @@ describe("CartDrawer", () => {
   });
 
   it("sums mixed retail and wholesale lines", () => {
-    addLine({ productId: "p1", purchaseMode: "retail", unitPrice: 350, quantity: 2 });
+    addLine({ productId: "p1", purchaseMode: "retail", unitPrice: "350.00", quantity: 2 });
     addLine({
       productId: "p2",
       name: "Dental Floss",
       purchaseMode: "wholesale",
-      unitPrice: 262.5,
+      unitPrice: "262.50",
       quantity: 4,
       wholesaleMinQty: 12,
     });
@@ -77,7 +77,7 @@ describe("CartDrawer", () => {
   });
 
   it("warns when a wholesale line is under the server's minimum quantity", () => {
-    addLine({ purchaseMode: "wholesale", unitPrice: 262.5, quantity: 2, wholesaleMinQty: 12 });
+    addLine({ purchaseMode: "wholesale", unitPrice: "262.50", quantity: 2, wholesaleMinQty: 12 });
     renderOpenDrawer();
 
     expect(screen.getByText(/wholesale starts at 12 units — add 10 more/i)).toBeInTheDocument();
@@ -85,7 +85,7 @@ describe("CartDrawer", () => {
 
   it("drops the minimum warning once the quantity reaches it", async () => {
     const user = userEvent.setup();
-    addLine({ purchaseMode: "wholesale", unitPrice: 262.5, quantity: 11, wholesaleMinQty: 12 });
+    addLine({ purchaseMode: "wholesale", unitPrice: "262.50", quantity: 11, wholesaleMinQty: 12 });
     renderOpenDrawer();
 
     expect(screen.getByText(/add 1 more/i)).toBeInTheDocument();
@@ -96,7 +96,7 @@ describe("CartDrawer", () => {
   });
 
   it("does not warn about minimums for a retail line", () => {
-    addLine({ purchaseMode: "retail", unitPrice: 350, quantity: 1, wholesaleMinQty: 12 });
+    addLine({ purchaseMode: "retail", unitPrice: "350.00", quantity: 1, wholesaleMinQty: 12 });
     renderOpenDrawer();
 
     expect(screen.queryByText(/wholesale starts at/i)).not.toBeInTheDocument();
@@ -124,14 +124,14 @@ describe("CartDrawer", () => {
   });
 
   it("notes that wholesale lines need a clinic account", () => {
-    addLine({ purchaseMode: "wholesale", unitPrice: 262.5, wholesaleMinQty: 12 });
+    addLine({ purchaseMode: "wholesale", unitPrice: "262.50", wholesaleMinQty: 12 });
     renderOpenDrawer();
 
     expect(screen.getByText(/wholesale lines need a clinic account/i)).toBeInTheDocument();
   });
 
   it("does not show the clinic note for a retail-only cart", () => {
-    addLine({ purchaseMode: "retail", unitPrice: 350 });
+    addLine({ purchaseMode: "retail", unitPrice: "350.00" });
     renderOpenDrawer();
 
     expect(screen.queryByText(/wholesale lines need a clinic account/i)).not.toBeInTheDocument();
@@ -187,11 +187,11 @@ describe("CartDrawer", () => {
     expect(useCartStore.getState().items).toHaveLength(0);
   });
 
-  it("truncates fractional cents in the line total rather than showing float dust", () => {
-    addLine({ unitPrice: 0.1, quantity: 3 });
+  it("keeps the line total and subtotal exact for a repeating float value", () => {
+    addLine({ unitPrice: "0.10", quantity: 3 });
     renderOpenDrawer();
 
-    // 0.1 * 3 === 0.30000000000000004 in IEEE754
+    // 0.1 * 3 === 0.30000000000000004 in IEEE754; the cart never touches a float.
     expect(screen.getAllByText("KES 0.30")).toHaveLength(2);
   });
 });

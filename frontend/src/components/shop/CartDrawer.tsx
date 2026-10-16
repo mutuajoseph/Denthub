@@ -12,13 +12,9 @@ import {
 } from "../../store/cartStore";
 import { useCartUiStore } from "../../store/cartUiStore";
 import { cn } from "../../utils/cn";
-import { formatPrice } from "../../utils/formatCurrency";
+import { formatPriceString } from "../../utils/formatCurrency";
+import { multiplyMoney } from "../../utils/money";
 import { ProductThumbnail } from "./ProductImage";
-
-/** Money is summed in the browser here, so round off the float dust. */
-function toCents(value: number): number {
-  return Math.round(value * 100) / 100;
-}
 
 function CartLine({
   item,
@@ -92,7 +88,7 @@ function CartLine({
           </div>
 
           <p className="text-sm font-semibold text-ink">
-            {formatPrice(toCents(item.unitPrice * item.quantity), currency)}
+            {formatPriceString(multiplyMoney(item.unitPrice, item.quantity), currency)}
           </p>
         </div>
 
@@ -237,7 +233,7 @@ export default function CartDrawer() {
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-slate">Subtotal</span>
                       <span className="text-lg font-semibold text-ink">
-                        {formatPrice(toCents(subtotal), currency)}
+                        {formatPriceString(subtotal, currency)}
                       </span>
                     </div>
 
