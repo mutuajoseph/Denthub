@@ -175,11 +175,16 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
       });
     }
 
-    throw new ApiError("Cannot reach the API. Is the backend running on port 8000?", {
-      status: 0,
-      code: "network_error",
-      detail: error,
-    });
+    throw new ApiError(
+      import.meta.env.DEV
+        ? "Cannot reach the API. Is the backend running on port 8000?"
+        : "Cannot reach the API. Please check your connection or try again later.",
+      {
+        status: 0,
+        code: "network_error",
+        detail: error,
+      },
+    );
   } finally {
     clearTimeout(timer);
   }
