@@ -13,8 +13,11 @@
 # catalogue. It must not be appended to startCommand: startCommand runs uvicorn,
 # which blocks forever, so anything chained after it never executes.
 #
-# The seeds are idempotent and order-dependent (countries before listings before
-# jobs), so they run on every deploy; re-running updates the same rows.
+# One entrypoint does both: `app.scripts.seed_all` migrates once, then runs the
+# seeds in dependency order (products -> countries -> listings -> jobs ->
+# magazine -> training). Running the six scripts individually migrated seven
+# times per deploy (issue #70). The seeds are idempotent, so they run on every
+# deploy and re-running just updates the same rows.
 # Migrations are forward-only here: pair every schema change with a deploy step
 # that tolerates the old shape (or use `expand -> migrate -> contract` across two
 # releases).
@@ -28,7 +31,7 @@ services:
     branch: main
     autoDeploy: false
     buildCommand: pip install uv && uv sync --frozen
-    preDeployCommand: uv run alembic upgrade head && uv run python -m app.scripts.seed_products && uv run python -m app.scripts.seed_countries && uv run python -m app.scripts.seed_listings && uv run python -m app.scripts.seed_jobs && uv run python -m app.scripts.seed_magazine && uv run python -m app.scripts.seed_training
+    preDeployCommand: uv run python -m app.scripts.seed_all
     startCommand: uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/v1/health
     envVars:

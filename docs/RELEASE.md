@@ -99,14 +99,17 @@ re-running the failed run from the Actions UI.
 5. Service → **Settings → Deploy Hook** → copy the URL.
 6. Confirm the health check is `/api/v1/health`.
 
-> The blueprint's `preDeployCommand` runs `alembic upgrade head` and then the demo
-> seed scripts (`seed_products` → `seed_countries` → `seed_listings` → `seed_jobs` →
+> The blueprint's `preDeployCommand` runs `uv run python -m app.scripts.seed_all`,
+> which runs `alembic upgrade head` once and then seeds the demo data
+> (`seed_products` → `seed_countries` → `seed_listings` → `seed_jobs` →
 > `seed_magazine` → `seed_training`) before the new build goes live. Migrations and
 > data therefore land before the service serves traffic. The seeds are idempotent and
-> run on every deploy. Do **not** move them to `startCommand`: it runs `uvicorn`, which
-> blocks forever, so commands chained after it never run. If you change the database
-> URL after the first deploy, run `alembic upgrade head` (and the seeds, if it is a new
-> database) against it once by hand.
+> run on every deploy. Each `seed_*` script is still runnable on its own (it migrates,
+> then seeds itself); `seed_all` is just the single deploy entrypoint. Do **not** move
+> the command to `startCommand`: it runs `uvicorn`, which blocks forever, so commands
+> chained after it never run. If you change the database URL after the first deploy,
+> run `alembic upgrade head` (and the seeds, if it is a new database) against it once
+> by hand.
 
 ### 2. Vercel (frontend)
 
