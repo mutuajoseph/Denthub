@@ -14,6 +14,7 @@ from app.config import DEV_JWT_SECRET_KEY, Settings
 
 def _clear_secrets(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("JWT_SECRET_KEY", raising=False)
+    monkeypatch.delenv("CORS_ORIGINS", raising=False)
 
 
 def test_local_without_secret_uses_dev_default(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -27,6 +28,7 @@ def test_local_without_secret_uses_dev_default(monkeypatch: pytest.MonkeyPatch) 
 def test_production_without_secret_refuses_to_start(monkeypatch: pytest.MonkeyPatch) -> None:
     _clear_secrets(monkeypatch)
     monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("CORS_ORIGINS", "https://example.com")
 
     with pytest.raises(RuntimeError, match="JWT_SECRET_KEY"):
         Settings.from_env()
@@ -36,6 +38,7 @@ def test_production_with_dev_default_secret_refuses_to_start(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("CORS_ORIGINS", "https://example.com")
     monkeypatch.setenv("JWT_SECRET_KEY", DEV_JWT_SECRET_KEY)
 
     with pytest.raises(RuntimeError, match="JWT_SECRET_KEY"):
@@ -44,6 +47,15 @@ def test_production_with_dev_default_secret_refuses_to_start(
 
 def test_production_with_real_secret_starts(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("CORS_ORIGINS", "https://example.com")
     monkeypatch.setenv("JWT_SECRET_KEY", "a-real-secret-from-the-dashboard")
 
     assert Settings.from_env().jwt_secret_key == "a-real-secret-from-the-dashboard"
+def test_production_without_cors_refuses_to_start(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Production must have an explicit CORS_ORIGINS value."""
+    _clear_secrets(monkeypatch)
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("JWT_SECRET_KEY", "a-real-secret-from-the-dashboard")
+
+    with pytest.raises(RuntimeError, match="CORS_ORIGINS"):
+        Settings.from_env()

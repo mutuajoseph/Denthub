@@ -32,12 +32,16 @@ class Settings:
 
     @classmethod
     def from_env(cls) -> Settings:
-        origins = os.getenv(
-            "CORS_ORIGINS",
-            "http://localhost:5173",
-        )
-
         environment = os.getenv("ENVIRONMENT", "local")
+
+        cors_origins_env = os.getenv("CORS_ORIGINS")
+        if environment == "production" and not cors_origins_env:
+            raise RuntimeError(
+                "CORS_ORIGINS must be set to the allowed frontend origin(s) in production; "
+                "refusing to start with a localhost-only default."
+            )
+
+        origins = cors_origins_env or "http://localhost:5173"
 
         database_url = os.getenv(
             "DATABASE_URL",

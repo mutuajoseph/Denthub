@@ -21,6 +21,7 @@ import { Magazine } from "./pages/Magazine";
 import NotFound from "./pages/NotFound";
 import OralCareShopPage from "./pages/OralCareShopPage";
 import { SignInPage } from "./pages/SignInPage";
+import Suppliers from "./pages/Suppliers";
 import { Training } from "./pages/Training";
 
 const App = () => {
@@ -58,6 +59,8 @@ const App = () => {
           <Route path="/training" element={<Training />} />
           <Route path="/magazine" element={<Magazine />} />
           <Route path="/shop" element={<OralCareShopPage />} />
+          <Route path="/suppliers" element={<Suppliers />} />
+          <Route path="/suppliers/:slug" element={<Suppliers />} />
           <Route path="/sign-in" element={<SignInPage onSuccess={handleLoginSuccess} />} />
           <Route
             path="/dashboard"
