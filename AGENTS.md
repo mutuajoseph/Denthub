@@ -113,8 +113,8 @@ the PR opens.
 ## Definition of done
 
 A change is done when every command below passes for the side(s) it touched,
-run from the repo root. The first five mirror CI exactly. CI does not run the
-tests yet, so running them is on you.
+run from the repo root. All of them run in CI too (as the quality + test jobs),
+but a red check costs a round-trip — run them before you push.
 
 ```bash
 uv run --directory backend ruff check app
