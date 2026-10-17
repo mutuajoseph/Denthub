@@ -1,10 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   type AppointmentPageWire,
+  type AppointmentWire,
   type BookAppointmentRequest,
   DASHBOARD_APPOINTMENT_LIMIT,
+  type UpdateAppointmentRequest,
   bookAppointment,
   fetchMyAppointments,
+  updateAppointment,
 } from "../lib/appointmentApi";
 
 /**
@@ -43,6 +46,28 @@ export function useBookAppointment() {
     mutationFn: (request: BookAppointmentRequest) => bookAppointment(request),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["appointments"] });
+    },
+  });
+}
+
+/**
+ * Cancel or reschedule one Appointment. Invalidating the list key refetches the
+ * dashboard, so the new status and slot appear without a manual reload.
+ */
+export function useUpdateAppointment() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      appointmentId,
+      request,
+    }: {
+      appointmentId: string;
+      request: UpdateAppointmentRequest;
+    }) => updateAppointment(appointmentId, request),
+    onSuccess: (updated: AppointmentWire) => {
+      void queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      return updated;
     },
   });
 }
