@@ -16,7 +16,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 
-import { isPublicRole } from "../auth/roles";
+import { isFacilityRole, isPublicRole } from "../auth/roles";
 import { splitBrand } from "../config/regions";
 import { useRegion } from "../hooks/useRegion";
 import type { AuthUser } from "../lib/auth";
@@ -46,10 +46,15 @@ type AccountLink = { label: string; href: string };
 
 /**
  * Account destinations the signed-in user may open, in menu order. Screens land
- * here as their routes appear (#67); only the account shell exists so far, and
- * only public accounts have one. See #58 and #75.
+ * here as their routes appear (#67). Facility accounts get their own "Facility"
+ * entry to the clinic dashboard (#81); every other public account lands on the
+ * account shell. See #58 and #75.
  */
 function accountLinksFor(user: AuthUser): AccountLink[] {
+  if (isFacilityRole(user)) {
+    return [{ label: "Facility", href: "/dashboard/facility" }];
+  }
+
   if (!isPublicRole(user)) {
     return [];
   }

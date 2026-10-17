@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import Boolean, DateTime, String, select
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
@@ -34,6 +34,17 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(50), default="patient", nullable=False)
     account_status: Mapped[str] = mapped_column(String(20), default="active", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    #: The Facility a facility-scoped account works at (owner, front office,
+    #: facility dentist). Null for patients and every other role, and null for a
+    #: facility user not yet linked to a listing (#81). SET NULL rather than
+    #: RESTRICT: losing a clinic should not delete its people.
+    facility_id: Mapped[str | None] = mapped_column(
+        String(36),
+        ForeignKey("facilities.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )
@@ -70,3 +81,14 @@ class UserRepository:
         # Flush to generate IDs/timestamps before returning
         await session.flush()
         return user
+
+    @staticmethod
+    async def list_for_facility(session: AsyncSession, *, facility_id: str) -> list[User]:
+        """The active users linked to a Facility — its staff, by name (#81)."""
+        stmt = (
+            select(User)
+            .where(User.facility_id == facility_id, User.is_active)
+            .order_by(User.full_name.asc())
+        )
+        result = await session.execute(stmt)
+        return list(result.scalars().all())

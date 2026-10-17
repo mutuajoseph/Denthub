@@ -209,3 +209,11 @@ export function postJson<T>(
 ): Promise<T> {
   return apiRequest<T>(path, { ...options, method: "POST", json });
 }
+
+export function patchJson<T>(
+  path: string,
+  json: unknown,
+  options: ApiRequestOptions = {},
+): Promise<T> {
+  return apiRequest<T>(path, { ...options, method: "PATCH", json });
+}

@@ -12,6 +12,7 @@ from app.routes.v1 import (
     appointments,
     auth,
     config,
+    facility,
     health,
     home,
     jobs,
@@ -34,3 +35,4 @@ v1_router.include_router(jobs.router)
 v1_router.include_router(magazine.router)
 v1_router.include_router(training.router)
 v1_router.include_router(appointments.router)
+v1_router.include_router(facility.router)
