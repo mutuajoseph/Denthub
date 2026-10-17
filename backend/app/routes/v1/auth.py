@@ -14,7 +14,9 @@ from app.logic.v1.auth import (
     UserLogin,
     UserResponse,
     UserSignup,
+    get_current_staff,
     get_current_user,
+    login_staff,
     login_user,
     signup_user,
 )
@@ -50,3 +52,29 @@ async def me(
 ) -> UserResponse:
     """Retrieve details of the currently authenticated user."""
     return await get_current_user(state, credentials.credentials)
+
+
+@router.post(
+    "/staff/login",
+    response_model=AuthResponseModel,
+    responses=standard_error_responses(),
+)
+async def staff_login(
+    data: UserLogin,
+    state: AppState = Depends(get_app_state),
+) -> AuthResponseModel:
+    """Verify platform-staff credentials and return a staff access token."""
+    return await login_staff(state, data)
+
+
+@router.get(
+    "/staff/me",
+    response_model=UserResponse,
+    responses=standard_error_responses(),
+)
+async def staff_me(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    state: AppState = Depends(get_app_state),
+) -> UserResponse:
+    """Retrieve details of the current user, requiring a staff access token."""
+    return await get_current_staff(state, credentials.credentials)

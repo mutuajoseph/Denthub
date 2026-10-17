@@ -42,6 +42,19 @@ PROFESSIONAL_ACCOUNT_TYPES: frozenset[str] = frozenset(
 #: Roles a human granted, as opposed to roles a signup could ever ask for.
 STAFF_ROLES: frozenset[str] = frozenset({"staff", "admin", "super_admin", "platform_operator"})
 
+#: Roles that may sign in through the staff surface (``/staff/access``). A
+#: subset of ``STAFF_ROLES``: the generic ``staff`` role signs in publicly, so
+#: only platform staff — admins and operators — use the staff surface.
+STAFF_SURFACE_ROLES: frozenset[str] = frozenset({"admin", "super_admin", "platform_operator"})
+
+#: Tokens carry an issuer and a scope so a staff token is distinguishable from
+#: a public one even though both are signed with the same secret. Issue #80,
+#: decision: separate issuer + scope claim, one users table.
+PUBLIC_TOKEN_ISSUER = "denthub-public"
+STAFF_TOKEN_ISSUER = "denthub-staff"
+PUBLIC_SCOPE = "public"
+STAFF_SCOPE = "staff"
+
 #: Roles that may perform a user-admin action such as approving an account.
 ADMIN_ROLES: frozenset[str] = frozenset({"admin", "super_admin"})
 
@@ -54,6 +67,11 @@ PATIENT_ROLES: frozenset[str] = frozenset({"patient", "international_patient"})
 def is_staff_role(role: str) -> bool:
     """Whether a stored role is a staff role rather than a public one."""
     return role in STAFF_ROLES
+
+
+def is_staff_surface_role(role: str) -> bool:
+    """Whether a stored role may use the staff surface (``/staff/access``)."""
+    return role in STAFF_SURFACE_ROLES
 
 
 class UserResponse(BaseModel):
@@ -119,17 +137,28 @@ def create_access_token(
     state: AppState,
     user_id: str,
     role: str,
+    *,
+    scope: str = PUBLIC_SCOPE,
 ) -> str:
-    """Create a new JSON Web Token for authentication."""
+    """Create a new JSON Web Token for authentication.
+
+    ``scope`` selects the token kind: a public token (the default) or a staff
+    token minted by the staff sign-in route. Both are signed with the same
+    secret, so the issuer and scope claims are what a staff route checks.
+    """
 
     settings = state.settings
 
     now = datetime.now(UTC)
     expire = now + timedelta(days=7)
 
+    issuer = STAFF_TOKEN_ISSUER if scope == STAFF_SCOPE else PUBLIC_TOKEN_ISSUER
+
     payload = {
         "sub": user_id,
         "role": role,
+        "scope": scope,
+        "iss": issuer,
         "iat": int(now.timestamp()),
         "exp": int(expire.timestamp()),
     }
@@ -251,10 +280,61 @@ async def login_user(
         )
 
 
-async def get_user_from_token(state: AppState, token: str) -> User:
-    """Load the token's subject from the database, rejecting invalid tokens."""
+async def login_staff(
+    state: AppState,
+    data: UserLogin,
+) -> AuthResponseModel:
+    """Verify credentials for the staff surface and mint a staff token.
+
+    The same users table backs both surfaces; a staff token is marked by its
+    issuer and ``scope`` claim (issue #80). An account that is not platform
+    staff is refused even with correct credentials — it simply has no staff
+    surface to sign in to.
+    """
+
+    async with state.db_session_maker() as session:
+        user = await UserRepository.get_by_email(
+            session,
+            data.email,
+        )
+
+        if not user or not verify_password(
+            data.password,
+            user.password_hash,
+        ):
+            raise UnauthorizedException(message="Incorrect email or password")
+
+        if not user.is_active:
+            raise ForbiddenException(message="User account is deactivated")
+
+        if not is_staff_surface_role(user.role):
+            raise ForbiddenException(message="This account may not sign in at the staff surface")
+
+        token = create_access_token(
+            state,
+            user.id,
+            user.role,
+            scope=STAFF_SCOPE,
+        )
+
+        return AuthResponseModel(
+            access_token=token,
+            token_type="bearer",
+            user=UserResponse(
+                id=user.id,
+                email=user.email,
+                role=user.role,
+                full_name=user.full_name,
+                is_staff=is_staff_role(user.role),
+                account_status=cast(AccountStatus, user.account_status),
+            ),
+        )
+
+
+def _decode_or_unauthorized(state: AppState, token: str) -> dict[str, Any]:
+    """Decode a token, mapping any JWT failure to a 401."""
     try:
-        payload = decode_access_token(
+        return decode_access_token(
             state,
             token,
         )
@@ -265,6 +345,9 @@ async def get_user_from_token(state: AppState, token: str) -> User:
             detail=str(e),
         ) from e
 
+
+async def _load_user_from_payload(state: AppState, payload: dict[str, Any]) -> User:
+    """Load the payload's subject from the database, or raise a 401."""
     user_id = payload.get("sub")
 
     if not user_id:
@@ -282,6 +365,11 @@ async def get_user_from_token(state: AppState, token: str) -> User:
         return user
 
 
+async def get_user_from_token(state: AppState, token: str) -> User:
+    """Load the token's subject from the database, rejecting invalid tokens."""
+    return await _load_user_from_payload(state, _decode_or_unauthorized(state, token))
+
+
 async def get_current_user(
     state: AppState,
     token: str,
@@ -292,6 +380,39 @@ async def get_current_user(
 
     if not user.is_active:
         raise ForbiddenException(message="User account is deactivated")
+
+    return UserResponse(
+        id=user.id,
+        email=user.email,
+        role=user.role,
+        full_name=user.full_name,
+        is_staff=is_staff_role(user.role),
+        account_status=cast(AccountStatus, user.account_status),
+    )
+
+
+async def get_current_staff(
+    state: AppState,
+    token: str,
+) -> UserResponse:
+    """Return the current user, requiring a staff-surface token.
+
+    A public token presented here is refused: the ``scope`` claim, not the
+    stored role alone, decides whether a caller is on the staff surface.
+    """
+
+    payload = _decode_or_unauthorized(state, token)
+
+    if payload.get("scope") != STAFF_SCOPE:
+        raise ForbiddenException(message="A staff access token is required for this route")
+
+    user = await _load_user_from_payload(state, payload)
+
+    if not user.is_active:
+        raise ForbiddenException(message="User account is deactivated")
+
+    if not is_staff_surface_role(user.role):
+        raise ForbiddenException(message="This account may not use the staff surface")
 
     return UserResponse(
         id=user.id,
