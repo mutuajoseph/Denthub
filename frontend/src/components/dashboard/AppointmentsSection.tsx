@@ -3,12 +3,14 @@ import { useMyAppointments } from "../../hooks/useAppointments";
 import { APPOINTMENT_STATUS_LABELS } from "../../lib/appointmentApi";
 import { formatAppointmentSlot } from "../../utils/appointmentTime";
 import Badge from "../ui/Badge";
+import { AppointmentActions } from "./AppointmentActions";
 
-const STATUS_TONES: Record<string, "neutral" | "success" | "ink" | "graphite"> = {
+const STATUS_TONES: Record<string, "neutral" | "success" | "ink" | "graphite" | "danger"> = {
   PENDING: "neutral",
   CONFIRMED: "success",
   IN_PROGRESS: "graphite",
   COMPLETED: "ink",
+  CANCELLED: "danger",
 };
 
 function describeError(error: unknown): string {
@@ -79,6 +81,7 @@ export function AppointmentsSection({ userId }: { userId: string | null }) {
                     {appointment.note}
                   </p>
                 )}
+                <AppointmentActions appointment={appointment} />
               </li>
             );
           })}

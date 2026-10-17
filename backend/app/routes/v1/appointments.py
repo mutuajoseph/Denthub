@@ -1,9 +1,9 @@
 """Appointment routes — thin HTTP adapters over appointment logic.
 
-Booking and reading back are Patient-only: the routes carry a bearer token, and
-the logic decides the role (root ``AGENTS.md``, "Auth and security"). Both
-answers document 401 and 403 as well as the shared envelope, because an
-authenticated, role-gated route can return them.
+Booking, reading back, and cancelling/rescheduling are Patient-only: the routes
+carry a bearer token, and the logic decides the role (root ``AGENTS.md``, "Auth
+and security"). Every answer documents 401 and 403 as well as the shared
+envelope, because an authenticated, role-gated route can return them.
 """
 
 from __future__ import annotations
@@ -17,8 +17,10 @@ from app.logic.v1.appointments import (
     AppointmentPage,
     AppointmentRequest,
     AppointmentResponse,
+    AppointmentUpdateRequest,
     book_appointment,
     list_my_appointments,
+    update_my_appointment,
 )
 from app.utils.openapi_helpers import standard_error_responses
 from app.utils.state import AppState
@@ -62,4 +64,24 @@ async def read_mine(
         token=credentials.credentials,
         limit=limit,
         offset=offset,
+    )
+
+
+@router.patch(
+    "/{appointment_id}",
+    response_model=AppointmentResponse,
+    responses=standard_error_responses(401, 403),
+)
+async def update_mine(
+    appointment_id: str,
+    request: AppointmentUpdateRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    state: AppState = Depends(get_app_state),
+) -> AppointmentResponse:
+    """Cancel or reschedule one of the signed-in Patient's own Appointments."""
+    return await update_my_appointment(
+        state,
+        token=credentials.credentials,
+        appointment_id=appointment_id,
+        request=request,
     )
