@@ -245,6 +245,15 @@ describe("App routes", () => {
     expect(screen.queryByRole("heading", { name: /page not found/i })).toBeNull();
   });
 
+  it("renders the standalone staff surface at /staff/access", () => {
+    renderApp("/staff/access");
+
+    expect(screen.getByRole("heading", { name: /staff sign in/i })).toBeInTheDocument();
+    // The public login must not leak into the staff surface.
+    expect(screen.queryByRole("heading", { name: /sign in to your account/i })).toBeNull();
+    expect(screen.queryByRole("heading", { name: /page not found/i })).toBeNull();
+  });
+
   it("renders the account shell for a signed-in patient", () => {
     seedAuth(ROLE.PATIENT);
 
