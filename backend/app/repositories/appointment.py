@@ -228,6 +228,31 @@ class AppointmentRepository:
         return int(result.scalar_one())
 
     @staticmethod
+    async def count_treating_for_facility(
+        session: AsyncSession,
+        *,
+        patient_id: str,
+        facility_id: str,
+        statuses: tuple[AppointmentStatus, ...],
+    ) -> int:
+        """Whether a Facility has a treating Appointment with a Patient (#84).
+
+        A "treating" link is an Appointment the clinic has accepted — one in the
+        given statuses. A still-``PENDING`` request is not yet care.
+        """
+        stmt = (
+            select(func.count())
+            .select_from(Appointment)
+            .where(
+                Appointment.patient_id == patient_id,
+                Appointment.facility_id == facility_id,
+                Appointment.status.in_(statuses),
+            )
+        )
+        result = await session.execute(stmt)
+        return int(result.scalar_one())
+
+    @staticmethod
     async def find_duplicate(
         session: AsyncSession,
         *,

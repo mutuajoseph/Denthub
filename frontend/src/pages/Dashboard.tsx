@@ -1,5 +1,6 @@
 import { isPatientRole } from "../auth/roles";
 import { AppointmentsSection } from "../components/dashboard/AppointmentsSection";
+import { HealthRecordSection } from "../components/dashboard/HealthRecordSection";
 import Card from "../components/ui/Card";
 import type { AuthUser } from "../lib/auth";
 
@@ -63,6 +64,12 @@ export function Dashboard({ user }: DashboardProps) {
         {isPatientRole(user) && (
           <div className="sm:col-span-2">
             <AppointmentsSection userId={user.id} />
+          </div>
+        )}
+
+        {isPatientRole(user) && (
+          <div className="sm:col-span-2">
+            <HealthRecordSection patientId={user.id} />
           </div>
         )}
       </div>
