@@ -14,6 +14,12 @@
 # `specialists.verification_tier`). The prefix runs before uvicorn, which blocks
 # forever; nothing may be chained after it.
 #
+# The app also runs `alembic upgrade head` in its lifespan when
+# ENVIRONMENT=production (app/main.py). That is the safety net: if a provider
+# setting (this start command) is not applied, the process still refuses to
+# serve an unmigrated database. Migrations are idempotent, so the two paths
+# running on the same deploy is harmless.
+#
 # One entrypoint does both: `app.scripts.seed_all` migrates once, then runs the
 # seeds in dependency order (products -> countries -> listings -> jobs ->
 # magazine -> training). Running the six scripts individually migrated seven

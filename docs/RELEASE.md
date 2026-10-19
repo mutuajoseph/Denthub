@@ -113,6 +113,12 @@ re-running the failed run from the Actions UI.
 > on every cold start, not just per deploy. The service fails to start if the
 > migration or a seed fails, which is the intended trade-off.
 >
+> **Safety net:** with `ENVIRONMENT=production`, `app/main.py` also runs
+> `alembic upgrade head` in its lifespan before accepting traffic. That makes
+> "schema before code" independent of provider settings: if the start command above
+> is not applied (as happened in v0.12.0), the process still migrates or refuses to
+> start. The two paths run the same idempotent migrations.
+>
 > Each `seed_*` script is still runnable on its own (it migrates, then seeds itself);
 > `seed_all` is just the single deploy entrypoint. If you change the database URL,
 > run `alembic upgrade head` (and the seeds, if it is a new database) against it once
