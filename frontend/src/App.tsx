@@ -49,6 +49,9 @@ const JobsBoard = lazy(() =>
 const Magazine = lazy(() =>
   import("./pages/Magazine").then((module) => ({ default: module.Magazine })),
 );
+const Messages = lazy(() =>
+  import("./pages/Messages").then((module) => ({ default: module.Messages })),
+);
 const NotFound = lazy(() => import("./pages/NotFound"));
 const OralCareShopPage = lazy(() => import("./pages/OralCareShopPage"));
 const SignInPage = lazy(() =>
@@ -147,6 +150,14 @@ const App = () => {
               element={
                 <RouteGuard user={user} allowedRoles={TRAINING_PROVIDER_ROLES} unauthorizedPath="/">
                   <TrainingDashboard />
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="/messages"
+              element={
+                <RouteGuard user={user} allowedRoles={PUBLIC_ROLES} unauthorizedPath="/">
+                  <Messages user={user} />
                 </RouteGuard>
               }
             />

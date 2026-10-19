@@ -59,12 +59,10 @@ function renderNavbar(user: AuthUser) {
 }
 
 async function openAccountMenu(user: AuthUser) {
-  const userEventApi = userEvent.setup();
+  const account = userEvent.setup();
   renderNavbar(user);
-  await userEventApi.click(
-    screen.getByRole("button", { name: `Account menu for ${user.full_name}` }),
-  );
-  return userEventApi;
+  await account.click(screen.getByRole("button", { name: `Account menu for ${user.full_name}` }));
+  return account;
 }
 
 describe("Navbar account menu", () => {
@@ -126,5 +124,22 @@ describe("Navbar account menu", () => {
 
     expect(screen.getByRole("menuitem", { name: "Dashboard" })).toBeInTheDocument();
     expect(screen.queryByRole("menuitem", { name: "Training" })).toBeNull();
+  });
+
+  it("restores the Messages entry for a public account", async () => {
+    await openAccountMenu(makeUser(ROLE.PATIENT));
+
+    expect(screen.getByRole("menuitem", { name: "Dashboard" })).toHaveAttribute(
+      "href",
+      "/dashboard",
+    );
+    expect(screen.getByRole("menuitem", { name: "Messages" })).toHaveAttribute("href", "/messages");
+  });
+
+  it("gives a staff account no account destinations", async () => {
+    await openAccountMenu(makeUser(ROLE.ADMIN));
+
+    expect(screen.queryByRole("menuitem", { name: "Messages" })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: "Dashboard" })).toBeNull();
   });
 });
