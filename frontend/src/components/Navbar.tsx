@@ -16,7 +16,12 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 
-import { isFacilityRole, isPublicRole, isSupplierRole } from "../auth/roles";
+import {
+  isFacilityRole,
+  isPublicRole,
+  isSupplierRole,
+  isTrainingProviderRole,
+} from "../auth/roles";
 import { splitBrand } from "../config/regions";
 import { useRegion } from "../hooks/useRegion";
 import type { AuthUser } from "../lib/auth";
@@ -63,6 +68,10 @@ function accountLinksFor(user: AuthUser): AccountLink[] {
 
   if (isSupplierRole(user)) {
     links.push({ label: "My store", href: "/dashboard/supplier" });
+  }
+
+  if (isTrainingProviderRole(user)) {
+    links.push({ label: "Training", href: "/dashboard/training" });
   }
 
   return links;

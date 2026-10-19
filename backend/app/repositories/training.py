@@ -18,6 +18,8 @@ from typing import Any
 from sqlalchemy import (
     DateTime,
     ForeignKey,
+    Index,
+    Integer,
     Numeric,
     String,
     Text,
@@ -35,10 +37,13 @@ class TrainingProvider(Base):
     """The organising body behind courses and webinars, per market.
 
     ``is_verified`` distinguishes a known, vetted body from one a patient or
-    dentist should treat with more care.
+    dentist should treat with more care. ``owner_user_id`` links the body to its
+    training-provider account: one account owns at most one provider, and the
+    account creates it from ``/dashboard/training`` (#79).
     """
 
     __tablename__ = "training_providers"
+    __table_args__ = (Index("uq_training_providers_owner_user_id", "owner_user_id", unique=True),)
 
     id: Mapped[str] = mapped_column(
         String(36),
@@ -48,6 +53,11 @@ class TrainingProvider(Base):
     name: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
     country_code: Mapped[str] = mapped_column(String(2), nullable=False, index=True)
     is_verified: Mapped[bool] = mapped_column(nullable=False, default=False)
+    owner_user_id: Mapped[str | None] = mapped_column(
+        String(36),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )
@@ -62,6 +72,7 @@ class TrainingCourse(Base):
     ``price`` may be ``None`` - free CPD exists - and when it is set the row
     carries its own ``currency`` (``NUMERIC(12,2)``), per the root ``AGENTS.md``
     money rule. ``delivery_mode`` is ``in_person``, ``online``, or ``blended``.
+    ``cpd_points`` is the CPD credit a professional earns by completing it.
     """
 
     __tablename__ = "training_courses"
@@ -84,6 +95,7 @@ class TrainingCourse(Base):
     delivery_mode: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
     price: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     currency: Mapped[str | None] = mapped_column(String(3), nullable=True)
+    cpd_points: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )
@@ -118,6 +130,7 @@ class TrainingWebinar(Base):
     country_code: Mapped[str] = mapped_column(String(2), nullable=False, index=True)
     join_url: Mapped[str] = mapped_column(String(500), nullable=False)
     scheduled_start: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    cpd_points: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )
@@ -395,13 +408,143 @@ class TrainingRepository:
         name: str,
         country_code: str,
         is_verified: bool,
+        owner_user_id: str | None = None,
     ) -> TrainingProvider:
-        """Create and persist a provider."""
+        """Create and persist a provider, optionally owned by an account."""
         provider = TrainingProvider(
             name=name,
             country_code=country_code,
             is_verified=is_verified,
+            owner_user_id=owner_user_id,
         )
         session.add(provider)
         await session.flush()
+        await session.refresh(provider)
         return provider
+
+    @staticmethod
+    async def get_provider_by_owner(
+        session: AsyncSession, owner_user_id: str
+    ) -> TrainingProvider | None:
+        """Return the provider owned by ``owner_user_id``, or ``None``."""
+        stmt = select(TrainingProvider).where(TrainingProvider.owner_user_id == owner_user_id)
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def list_courses_for_provider(
+        session: AsyncSession,
+        provider_id: str,
+        *,
+        limit: int,
+        offset: int,
+    ) -> list[TrainingCourse]:
+        """One page of a provider's own courses, newest first."""
+        stmt = (
+            select(TrainingCourse)
+            .where(TrainingCourse.provider_id == provider_id)
+            .order_by(TrainingCourse.created_at.desc(), TrainingCourse.title.asc())
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await session.execute(stmt)
+        return list(result.scalars().all())
+
+    @staticmethod
+    async def count_courses_for_provider(session: AsyncSession, provider_id: str) -> int:
+        """Count a provider's own courses with the same scope as the list."""
+        stmt = (
+            select(func.count())
+            .select_from(TrainingCourse)
+            .where(TrainingCourse.provider_id == provider_id)
+        )
+        result = await session.execute(stmt)
+        return int(result.scalar_one())
+
+    @staticmethod
+    async def get_course_for_provider(
+        session: AsyncSession,
+        course_id: str,
+        provider_id: str,
+    ) -> TrainingCourse | None:
+        """Fetch a course only when it belongs to ``provider_id``.
+
+        Anything else reads as "not found", so one provider can never observe
+        another's records through this path.
+        """
+        stmt = select(TrainingCourse).where(
+            TrainingCourse.id == course_id,
+            TrainingCourse.provider_id == provider_id,
+        )
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def list_webinars_for_provider(
+        session: AsyncSession,
+        provider_id: str,
+        *,
+        limit: int,
+        offset: int,
+    ) -> list[TrainingWebinar]:
+        """One page of a provider's own webinars, soonest scheduled first."""
+        stmt = (
+            select(TrainingWebinar)
+            .where(TrainingWebinar.provider_id == provider_id)
+            .order_by(TrainingWebinar.scheduled_start.asc())
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await session.execute(stmt)
+        return list(result.scalars().all())
+
+    @staticmethod
+    async def count_webinars_for_provider(
+        session: AsyncSession,
+        provider_id: str,
+        *,
+        upcoming: bool | None = None,
+        now: datetime,
+    ) -> int:
+        """Count a provider's own webinars, optionally only future ones."""
+        stmt = (
+            select(func.count())
+            .select_from(TrainingWebinar)
+            .where(TrainingWebinar.provider_id == provider_id)
+        )
+
+        if upcoming is True:
+            stmt = stmt.where(TrainingWebinar.scheduled_start >= now)
+        elif upcoming is False:
+            stmt = stmt.where(TrainingWebinar.scheduled_start < now)
+
+        result = await session.execute(stmt)
+        return int(result.scalar_one())
+
+    @staticmethod
+    async def get_webinar_for_provider(
+        session: AsyncSession,
+        webinar_id: str,
+        provider_id: str,
+    ) -> TrainingWebinar | None:
+        """Fetch a webinar only when it belongs to ``provider_id``."""
+        stmt = select(TrainingWebinar).where(
+            TrainingWebinar.id == webinar_id,
+            TrainingWebinar.provider_id == provider_id,
+        )
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def sum_cpd_points_for_provider(session: AsyncSession, provider_id: str) -> int:
+        """Total CPD points a provider's courses and webinars offer."""
+        course_stmt = select(func.coalesce(func.sum(TrainingCourse.cpd_points), 0)).where(
+            TrainingCourse.provider_id == provider_id
+        )
+        webinar_stmt = select(func.coalesce(func.sum(TrainingWebinar.cpd_points), 0)).where(
+            TrainingWebinar.provider_id == provider_id
+        )
+
+        courses = await session.execute(course_stmt)
+        webinars = await session.execute(webinar_stmt)
+        return int(courses.scalar_one()) + int(webinars.scalar_one())

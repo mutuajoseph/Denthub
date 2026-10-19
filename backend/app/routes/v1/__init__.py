@@ -22,6 +22,7 @@ from app.routes.v1 import (
     products,
     suppliers,
     training,
+    training_provider,
     users,
 )
 
@@ -40,3 +41,4 @@ v1_router.include_router(training.router)
 v1_router.include_router(appointments.router)
 v1_router.include_router(facility.router)
 v1_router.include_router(health_records.router)
+v1_router.include_router(training_provider.router)

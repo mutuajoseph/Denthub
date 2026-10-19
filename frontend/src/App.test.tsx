@@ -24,6 +24,7 @@ import {
   fetchSpecialistDetail,
 } from "./lib/listingApi";
 import { fetchMyStore } from "./lib/supplierApi";
+import { fetchMyProviderDashboard } from "./lib/trainingProviderApi";
 
 vi.mock("./lib/listingApi", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./lib/listingApi")>();
@@ -60,6 +61,15 @@ vi.mock("./lib/supplierApi", async (importOriginal) => {
   };
 });
 
+vi.mock("./lib/trainingProviderApi", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./lib/trainingProviderApi")>();
+
+  return {
+    ...actual,
+    fetchMyProviderDashboard: vi.fn(),
+  };
+});
+
 const fetchListingSearchMock = vi.mocked(fetchListingSearch);
 const fetchFacilityDetailMock = vi.mocked(fetchFacilityDetail);
 const fetchSpecialistDetailMock = vi.mocked(fetchSpecialistDetail);
@@ -68,6 +78,7 @@ const fetchCountryConfigMock = vi.mocked(fetchCountryConfig);
 const fetchSpecialtiesMock = vi.mocked(fetchSpecialties);
 const fetchFacilityDashboardMock = vi.mocked(fetchFacilityDashboard);
 const fetchMyStoreMock = vi.mocked(fetchMyStore);
+const fetchMyProviderDashboardMock = vi.mocked(fetchMyProviderDashboard);
 
 const facilityDetail: FacilityDetail = {
   listing: {
@@ -183,6 +194,7 @@ describe("App routes", () => {
     fetchSpecialistDetailMock.mockResolvedValue(specialistDetail);
     fetchFacilityDashboardMock.mockResolvedValue(facilityDashboard);
     fetchMyStoreMock.mockResolvedValue(null);
+    fetchMyProviderDashboardMock.mockResolvedValue(null);
   });
 
   it("renders the home page at /", () => {
@@ -313,6 +325,13 @@ describe("App routes", () => {
     expect(screen.queryByRole("heading", { name: /page not found/i })).toBeNull();
   });
 
+  it("sends a guest from /dashboard/training to the routed sign-in page", () => {
+    renderApp("/dashboard/training");
+
+    expect(screen.getByRole("heading", { name: /sign in to your account/i })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /page not found/i })).toBeNull();
+  });
+
   it("sends a guest from /dashboard/supplier to the routed sign-in page", () => {
     renderApp("/dashboard/supplier");
 
@@ -357,5 +376,24 @@ describe("App routes", () => {
     expect(container.querySelector("#hero-heading")).not.toBeNull();
     expect(screen.queryByRole("heading", { name: /set up your store/i })).toBeNull();
     expect(screen.queryByRole("heading", { name: /page not found/i })).toBeNull();
+  });
+
+  it("keeps a patient off /dashboard/training without a 404", () => {
+    seedAuth(ROLE.PATIENT);
+
+    const { container } = renderApp("/dashboard/training");
+
+    expect(container.querySelector("#hero-heading")).not.toBeNull();
+    expect(screen.queryByRole("heading", { name: /page not found/i })).toBeNull();
+  });
+
+  it("renders the training dashboard for a training provider", async () => {
+    seedAuth(ROLE.TRAINING_PROVIDER);
+
+    renderApp("/dashboard/training");
+
+    expect(
+      await screen.findByRole("heading", { name: /create your provider profile/i }),
+    ).toBeInTheDocument();
   });
 });
