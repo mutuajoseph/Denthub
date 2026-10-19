@@ -83,6 +83,20 @@ class UserRepository:
         return user
 
     @staticmethod
+    async def names_by_ids(session: AsyncSession, user_ids: list[str]) -> dict[str, str]:
+        """Resolve full names for a batch of user ids, keyed by id (#84).
+
+        One query for a whole page of Health Record entries; an id with no row is
+        absent, which the caller renders as a deleted author.
+        """
+        if not user_ids:
+            return {}
+
+        stmt = select(User.id, User.full_name).where(User.id.in_(user_ids))
+        rows = await session.execute(stmt)
+        return {row.id: row.full_name for row in rows.all()}
+
+    @staticmethod
     async def list_for_facility(session: AsyncSession, *, facility_id: str) -> list[User]:
         """The active users linked to a Facility — its staff, by name (#81)."""
         stmt = (

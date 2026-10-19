@@ -19,6 +19,7 @@ from app.repositories.country import (
     Specialty,
     Subdivision,
 )
+from app.repositories.health_record import HealthRecordEntry, PatientHealthRecord
 from app.repositories.job import JobPosting, JobSalaryRange
 from app.repositories.listing import Branch, Facility, OpeningHour, Specialist
 from app.repositories.magazine import MagazineArticle, MagazineArticleTag
@@ -440,6 +441,59 @@ def build_appointments(
     ]
 
 
+# --- Health Records -----------------------------------------------------------
+#
+# One record for the seeded Patient Amina with two entries — one she wrote and
+# one her clinic's dentist wrote — so the author badge (patient vs clinician,
+# #84) is exercisable from the shared fixture.
+
+HEALTH_RECORD_CLINICIAN = {
+    "full_name": "Dr. Wanjiku Kamau",
+    "email": "wanjiku.dentist@example.com",
+    "role": "facility_dentist",
+}
+
+
+def build_health_record_clinician() -> User:
+    """The clinical author of the seeded Health Record entry."""
+    return User(**HEALTH_RECORD_CLINICIAN, password_hash=SEEDED_PASSWORD_HASH)
+
+
+def build_health_records(patients: list[User], clinician: User) -> list[PatientHealthRecord]:
+    """Return the seeded Health Records with their entries wired.
+
+    ``patients`` must be the flushed ``build_users`` rows and ``clinician`` the
+    flushed ``build_health_record_clinician`` row, so every author id resolves.
+    """
+    amina = patients[0]
+
+    return [
+        PatientHealthRecord(
+            patient_id=amina.id,
+            maternal_status="none",
+            entries=[
+                # Explicit timestamps, an hour apart: entry ordering is by
+                # ``created_at``, and the column's default is second-resolution,
+                # so two inserts in the same second would tie and reorder.
+                HealthRecordEntry(
+                    category="allergy",
+                    body="Penicillin — anaphylaxis.",
+                    author_id=amina.id,
+                    author_kind="patient",
+                    created_at=datetime(2026, 1, 1, 9, 0, 0),
+                ),
+                HealthRecordEntry(
+                    category="dental_history",
+                    body="Lower-left first molar restored with composite, 2024.",
+                    author_id=clinician.id,
+                    author_kind="clinician",
+                    created_at=datetime(2026, 1, 1, 10, 0, 0),
+                ),
+            ],
+        )
+    ]
+
+
 # --- Magazine ----------------------------------------------------------------
 #
 # Two published articles per market plus a Kenyan draft and a scheduled story,
@@ -845,6 +899,8 @@ __all__ = [
     "SEEDED_PASSWORD",
     "build_appointments",
     "build_countries",
+    "build_health_record_clinician",
+    "build_health_records",
     "build_jobs",
     "build_listings",
     "build_magazine_articles",

@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppointmentWire } from "../lib/appointmentApi";
 import { fetchMyAppointments } from "../lib/appointmentApi";
 import type { AuthUser } from "../lib/auth";
+import { fetchHealthRecord } from "../lib/healthRecordApi";
 import { Dashboard } from "./Dashboard";
 
 vi.mock("../lib/appointmentApi", async (importOriginal) => {
@@ -13,7 +14,13 @@ vi.mock("../lib/appointmentApi", async (importOriginal) => {
   return { ...actual, fetchMyAppointments: vi.fn() };
 });
 
+vi.mock("../lib/healthRecordApi", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../lib/healthRecordApi")>();
+  return { ...actual, fetchHealthRecord: vi.fn() };
+});
+
 const fetchMyAppointmentsMock = vi.mocked(fetchMyAppointments);
+const fetchHealthRecordMock = vi.mocked(fetchHealthRecord);
 
 const patient: AuthUser = {
   id: "user-1",
@@ -66,6 +73,14 @@ describe("Dashboard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     fetchMyAppointmentsMock.mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 });
+    fetchHealthRecordMock.mockResolvedValue({
+      id: "hr-1",
+      patient_id: "user-1",
+      maternal_status: "none",
+      entries: [],
+      created_at: "2026-01-01T08:00:00",
+      updated_at: "2026-01-01T08:00:00",
+    });
   });
 
   it("shows the signed-in user's identity", () => {
@@ -126,11 +141,13 @@ describe("Dashboard", () => {
     expect(fetchMyAppointmentsMock).toHaveBeenCalledTimes(1);
   });
 
-  it("does not fetch appointments for a non-patient account", () => {
+  it("does not fetch patient data for a non-patient account", () => {
     renderDashboard(facilityOwner);
 
     expect(fetchMyAppointmentsMock).not.toHaveBeenCalled();
+    expect(fetchHealthRecordMock).not.toHaveBeenCalled();
     expect(screen.queryByRole("heading", { name: /appointments/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /health record/i })).not.toBeInTheDocument();
   });
 
   it("surfaces an appointment load failure with a retry", async () => {

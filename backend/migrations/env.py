@@ -31,6 +31,10 @@ from app.repositories.country import (  # noqa: F401
     Specialty,
     Subdivision,
 )
+from app.repositories.health_record import (  # noqa: F401
+    HealthRecordEntry,
+    PatientHealthRecord,
+)
 from app.repositories.listing import (  # noqa: F401
     Branch,
     DentistBranch,

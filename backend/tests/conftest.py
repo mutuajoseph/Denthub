@@ -22,6 +22,8 @@ from app.utils.state import AppState
 from tests.factories import (
     build_appointments,
     build_countries,
+    build_health_record_clinician,
+    build_health_records,
     build_jobs,
     build_listings,
     build_magazine_articles,
@@ -64,10 +66,17 @@ async def session_maker() -> AsyncIterator[async_sessionmaker[AsyncSession]]:
             users = build_users()
             for user in users:
                 session.add(user)
+            # The clinical author of the seeded Health Record entry: a separate
+            # builder so `build_appointments` can still unpack exactly two users.
+            clinician = build_health_record_clinician()
+            session.add(clinician)
             await session.flush()
 
             for appointment in build_appointments(users, facilities, specialists):
                 session.add(appointment)
+
+            for record in build_health_records(users, clinician):
+                session.add(record)
 
             for posting in build_jobs(specialties, facilities):
                 session.add(posting)
