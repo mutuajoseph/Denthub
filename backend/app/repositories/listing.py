@@ -123,6 +123,20 @@ class Specialist(Base):
     country_code: Mapped[str] = mapped_column(String(2), default="KE", index=True, nullable=False)
     subdivision_code: Mapped[str] = mapped_column(String(30), index=True, nullable=False)
 
+    #: How far this professional's profile has been checked by DentHub, one
+    #: graded value (``CONTEXT.md`` "Verification tier"). Staff set it from the
+    #: admin console; the public listing reads the same column.
+    verification_tier: Mapped[VerificationTier] = mapped_column(
+        SAEnum(
+            *VERIFICATION_TIERS,
+            name="verification_tier",
+            native_enum=False,
+            length=20,
+        ),
+        default="unverified",
+        nullable=False,
+    )
+
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
     list_price: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
 
@@ -403,6 +417,13 @@ class FacilityRepository:
         return result.scalar_one_or_none()
 
     @staticmethod
+    async def list_all(session: AsyncSession) -> list[Facility]:
+        """Every Facility, for the admin verification list."""
+        stmt = select(Facility).order_by(Facility.name.asc())
+        result = await session.execute(stmt)
+        return list(result.scalars().all())
+
+    @staticmethod
     async def find(
         session: AsyncSession,
         *,
@@ -499,6 +520,13 @@ class SpecialistRepository:
         )
         result = await session.execute(stmt)
         return result.scalar_one_or_none()
+
+    @staticmethod
+    async def list_all(session: AsyncSession) -> list[Specialist]:
+        """Every Specialist, for the admin verification list."""
+        stmt = select(Specialist).order_by(Specialist.name.asc())
+        result = await session.execute(stmt)
+        return list(result.scalars().all())
 
     @staticmethod
     async def find_by_slug(session: AsyncSession, slug: str) -> Specialist | None:

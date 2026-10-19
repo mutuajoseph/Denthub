@@ -4,6 +4,7 @@ import { Route, Routes } from "react-router-dom";
 import { AuthModal } from "./auth/AuthModal";
 import RouteGuard from "./auth/RouteGuard";
 import {
+  ADMIN_ROLES,
   FACILITY_ROLES,
   PUBLIC_ROLES,
   SUPPLIER_ROLES,
@@ -24,6 +25,9 @@ import type { AuthResponse } from "./lib/auth";
  * already default exports.
  */
 const About = lazy(() => import("./pages/About").then((module) => ({ default: module.About })));
+const AdminDashboard = lazy(() =>
+  import("./pages/AdminDashboard").then((module) => ({ default: module.AdminDashboard })),
+);
 const Dashboard = lazy(() =>
   import("./pages/Dashboard").then((module) => ({ default: module.Dashboard })),
 );
@@ -150,6 +154,14 @@ const App = () => {
               element={
                 <RouteGuard user={user} allowedRoles={TRAINING_PROVIDER_ROLES} unauthorizedPath="/">
                   <TrainingDashboard />
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <RouteGuard user={user} allowedRoles={ADMIN_ROLES} unauthorizedPath="/">
+                  <AdminDashboard user={user} />
                 </RouteGuard>
               }
             />

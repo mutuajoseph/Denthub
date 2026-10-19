@@ -220,11 +220,11 @@ async def test_specialist_list_reuses_the_same_card(client: AsyncClient) -> None
     assert item["open_now"] in {True, False}
     assert Decimal(str(item["list_price"])) == Decimal("3500.00")
     assert Decimal(str(item["rating"])) == Decimal("4.90")
-    # The specialist's card points at their workplace's phone, and carries no
-    # tier of its own (specialists gain one in a later issue).
+    # The specialist's card points at their workplace's phone and carries its
+    # own verification tier, which starts at the unverified default (#82).
     assert item["phone"] == "+254 711 000 111"
     assert item["clinic_name"] == "Smile Point Dental"
-    assert item["verification_tier"] is None
+    assert item["verification_tier"] == "unverified"
 
 
 async def test_specialist_list_filters_by_specialty(client: AsyncClient) -> None:

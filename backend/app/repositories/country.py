@@ -216,12 +216,57 @@ class CountryRepository:
         return list(result.scalars().all())
 
     @staticmethod
+    async def list_all(session: AsyncSession) -> list[Country]:
+        """Every Country, active or not, for the admin console.
+
+        The public switcher uses :meth:`list_active`; an Admin needs to see a
+        retired market too, otherwise it could never be switched back on.
+        """
+        stmt = (
+            select(Country)
+            .options(
+                selectinload(Country.features),
+                selectinload(Country.insurance_providers),
+            )
+            .order_by(Country.name.asc())
+        )
+        result = await session.execute(stmt)
+        return list(result.scalars().all())
+
+    @staticmethod
     async def create_country(session: AsyncSession, **kwargs: Any) -> Country:
         """Create and persist a Country."""
         country = Country(**kwargs)
         session.add(country)
         await session.flush()
         return country
+
+
+class CountryFeatureRepository:
+    """Reads and writes for per-Country feature flags."""
+
+    @staticmethod
+    async def get(
+        session: AsyncSession,
+        *,
+        country_code: str,
+        feature: str,
+    ) -> CountryFeature | None:
+        """One flag row, or ``None`` when the market never configured it."""
+        stmt = select(CountryFeature).where(
+            CountryFeature.country_code == country_code.upper(),
+            CountryFeature.feature == feature,
+        )
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def create(session: AsyncSession, **kwargs: Any) -> CountryFeature:
+        """Create and persist a feature flag."""
+        feature = CountryFeature(**kwargs)
+        session.add(feature)
+        await session.flush()
+        return feature
 
 
 class SubdivisionRepository:

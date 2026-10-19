@@ -100,8 +100,9 @@ class DentistListing(BaseModel):
     #: A number a patient can dial: the Facility's own phone, or a phone from
     #: one of the Specialist's Branches. Null when no number is published.
     phone: str | None
-    #: The tier a Facility is verified at (``CONTEXT.md`` "Verification tier").
-    #: Always null for a Specialist: specialists do not carry a tier yet.
+    #: The tier a Facility or Specialist is verified at (``CONTEXT.md``
+    #: "Verification tier"). Null only when the row itself is missing a grade,
+    #: which the column's NOT NULL default prevents today.
     verification_tier: VerificationTier | None
     #: For a Specialist, the Facility they work at as a card shows it; a
     #: Facility's own name is its ``name``, so this is null for a Facility.
@@ -322,7 +323,7 @@ def _specialist_listing(
             for branch in specialist.branches
         ),
         phone=phone,
-        verification_tier=None,
+        verification_tier=specialist.verification_tier,
         clinic_name=clinic_name,
     )
 
