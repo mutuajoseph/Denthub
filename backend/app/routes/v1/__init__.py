@@ -20,6 +20,7 @@ from app.routes.v1 import (
     listing,
     magazine,
     products,
+    suppliers,
     training,
     users,
 )
@@ -29,6 +30,7 @@ v1_router.include_router(health.router)
 v1_router.include_router(auth.router, prefix="/auth")
 v1_router.include_router(config.router)
 v1_router.include_router(products.router)
+v1_router.include_router(suppliers.router)
 v1_router.include_router(listing.router)
 v1_router.include_router(home.router)
 v1_router.include_router(users.router)
