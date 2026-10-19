@@ -9,7 +9,7 @@ to **Vercel** and the backend to **Render**.
 
 ```mermaid
 flowchart TD
-    A[feature branch: feat/*, fix/*] -->|open PR to main| B{CI quality gates<br/>Python · TypeScript · Database}
+    A[feature branch: feat/*, fix/*] -->|open PR to main| B{CI quality gates<br/>Python · TypeScript · Database<br/>pytest · vitest}
     A -.->|opens| P[Vercel Preview URL]
     B -->|green + review| C[squash-merge to main]
     C --> R[Release action auto-runs<br/>bump from commit → tag vX.Y.Z + GitHub Release]
@@ -137,7 +137,8 @@ Repo → **Settings → Secrets and variables → Actions** → add:
 
 Repo → **Settings → Branches** → protect `main`:
 - Require a PR before merging (≥ 1 approval).
-- Require status checks: **Python Quality**, **TypeScript Quality**, **Database Quality**.
+- Require status checks: **Python Quality**, **TypeScript Quality**, **Database
+  Quality**, **Python Tests**, **TypeScript Tests**.
 - Require branches up to date before merging.
 
 ---

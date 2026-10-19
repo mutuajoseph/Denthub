@@ -85,7 +85,7 @@ uv run --directory backend mypy app
 pnpm --filter frontend lint
 pnpm --filter frontend build
 
-# Tests (CI does not run these yet, so this is the only gate)
+# Tests (also run by CI now — the Python Tests / TypeScript Tests jobs)
 uv run --directory backend pytest -q
 pnpm --filter frontend test
 
