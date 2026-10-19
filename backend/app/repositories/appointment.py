@@ -23,7 +23,7 @@ booking is a request, not a confirmed visit. The column type is built from the
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime, time, timedelta
 from typing import Any, Literal, get_args
 
 from sqlalchemy import (
@@ -138,6 +138,16 @@ class AppointmentRepository:
         return result.scalar_one_or_none()
 
     @staticmethod
+    async def update(
+        session: AsyncSession, appointment: Appointment, **changes: Any
+    ) -> Appointment:
+        """Apply the given field changes to an Appointment and flush them."""
+        for field, value in changes.items():
+            setattr(appointment, field, value)
+        await session.flush()
+        return appointment
+
+    @staticmethod
     async def list_for_patient(
         session: AsyncSession,
         *,
@@ -167,6 +177,52 @@ class AppointmentRepository:
             select(func.count())
             .select_from(Appointment)
             .where(Appointment.patient_id == patient_id)
+        )
+        result = await session.execute(stmt)
+        return int(result.scalar_one())
+
+    @staticmethod
+    async def list_for_facility_day(
+        session: AsyncSession,
+        *,
+        facility_id: str,
+        day: date,
+        limit: int,
+    ) -> list[Appointment]:
+        """A Facility's Appointments on one wall-clock day, soonest first.
+
+        The day is a half-open range on the stored wall-clock time, not a
+        ``date()`` cast: it is portable and it keeps the comparison on the
+        clinic's own clock (``CONTEXT.md``, *Appointment*).
+        """
+        start = datetime.combine(day, time.min)
+        end = datetime.combine(day + timedelta(days=1), time.min)
+
+        stmt = (
+            select(Appointment)
+            .where(
+                Appointment.facility_id == facility_id,
+                Appointment.scheduled_at >= start,
+                Appointment.scheduled_at < end,
+            )
+            .order_by(Appointment.scheduled_at.asc(), Appointment.created_at.asc())
+            .limit(limit)
+        )
+        result = await session.execute(stmt)
+        return list(result.scalars().all())
+
+    @staticmethod
+    async def count_for_facility_status(
+        session: AsyncSession,
+        *,
+        facility_id: str,
+        status: AppointmentStatus,
+    ) -> int:
+        """Count a Facility's Appointments in one status (its pending queue)."""
+        stmt = (
+            select(func.count())
+            .select_from(Appointment)
+            .where(Appointment.facility_id == facility_id, Appointment.status == status)
         )
         result = await session.execute(stmt)
         return int(result.scalar_one())

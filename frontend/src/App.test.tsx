@@ -15,6 +15,7 @@ import {
   fetchCountryConfig,
   fetchSpecialties,
 } from "./lib/countryConfigApi";
+import { type FacilityDashboardWire, fetchFacilityDashboard } from "./lib/facilityApi";
 import {
   type FacilityDetail,
   type SpecialistDetail,
@@ -40,12 +41,18 @@ vi.mock("./lib/countryConfigApi", () => ({
   fetchSpecialties: vi.fn(),
 }));
 
+vi.mock("./lib/facilityApi", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./lib/facilityApi")>();
+  return { ...actual, fetchFacilityDashboard: vi.fn() };
+});
+
 const fetchListingSearchMock = vi.mocked(fetchListingSearch);
 const fetchFacilityDetailMock = vi.mocked(fetchFacilityDetail);
 const fetchSpecialistDetailMock = vi.mocked(fetchSpecialistDetail);
 const fetchCountriesMock = vi.mocked(fetchCountries);
 const fetchCountryConfigMock = vi.mocked(fetchCountryConfig);
 const fetchSpecialtiesMock = vi.mocked(fetchSpecialties);
+const fetchFacilityDashboardMock = vi.mocked(fetchFacilityDashboard);
 
 const facilityDetail: FacilityDetail = {
   listing: {
@@ -91,6 +98,15 @@ const specialistDetail: SpecialistDetail = {
   slug: "dr-wanjiku-kamau",
   specialties: [],
   branches: [],
+};
+
+const facilityDashboard: FacilityDashboardWire = {
+  facility_id: "f-1",
+  facility_name: "SmileCare Dental Centre",
+  country_code: "KE",
+  today: [],
+  pending_count: 0,
+  staff: [],
 };
 
 function makeConfig(code: string): CountryConfig {
@@ -150,6 +166,7 @@ describe("App routes", () => {
     fetchSpecialtiesMock.mockResolvedValue([]);
     fetchFacilityDetailMock.mockResolvedValue(facilityDetail);
     fetchSpecialistDetailMock.mockResolvedValue(specialistDetail);
+    fetchFacilityDashboardMock.mockResolvedValue(facilityDashboard);
   });
 
   it("renders the home page at /", () => {
@@ -270,6 +287,33 @@ describe("App routes", () => {
 
     expect(container.querySelector("#hero-heading")).not.toBeNull();
     expect(screen.queryByRole("heading", { name: /your account/i })).toBeNull();
+    expect(screen.queryByRole("heading", { name: /page not found/i })).toBeNull();
+  });
+
+  it("sends a guest from /dashboard/facility to the routed sign-in page", () => {
+    renderApp("/dashboard/facility");
+
+    expect(screen.getByRole("heading", { name: /sign in to your account/i })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /page not found/i })).toBeNull();
+  });
+
+  it("renders the clinic dashboard for a signed-in facility owner", async () => {
+    seedAuth(ROLE.FACILITY_OWNER);
+
+    renderApp("/dashboard/facility");
+
+    expect(
+      await screen.findByRole("heading", { name: /smilecare dental centre/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps a signed-in patient off /dashboard/facility without a 404", () => {
+    seedAuth(ROLE.PATIENT);
+
+    const { container } = renderApp("/dashboard/facility");
+
+    expect(container.querySelector("#hero-heading")).not.toBeNull();
+    expect(screen.queryByRole("heading", { name: /smilecare dental centre/i })).toBeNull();
     expect(screen.queryByRole("heading", { name: /page not found/i })).toBeNull();
   });
 });

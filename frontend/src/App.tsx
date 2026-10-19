@@ -3,7 +3,7 @@ import { Route, Routes } from "react-router-dom";
 
 import { AuthModal } from "./auth/AuthModal";
 import RouteGuard from "./auth/RouteGuard";
-import { PUBLIC_ROLES } from "./auth/roles";
+import { FACILITY_ROLES, PUBLIC_ROLES } from "./auth/roles";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AppShell } from "./components/layout/AppShell";
 import { usePageMeta } from "./hooks/usePageMeta";
@@ -13,6 +13,7 @@ import { About } from "./pages/About";
 import { Dashboard } from "./pages/Dashboard";
 import { DentistProfile } from "./pages/DentistProfile";
 import { Emergency } from "./pages/Emergency";
+import { FacilityDashboard } from "./pages/FacilityDashboard";
 import { FindDentist } from "./pages/FindDentist";
 import Home from "./pages/Home";
 import { International } from "./pages/International";
@@ -72,6 +73,14 @@ const App = () => {
             element={
               <RouteGuard user={user} allowedRoles={PUBLIC_ROLES} unauthorizedPath="/">
                 <Dashboard user={user} />
+              </RouteGuard>
+            }
+          />
+          <Route
+            path="/dashboard/facility"
+            element={
+              <RouteGuard user={user} allowedRoles={FACILITY_ROLES} unauthorizedPath="/">
+                <FacilityDashboard user={user} />
               </RouteGuard>
             }
           />
