@@ -15,6 +15,7 @@ import uuid
 from httpx import AsyncClient
 
 from app.logic.v1.auth import STAFF_SCOPE, create_access_token, hash_password
+from app.repositories.admin import AdminAuditRepository
 from app.repositories.user import User
 from app.utils.state import AppState
 
@@ -133,6 +134,17 @@ async def test_a_lead_hides_a_posting_and_the_public_board_drops_it(
 
     assert response.status_code == 200
     assert response.json()["status"] == "hidden"
+
+    async with state.db_session_maker() as session:
+        rows = await AdminAuditRepository.list_recent(session, limit=1)
+
+    assert rows[0].actor_id == lead.id
+    assert rows[0].actor_role == "platform_operator"
+    assert rows[0].action == "moderation.status"
+    assert rows[0].entity_type == "job"
+    assert rows[0].entity_id == posting_id
+    assert rows[0].before == {"status": "published"}
+    assert rows[0].after == {"status": "hidden"}
 
     unpublished = await client.get("/api/v1/jobs", params={"country": "KE"})
     assert posting_id not in {item["id"] for item in unpublished.json()["items"]}

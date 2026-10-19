@@ -1,10 +1,11 @@
-"""Admin console persistence: the audit trail for staff-initiated writes.
+"""Staff write persistence: the audit trail for console-initiated changes.
 
-Every action an Admin takes from ``/admin`` writes one row here before the
-change is committed, in the same transaction. The row snapshots the actor's
-email and role at the time of the action, so the trail stays readable after an
-account is renamed, re-roled, or deleted: the foreign key is ``SET NULL`` and
-the snapshot is what the console renders.
+Every write an Admin takes from ``/admin`` and every write an Operator takes
+from ``/operations`` records one row here before the change is committed, in the
+same transaction. The row snapshots the actor's email and role at the time of
+the action, so the trail stays readable after an account is renamed, re-roled,
+or deleted: the foreign key is ``SET NULL`` and the snapshot is what the
+console renders.
 
 ``before``/``after`` hold the small, JSON-serialisable slice of the entity that
 changed (a tier, a flag, a status), not the whole row. That keeps the trail

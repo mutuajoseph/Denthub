@@ -10,6 +10,10 @@ An Assistant may read their Division; only a Lead may write to it. The tier is
 read from the user row on each request, so promoting or demoting an operator
 takes effect immediately rather than when their token next refreshes.
 
+Every write also appends an admin audit row in the same transaction, so an
+operator's moderation sits in the same trail as an Admin's; the row snapshots
+the operator's role, and the Admin console renders it without a second source.
+
 This slice ships the console shell, the division scoping and the Jobs write;
 the other Divisions' actions are follow-ups.
 """
@@ -24,6 +28,7 @@ from pydantic import BaseModel
 
 from app.exceptions import ForbiddenException, NotFoundException
 from app.logic.v1.auth import UserResponse, get_current_staff
+from app.repositories.admin import AdminAuditRepository
 from app.repositories.job import JobPosting, JobsRepository
 from app.repositories.user import (
     OperatorDivision,
@@ -181,7 +186,22 @@ async def set_job_status(
         if posting is None:
             raise NotFoundException(message="Job posting not found")
 
+        before: dict[str, object] = {"status": posting.status}
         posting.status = request.status
+
+        # The same trail as an Admin's moderation: the snapshot keeps the
+        # operator's role, and the write and its audit row commit together.
+        await AdminAuditRepository.record(
+            session,
+            actor_id=context.user.id,
+            actor_email=context.user.email,
+            actor_role=context.user.role,
+            action="moderation.status",
+            entity_type="job",
+            entity_id=posting.id,
+            before=before,
+            after={"status": posting.status},
+        )
         await session.commit()
 
         return _serialize_job(posting)
