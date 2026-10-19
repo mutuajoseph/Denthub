@@ -17,7 +17,10 @@ have to walk back through the listing table to find its market.
 
 ``status`` mirrors the documented lifecycle and defaults to ``PENDING``: a new
 booking is a request, not a confirmed visit. The column type is built from the
-``Literal`` below so the four states can never drift apart.
+``Literal`` below so the states can never drift apart, and ``create_constraint``
+makes the database reject a value outside them rather than trusting every writer.
+``CANCELLED`` is terminal and reachable only from ``PENDING``/``CONFIRMED``: a
+Patient may withdraw a booking the clinic has not yet started (#88).
 """
 
 from __future__ import annotations
@@ -45,8 +48,9 @@ from sqlalchemy.sql.expression import ColumnElement
 from app.repositories.database import Base
 from app.repositories.listing import Facility, Specialist
 
-#: The four documented states, in the order they are reached (``CONTEXT.md``).
-AppointmentStatus = Literal["PENDING", "CONFIRMED", "IN_PROGRESS", "COMPLETED"]
+#: The documented states. Reachable in order, except ``CANCELLED``, which a
+#: Patient may enter from either of the two states the clinic has not started.
+AppointmentStatus = Literal["PENDING", "CONFIRMED", "IN_PROGRESS", "COMPLETED", "CANCELLED"]
 APPOINTMENT_STATUSES = get_args(AppointmentStatus)
 
 
@@ -102,6 +106,7 @@ class Appointment(Base):
             name="appointment_status",
             native_enum=False,
             length=12,
+            create_constraint=True,
         ),
         default="PENDING",
         nullable=False,
@@ -141,7 +146,12 @@ class AppointmentRepository:
     async def update(
         session: AsyncSession, appointment: Appointment, **changes: Any
     ) -> Appointment:
-        """Apply the given field changes to an Appointment and flush them."""
+        """Apply ``changes`` to an Appointment and flush.
+
+        The caller owns the rule that decided the change (a state transition, a
+        new slot); this only writes it, so the columns touched are named by the
+        logic layer rather than mirrored here.
+        """
         for field, value in changes.items():
             setattr(appointment, field, value)
         await session.flush()
@@ -260,12 +270,22 @@ class AppointmentRepository:
         scheduled_at: datetime,
         facility_id: str | None,
         specialist_id: str | None,
+        exclude_id: str | None = None,
     ) -> Appointment | None:
-        """An existing booking for the same Patient, same slot, same Listing."""
+        """An existing booking for the same Patient, same slot, same Listing.
+
+        ``exclude_id`` drops one Appointment from the comparison, so a Patient
+        rescheduling a booking onto its own slot is not a conflict with itself
+        (#88). ``CANCELLED`` rows are skipped: a withdrawn slot is free again.
+        """
         clauses: list[ColumnElement[bool]] = [
             Appointment.patient_id == patient_id,
             Appointment.scheduled_at == scheduled_at,
+            Appointment.status != "CANCELLED",
         ]
+
+        if exclude_id is not None:
+            clauses.append(Appointment.id != exclude_id)
 
         if facility_id is not None:
             clauses.append(Appointment.facility_id == facility_id)
