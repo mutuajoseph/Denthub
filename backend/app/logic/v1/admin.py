@@ -14,7 +14,10 @@ The console covers four things:
 * Verification tiers. One graded value on a Facility or Specialist, set by
   staff — never a set of independent flags (``CONTEXT.md`` "Verification tier").
 * Moderation. A Magazine Item or Job posting can be hidden from every public
-  read path and published again; both already carry a ``status`` column.
+  read path and published again; both already carry a ``status`` column. The
+  console's lever is the two states it can set (``published``/``hidden``); a row
+  in any other status is publishable, and the module that owns its drafts is
+  responsible for them.
 * The audit trail those writes produce.
 """
 
@@ -296,9 +299,11 @@ async def update_country(
 ) -> AdminCountry:
     """Activate or retire a market.
 
-    A retired Country drops out of the public switcher and its config is no
-    longer served as the active market, which is what makes this the admin's
-    on/off switch for a market rather than a cosmetic flag.
+    A retired Country drops out of the public switcher (``list_active``), so no
+    client is offered it as a market to choose. A caller that already holds the
+    code can still read its configuration, so this is a discovery switch rather
+    than a hard takedown; gating the config endpoint itself is a public API
+    change left to its own issue.
     """
     actor = await _require_admin(state, token)
 
