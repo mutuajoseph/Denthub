@@ -390,6 +390,22 @@ def build_users() -> list[User]:
     ]
 
 
+def build_operator(*, division: str = "jobs", tier: str = "lead") -> User:
+    """A Platform Operator scoped to one Division at one tier (#83).
+
+    The pair is stored on the user row and read fresh per request, so a test can
+    build the same account at either tier or Division without a second fixture.
+    """
+    return User(
+        full_name="Nia Operator",
+        email=f"operator-{division}-{tier}@example.com",
+        role="platform_operator",
+        password_hash=SEEDED_PASSWORD_HASH,
+        operator_division=division,
+        operator_tier=tier,
+    )
+
+
 def build_appointments(
     patients: list[User],
     facilities: list[Facility],
