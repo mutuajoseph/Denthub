@@ -14,8 +14,8 @@ resolved to, in ``Content-Country`` / ``Content-Currency`` / ``Content-Language`
 so a client that asked for something the server cannot serve still shows the
 truth ("prices in KES") instead of a quietly wrong answer.
 
-Authentication, users, and health replies are never publicly cached, and error
-replies pass through untouched.
+Authentication, users, health, and admin replies are never publicly cached, and
+error replies pass through untouched.
 """
 
 from __future__ import annotations
@@ -42,7 +42,7 @@ RESOURCE_CACHE_CONTROL = "public, no-cache"
 
 #: Replies that are person- or infra-specific and never become public caches.
 _NON_CACHEABLE_PREFIXES = tuple(
-    f"{API_V1_PREFIX}{suffix}" for suffix in ("/auth", "/users", "/health")
+    f"{API_V1_PREFIX}{suffix}" for suffix in ("/auth", "/users", "/health", "/admin")
 )
 _CONFIG_PREFIX = f"{API_V1_PREFIX}/config/"
 

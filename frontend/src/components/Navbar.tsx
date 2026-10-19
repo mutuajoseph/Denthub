@@ -17,6 +17,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 
 import {
+  isAdminRole,
   isFacilityRole,
   isPublicRole,
   isSupplierRole,
@@ -57,6 +58,10 @@ type AccountLink = { label: string; href: string };
  * training dashboard. See #58 and #75.
  */
 function accountLinksFor(user: AuthUser): AccountLink[] {
+  if (isAdminRole(user)) {
+    return [{ label: "Admin console", href: "/admin" }];
+  }
+
   if (isFacilityRole(user)) {
     return [{ label: "Facility", href: "/dashboard/facility" }];
   }

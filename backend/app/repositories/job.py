@@ -235,6 +235,24 @@ class JobsRepository:
         return result.scalar_one_or_none()
 
     @staticmethod
+    async def get_any(session: AsyncSession, posting_id: str) -> JobPosting | None:
+        """One posting by id in any status, for moderation."""
+        stmt = select(JobPosting).where(JobPosting.id == posting_id)
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def list_recent(session: AsyncSession, *, limit: int) -> list[JobPosting]:
+        """The newest postings in any status, for the moderation queue."""
+        stmt = (
+            select(JobPosting)
+            .order_by(JobPosting.posted_at.desc(), JobPosting.title.asc())
+            .limit(limit)
+        )
+        result = await session.execute(stmt)
+        return list(result.scalars().all())
+
+    @staticmethod
     async def find(
         session: AsyncSession,
         *,

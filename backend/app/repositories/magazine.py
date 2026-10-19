@@ -183,6 +183,28 @@ class MagazineRepository:
         return result.scalar_one_or_none()
 
     @staticmethod
+    async def get_any(session: AsyncSession, article_id: str) -> MagazineArticle | None:
+        """One article by id in any status, for moderation.
+
+        The public :meth:`get_by_slug` deliberately hides drafts; an Admin has
+        to be able to see and act on a row that is not published.
+        """
+        stmt = select(MagazineArticle).where(MagazineArticle.id == article_id)
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def list_recent(session: AsyncSession, *, limit: int) -> list[MagazineArticle]:
+        """The newest articles in any status, for the moderation queue."""
+        stmt = (
+            select(MagazineArticle)
+            .order_by(MagazineArticle.published_at.desc(), MagazineArticle.slug.asc())
+            .limit(limit)
+        )
+        result = await session.execute(stmt)
+        return list(result.scalars().all())
+
+    @staticmethod
     async def list_categories(session: AsyncSession, *, country_code: str) -> list[str]:
         """The distinct categories of a country's published articles."""
         stmt = (
