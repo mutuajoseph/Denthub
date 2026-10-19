@@ -19,6 +19,7 @@ import { Link, NavLink } from "react-router-dom";
 import {
   isAdminRole,
   isFacilityRole,
+  isOperationsRole,
   isPublicRole,
   isSupplierRole,
   isTrainingProviderRole,
@@ -60,6 +61,10 @@ type AccountLink = { label: string; href: string };
 function accountLinksFor(user: AuthUser): AccountLink[] {
   if (isAdminRole(user)) {
     return [{ label: "Admin console", href: "/admin" }];
+  }
+
+  if (isOperationsRole(user)) {
+    return [{ label: "Operations console", href: "/operations" }];
   }
 
   if (isFacilityRole(user)) {

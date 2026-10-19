@@ -327,7 +327,7 @@ function AuditSection({ userId }: { userId: string | null }) {
         Audit trail
       </h2>
       <p className="mt-1 text-sm text-charcoal">
-        Newest admin write first. Every console change records who acted and what changed.
+        Newest staff write first. Every console change records who acted and what changed.
       </p>
 
       {query.isPending ? (
@@ -335,7 +335,7 @@ function AuditSection({ userId }: { userId: string | null }) {
       ) : query.error || !entries ? (
         <SectionError error={query.error} onRetry={() => void query.refetch()} />
       ) : entries.length === 0 ? (
-        <p className="mt-3 text-sm text-charcoal">No admin changes have been recorded yet.</p>
+        <p className="mt-3 text-sm text-charcoal">No staff changes have been recorded yet.</p>
       ) : (
         <ul className="mt-4 space-y-2">
           {entries.map((entry) => (

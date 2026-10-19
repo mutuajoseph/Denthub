@@ -589,7 +589,7 @@ async def list_audit(
     token: str,
     limit: int = ADMIN_LIST_LIMIT,
 ) -> AdminAuditList:
-    """The newest admin writes first, so the console shows recent activity."""
+    """The newest staff writes first, so the console shows recent activity."""
     await _require_admin(state, token)
     page_size = _limit(limit)
 

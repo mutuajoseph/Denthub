@@ -7,14 +7,25 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal, get_args
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, String, select
+from sqlalchemy import Enum as SAEnum
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
 from app.repositories.database import Base
+
+#: The Divisions a Platform Operator can be scoped to (``CONTEXT.md``
+#: "Operator", PRD §2). One Operator belongs to exactly one of these.
+OperatorDivision = Literal["jobs", "shop", "training", "dentist", "international", "suppliers"]
+OPERATOR_DIVISIONS = get_args(OperatorDivision)
+
+#: What an Operator may do inside their Division. A Lead writes; an Assistant
+#: only reads.
+OperatorTier = Literal["lead", "assistant"]
+OPERATOR_TIERS = get_args(OperatorTier)
 
 
 class User(Base):
@@ -44,6 +55,29 @@ class User(Base):
         ForeignKey("facilities.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
+    )
+
+    #: A Platform Operator's one Division and their tier inside it (PRD §2,
+    #: ``CONTEXT.md`` "Operator"). Both null for every non-operator, and the
+    #: console reads them fresh per request so granting or revoking a Division
+    #: takes effect at once. The pair is set by staff; it is never request input.
+    operator_division: Mapped[OperatorDivision | None] = mapped_column(
+        SAEnum(
+            *OPERATOR_DIVISIONS,
+            name="operator_division",
+            native_enum=False,
+            length=20,
+        ),
+        nullable=True,
+    )
+    operator_tier: Mapped[OperatorTier | None] = mapped_column(
+        SAEnum(
+            *OPERATOR_TIERS,
+            name="operator_tier",
+            native_enum=False,
+            length=20,
+        ),
+        nullable=True,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False

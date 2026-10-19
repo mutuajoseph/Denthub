@@ -6,6 +6,7 @@ import RouteGuard from "./auth/RouteGuard";
 import {
   ADMIN_ROLES,
   FACILITY_ROLES,
+  OPERATIONS_ROLES,
   PUBLIC_ROLES,
   SUPPLIER_ROLES,
   TRAINING_PROVIDER_ROLES,
@@ -57,6 +58,11 @@ const Messages = lazy(() =>
   import("./pages/Messages").then((module) => ({ default: module.Messages })),
 );
 const NotFound = lazy(() => import("./pages/NotFound"));
+const OperationsDashboard = lazy(() =>
+  import("./pages/OperationsDashboard").then((module) => ({
+    default: module.OperationsDashboard,
+  })),
+);
 const OralCareShopPage = lazy(() => import("./pages/OralCareShopPage"));
 const SignInPage = lazy(() =>
   import("./pages/SignInPage").then((module) => ({ default: module.SignInPage })),
@@ -162,6 +168,14 @@ const App = () => {
               element={
                 <RouteGuard user={user} allowedRoles={ADMIN_ROLES} unauthorizedPath="/">
                   <AdminDashboard user={user} />
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="/operations"
+              element={
+                <RouteGuard user={user} allowedRoles={OPERATIONS_ROLES} unauthorizedPath="/">
+                  <OperationsDashboard user={user} />
                 </RouteGuard>
               }
             />

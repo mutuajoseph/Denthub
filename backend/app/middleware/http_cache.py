@@ -42,7 +42,7 @@ RESOURCE_CACHE_CONTROL = "public, no-cache"
 
 #: Replies that are person- or infra-specific and never become public caches.
 _NON_CACHEABLE_PREFIXES = tuple(
-    f"{API_V1_PREFIX}{suffix}" for suffix in ("/auth", "/users", "/health", "/admin")
+    f"{API_V1_PREFIX}{suffix}" for suffix in ("/auth", "/users", "/health", "/admin", "/operations")
 )
 _CONFIG_PREFIX = f"{API_V1_PREFIX}/config/"
 
