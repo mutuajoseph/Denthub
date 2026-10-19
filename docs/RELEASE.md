@@ -94,20 +94,27 @@ re-running the failed run from the Actions UI.
    (`python -c "import secrets; print(secrets.token_urlsafe(48))"`). It is declared
    `sync: false` and must never be committed. **The app refuses to start in
    production if it is missing or left at the public dev default**, so a release
-   without it fails at `preDeployCommand`/startup rather than serving forgeable
-   tokens. Rotating the key invalidates every existing session.
+   without it fails at startup rather than serving forgeable tokens. Rotating the
+   key invalidates every existing session.
 5. Service → **Settings → Deploy Hook** → copy the URL.
 6. Confirm the health check is `/api/v1/health`.
 
-> The blueprint's `preDeployCommand` runs `uv run python -m app.scripts.seed_all`,
-> which runs `alembic upgrade head` once and then seeds the demo data
-> (`seed_products` → `seed_countries` → `seed_listings` → `seed_jobs` →
-> `seed_magazine` → `seed_training`) before the new build goes live. Migrations and
-> data therefore land before the service serves traffic. The seeds are idempotent and
-> run on every deploy. Each `seed_*` script is still runnable on its own (it migrates,
-> then seeds itself); `seed_all` is just the single deploy entrypoint. Do **not** move
-> the command to `startCommand`: it runs `uvicorn`, which blocks forever, so commands
-> chained after it never run. If you change the database URL after the first deploy,
+> The blueprint's `startCommand` prefixes uvicorn with
+> `uv run python -m app.scripts.seed_all`, which runs `alembic upgrade head` once and
+> then seeds the demo data (`seed_products` → `seed_countries` → `seed_listings` →
+> `seed_jobs` → `seed_magazine` → `seed_training`) before the service serves traffic.
+> Migrations and data therefore land before the health check passes.
+>
+> **Why not `preDeployCommand`?** Render only runs pre-deploy commands on **paid**
+> web services; this service is on the free plan, so the command is silently skipped
+> and the service goes live against an unmigrated database. The prefix must stay
+> *before* uvicorn (which blocks forever); nothing may be chained after it. The seeds
+> are idempotent, so every start can re-run them — on a free instance that also means
+> on every cold start, not just per deploy. The service fails to start if the
+> migration or a seed fails, which is the intended trade-off.
+>
+> Each `seed_*` script is still runnable on its own (it migrates, then seeds itself);
+> `seed_all` is just the single deploy entrypoint. If you change the database URL,
 > run `alembic upgrade head` (and the seeds, if it is a new database) against it once
 > by hand.
 
@@ -155,9 +162,9 @@ curl -fsS https://<your-vercel-domain>/api/v1/health          # same, via the re
 
 A **404** from the Render URL means the service was never created or the name in
 `frontend/vercel.json` doesn't match it. A **health 200 but `/api/v1/products` 500**
-means migrations didn't run — check the deploy log for the `preDeployCommand` step.
+means migrations didn't run — check the start-command log for the `seed_all` step.
 A **health 200 and empty pages** means the seeds didn't run — check the same
-`preDeployCommand` step for the `seed.*` log lines (`seed.done`, `seed.listings.done`).
+start-command log for the `seed.*` log lines (`seed.done`, `seed.listings.done`).
 
 
 ---
