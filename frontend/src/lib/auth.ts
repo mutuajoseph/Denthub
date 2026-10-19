@@ -117,6 +117,18 @@ export async function login(credentials: LoginRequest): Promise<AuthResponse> {
   });
 }
 
+/**
+ * Sign in at the staff surface (PRD §6, issue #80). The backend mints a token
+ * scoped to the staff issuer; the client stores it under the same key because
+ * one browser holds one session.
+ */
+export async function loginStaff(credentials: LoginRequest): Promise<AuthResponse> {
+  return postAuth("/auth/staff/login", {
+    email: credentials.email,
+    password: credentials.password,
+  });
+}
+
 export async function register(data: RegisterRequest): Promise<AuthResponse> {
   const accountType = normalizeRole(data.account_type);
 
