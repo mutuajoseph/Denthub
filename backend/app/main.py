@@ -8,6 +8,7 @@ a test can construct its own state without touching globals.
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -20,17 +21,29 @@ from app.exceptions import register_exception_handlers
 from app.middleware.http_cache import HttpCacheMiddleware
 from app.middleware.logging import RequestLoggingMiddleware
 from app.routes.v1 import v1_router
+from app.scripts.seed_products import run_migrations
 from app.utils.logger import configure_logging
 from app.utils.state import AppState
 from app.utils.urls import describe_url
 
 
-def create_app() -> FastAPI:
-    settings = Settings.from_env()
+def create_app(settings: Settings | None = None) -> FastAPI:
+    """Build the app; ``settings`` is injectable so tests need no environment."""
+    settings = settings or Settings.from_env()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         logger = configure_logging(dev_mode=settings.dev_mode, log_level=settings.log_level)
+
+        # Schema before code: production must never serve a query that expects a
+        # column the database lacks. Render's free plan ignores pre-deploy
+        # commands and the start command is provider configuration, so the
+        # process itself upgrades the schema before accepting traffic. Alembic
+        # calls ``asyncio.run()`` internally, hence the thread.
+        if settings.environment == "production":
+            logger.info("db.migrate.start")
+            await asyncio.to_thread(run_migrations)
+            logger.info("db.migrate.done")
 
         # Initialize async database engine and session maker
         logger.info("db.init", url=describe_url(settings.database_url))
