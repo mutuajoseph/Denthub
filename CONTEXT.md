@@ -80,9 +80,18 @@ internal route, never the public login.
 _Avoid_: Staff (unqualified), internal user
 
 **Operator**:
-Platform Staff scoped to one Division (Jobs, Shop, Training, Dentist,
-International, Suppliers) at a Lead or Assistant tier.
+Platform Staff scoped to one Division at a Lead or Assistant tier.
 _Avoid_: Moderator
+
+**Division**:
+One of the six areas an Operator is scoped to: Jobs, Shop, Training, Dentist,
+International, Suppliers. An Operator belongs to exactly one.
+_Avoid_: Department, vertical, category
+
+**Operator tier**:
+An Operator's authority inside their Division: a Lead may write, an Assistant
+may only read.
+_Avoid_: Level, rank
 
 ### Care
 
