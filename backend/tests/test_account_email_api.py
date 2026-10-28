@@ -304,3 +304,12 @@ async def test_the_console_mailer_never_logs_the_message_body() -> None:
 
     assert logger.calls
     assert secret not in repr(logger.calls)
+
+
+async def test_the_local_console_mailer_logs_the_body_so_links_can_be_followed() -> None:
+    logger = _RecordingLogger()
+    mailer = ConsoleMailer(logger=logger, log_body=True)  # type: ignore[arg-type]
+
+    await mailer.send(OutgoingEmail(to="amina@example.com", subject="Reset", text="?token=abc"))
+
+    assert "?token=abc" in repr(logger.calls)

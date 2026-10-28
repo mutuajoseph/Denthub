@@ -61,7 +61,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 logger=logger,
             )
             if settings.resend_api_key
-            else ConsoleMailer(logger=logger)
+            else ConsoleMailer(logger=logger, log_body=settings.environment == "local")
         )
 
         app.state.app_state = AppState(
