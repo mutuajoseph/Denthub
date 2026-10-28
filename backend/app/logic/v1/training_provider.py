@@ -24,7 +24,7 @@ from app.exceptions import (
     InvalidRequestError,
     NotFoundException,
 )
-from app.logic.v1.auth import TRAINING_PROVIDER_ROLES, get_user_from_token
+from app.logic.v1.auth import TRAINING_PROVIDER_ROLES
 from app.logic.v1.training import DeliveryMode
 from app.repositories.training import (
     TrainingCourse,
@@ -217,17 +217,12 @@ def _serialize_webinar(webinar: TrainingWebinar) -> ProviderWebinar:
     )
 
 
-async def _require_training_provider(state: AppState, token: str) -> User:
-    """Load the caller and reject everyone but an active provider account."""
-    actor = await get_user_from_token(state, token)
-
+def _require_training_provider(actor: User) -> User:
+    """Reject everyone but a training provider account."""
     if actor.role not in TRAINING_PROVIDER_ROLES:
         raise ForbiddenException(
             message="Only training provider accounts may manage a training dashboard"
         )
-
-    if not actor.is_active:
-        raise ForbiddenException(message="User account is deactivated")
 
     return actor
 
@@ -249,13 +244,13 @@ def _normalize_country(country_code: str) -> str:
     return country
 
 
-async def get_my_dashboard(state: AppState, *, token: str) -> TrainingProviderDashboard:
+async def get_my_dashboard(state: AppState, *, actor: User) -> TrainingProviderDashboard:
     """The caller's provider profile and derived stats.
 
     404 when the account has not created a provider yet — the dashboard turns
     that into the create-provider form.
     """
-    actor = await _require_training_provider(state, token)
+    actor = _require_training_provider(actor)
 
     async with state.db_session_maker() as session:
         provider = await _owned_provider(session, actor.id)
@@ -282,7 +277,7 @@ async def get_my_dashboard(state: AppState, *, token: str) -> TrainingProviderDa
 async def create_my_provider(
     state: AppState,
     *,
-    token: str,
+    actor: User,
     data: CreateProviderRequest,
     country_code: str,
 ) -> TrainingProviderDashboard:
@@ -291,7 +286,7 @@ async def create_my_provider(
     One provider per account (409 on a second attempt); it starts unverified
     and staff verify it later.
     """
-    actor = await _require_training_provider(state, token)
+    actor = _require_training_provider(actor)
     country = _normalize_country(country_code)
 
     async with state.db_session_maker() as session:
@@ -321,12 +316,12 @@ async def create_my_provider(
 async def list_my_courses(
     state: AppState,
     *,
-    token: str,
+    actor: User,
     limit: int = DEFAULT_PAGE_SIZE,
     offset: int = 0,
 ) -> ProviderCourseList:
     """List the caller's own courses."""
-    actor = await _require_training_provider(state, token)
+    actor = _require_training_provider(actor)
     page_size, start = _page_window(limit, offset)
 
     async with state.db_session_maker() as session:
@@ -347,7 +342,7 @@ async def list_my_courses(
 async def create_my_course(
     state: AppState,
     *,
-    token: str,
+    actor: User,
     data: CreateCourseRequest,
     currency: str,
 ) -> ProviderCourse:
@@ -357,7 +352,7 @@ async def create_my_course(
     the provider, ``currency`` from the region headers) and starts free unless
     a price is given, in which case it carries that currency on the same row.
     """
-    actor = await _require_training_provider(state, token)
+    actor = _require_training_provider(actor)
 
     async with state.db_session_maker() as session:
         provider = await _owned_provider(session, actor.id)
@@ -382,7 +377,7 @@ async def create_my_course(
 async def update_my_course(
     state: AppState,
     *,
-    token: str,
+    actor: User,
     course_id: str,
     data: UpdateCourseRequest,
     currency: str,
@@ -392,7 +387,7 @@ async def update_my_course(
     A course belonging to another provider reads as 404, exactly as an unknown
     id does, so ownership is never observable from the response.
     """
-    actor = await _require_training_provider(state, token)
+    actor = _require_training_provider(actor)
 
     updates = data.model_dump(exclude_unset=True)
     for key in _COURSE_REQUIRED_ON_UPDATE:
@@ -423,12 +418,12 @@ async def update_my_course(
 async def list_my_webinars(
     state: AppState,
     *,
-    token: str,
+    actor: User,
     limit: int = DEFAULT_PAGE_SIZE,
     offset: int = 0,
 ) -> ProviderWebinarList:
     """List the caller's own webinars, past ones included."""
-    actor = await _require_training_provider(state, token)
+    actor = _require_training_provider(actor)
     page_size, start = _page_window(limit, offset)
 
     async with state.db_session_maker() as session:
@@ -451,11 +446,11 @@ async def list_my_webinars(
 async def create_my_webinar(
     state: AppState,
     *,
-    token: str,
+    actor: User,
     data: CreateWebinarRequest,
 ) -> ProviderWebinar:
     """Create a webinar in the caller's own provider."""
-    actor = await _require_training_provider(state, token)
+    actor = _require_training_provider(actor)
 
     async with state.db_session_maker() as session:
         provider = await _owned_provider(session, actor.id)
@@ -478,12 +473,12 @@ async def create_my_webinar(
 async def update_my_webinar(
     state: AppState,
     *,
-    token: str,
+    actor: User,
     webinar_id: str,
     data: UpdateWebinarRequest,
 ) -> ProviderWebinar:
     """Apply a partial update to one of the caller's own webinars."""
-    actor = await _require_training_provider(state, token)
+    actor = _require_training_provider(actor)
 
     updates = data.model_dump(exclude_unset=True)
     for key in _WEBINAR_REQUIRED_ON_UPDATE:

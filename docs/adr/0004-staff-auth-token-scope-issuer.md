@@ -70,3 +70,17 @@ publicly and cannot obtain a staff token via `/auth/staff/login`.
   cookies (ADR 0003, point 1).
 - Consider adding issuer verification in `decode_access_token()` when token
   kinds diverge further.
+
+## Addendum (#130): one gate, issuer enforced
+
+Every authenticated route now resolves its caller through the dependencies in
+`backend/app/dependencies.py` (`current_user`, `current_staff`,
+`current_admin`), all built on `authenticate()` in `app/logic/v1/auth.py`,
+which replaces `get_current_staff()` and `get_user_from_token()`. The decision
+above is unchanged, with two consequences now enforced everywhere:
+
+- **Both directions are refused.** A staff token on a public route is a `403`,
+  as a public token on a staff route already was.
+- **The issuer is verified.** A token whose `iss` does not match its `scope`
+  (`denthub-public` with `public`, `denthub-staff` with `staff`) is a `401`.
+  This closes the follow-up above.

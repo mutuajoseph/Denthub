@@ -25,7 +25,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.exceptions import ForbiddenException, NotFoundException
-from app.logic.v1.auth import PATIENT_ROLES, get_user_from_token
+from app.logic.v1.auth import PATIENT_ROLES
 from app.repositories.appointment import AppointmentRepository, AppointmentStatus
 from app.repositories.health_record import (
     HealthRecordAuthorKind,
@@ -88,16 +88,6 @@ class HealthRecordResponse(BaseModel):
     entries: list[HealthRecordEntryResponse]
     created_at: datetime
     updated_at: datetime
-
-
-async def _load_actor(state: AppState, token: str) -> User:
-    """The signed-in user, rejecting a deactivated account."""
-    actor = await get_user_from_token(state, token)
-
-    if not actor.is_active:
-        raise ForbiddenException(message="User account is deactivated")
-
-    return actor
 
 
 async def _is_treating_clinician(session: AsyncSession, actor: User, patient_id: str) -> bool:
@@ -177,7 +167,7 @@ def _serialize(
 async def get_health_record(
     state: AppState,
     *,
-    token: str,
+    actor: User,
     patient_id: str,
 ) -> HealthRecordResponse:
     """The Patient's Health Record, oldest entry first.
@@ -186,7 +176,6 @@ async def get_health_record(
     created empty on first read, so a Patient who has never had an entry still
     gets a truthful, empty record rather than a 404.
     """
-    actor = await _load_actor(state, token)
 
     async with state.db_session_maker() as session:
         await _authorize(session, actor, patient_id)
@@ -205,7 +194,7 @@ async def get_health_record(
 async def add_health_record_entry(
     state: AppState,
     *,
-    token: str,
+    actor: User,
     patient_id: str,
     request: HealthRecordEntryRequest,
 ) -> HealthRecordEntryResponse:
@@ -215,7 +204,6 @@ async def add_health_record_entry(
     author kind is taken from the caller, never from the body (root ``AGENTS.md``,
     "Auth and security"), so an entry cannot claim to be someone it is not.
     """
-    actor = await _load_actor(state, token)
 
     async with state.db_session_maker() as session:
         author_kind = await _authorize(session, actor, patient_id)
@@ -238,7 +226,7 @@ async def add_health_record_entry(
 async def update_health_record(
     state: AppState,
     *,
-    token: str,
+    actor: User,
     patient_id: str,
     request: HealthRecordUpdateRequest,
 ) -> HealthRecordResponse:
@@ -248,7 +236,6 @@ async def update_health_record(
     records clinical detail as an entry (which is badged and audited); a
     record-level field has no per-entry author, so it stays with the Patient.
     """
-    actor = await _load_actor(state, token)
 
     async with state.db_session_maker() as session:
         author_kind = await _authorize(session, actor, patient_id)
