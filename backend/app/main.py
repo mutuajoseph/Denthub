@@ -12,6 +12,7 @@ import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -23,6 +24,7 @@ from app.middleware.logging import RequestLoggingMiddleware
 from app.routes.v1 import v1_router
 from app.scripts.seed_products import run_migrations
 from app.utils.logger import configure_logging
+from app.utils.mailer import ConsoleMailer, Mailer, ResendMailer
 from app.utils.state import AppState
 from app.utils.urls import describe_url
 
@@ -50,15 +52,33 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         engine = create_async_engine(settings.database_url, echo=settings.dev_mode)
         db_session_maker = async_sessionmaker(bind=engine, expire_on_commit=False)
 
+        # The HTTP client exists only for Resend, and the mailer that owns it is
+        # the AppState singleton; the lifespan closes it on shutdown.
+        http: httpx.AsyncClient | None = None
+        mailer: Mailer
+        if settings.resend_api_key:
+            http = httpx.AsyncClient(timeout=10.0)
+            mailer = ResendMailer(
+                api_key=settings.resend_api_key,
+                sender=settings.mail_from,
+                http=http,
+                logger=logger,
+            )
+        else:
+            mailer = ConsoleMailer(logger=logger, log_body=settings.environment == "local")
+
         app.state.app_state = AppState(
             settings=settings,
             logger=logger,
             db_session_maker=db_session_maker,
+            mailer=mailer,
         )
 
         logger.info("app.startup", app=settings.app_name, environment=settings.environment)
         yield
 
+        if http is not None:
+            await http.aclose()
         logger.info("db.shutdown")
         await engine.dispose()
         logger.info("app.shutdown", app=settings.app_name)

@@ -176,6 +176,7 @@ function seedAuth(role: Role): void {
       role,
       is_staff: role === ROLE.STAFF,
       account_status: "active",
+      email_verified: true,
       profiles: [],
       memberships: [],
     },

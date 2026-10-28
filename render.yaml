@@ -66,3 +66,13 @@ services:
       # deploy and re-seeding would be required each time. See docs/RELEASE.md.
       - key: DATABASE_URL
         sync: false
+      # Outgoing email (#120; app/utils/mailer.py). Production refuses to start
+      # without all three (app/config.py). RESEND_API_KEY is a secret; MAIL_FROM
+      # must be on a domain verified in Resend; FRONTEND_URL is where emailed
+      # links point. See docs/RELEASE.md.
+      - key: RESEND_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
