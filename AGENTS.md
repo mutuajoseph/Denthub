@@ -96,7 +96,10 @@ the PR opens.
 ## Branches, commits, and PRs
 
 - Branch off `main` as `feat/<slug>` or `fix/<slug>` (`docs/`, `chore/`, `ci/`
-  likewise). Reference the issue number in the PR body (`Closes #N`).
+  likewise).
+- Link the issue as `Refs #N` in the PR body and the squash message. GitHub
+  closes an issue on merge when `#N` follows a closing keyword (close, fix,
+  resolve, in any tense), and closing is the user's call.
 - **The PR title is a Conventional Commit** and it sets the release version:
   `feat:` is minor, `fix:`/`chore:`/`docs:` are patch, `feat!:` is major.
 - **Squash-merge only.** The release job reads the squashed commit subject; a
