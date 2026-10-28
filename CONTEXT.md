@@ -81,7 +81,9 @@ _Avoid_: Invite link
 **Verification**:
 An application for DentHub to check a Specialist's, Facility's, Supplier's, or
 Training Provider's credentials, moving PENDING → VERIFIED or REJECTED, and
-revocable. Approving one raises the Verification tier to verified.
+revocable. Approving a Specialist's or Facility's raises its Verification tier
+to verified; approving a Supplier's or Training Provider's marks it verified,
+which it needs before its products or Courses go live.
 _Avoid_: Approval, KYC, account status
 
 **Verified Medic**:
