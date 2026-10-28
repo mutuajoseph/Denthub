@@ -15,6 +15,7 @@ from typing import Any
 from httpx import AsyncClient
 from sqlalchemy import update
 
+from app.repositories.user import User
 from app.repositories.user_token import UserToken
 from app.utils.mailer import ConsoleMailer, OutgoingEmail
 from app.utils.state import AppState
@@ -151,18 +152,25 @@ async def test_resend_needs_a_signed_in_user(client: AsyncClient) -> None:
 # --- Forgot and reset --------------------------------------------------------
 
 
-async def test_forgot_answers_identically_for_known_and_unknown_emails(
+async def test_forgot_answers_identically_for_known_unknown_and_deactivated_emails(
     client: AsyncClient, state: AppState
 ) -> None:
     await _sign_up(client)
+    await _sign_up(client, email="gone@example.com")
+    async with state.db_session_maker() as session:
+        await session.execute(
+            update(User).where(User.email == "gone@example.com").values(is_active=False)
+        )
+        await session.commit()
     sent_before = len(_outbox(state))
 
     known = await _forgot(client, "amina@example.com")
     unknown = await _forgot(client, "nobody@example.com")
+    deactivated = await _forgot(client, "gone@example.com")
 
-    assert known.status_code == unknown.status_code == 202
-    assert known.json() == unknown.json()
-    # Only the real account is emailed.
+    assert known.status_code == unknown.status_code == deactivated.status_code == 202
+    assert known.json() == unknown.json() == deactivated.json()
+    # Only the active account is emailed.
     assert [e.to for e in _outbox(state)[sent_before:]] == ["amina@example.com"]
 
 
@@ -247,6 +255,12 @@ async def test_a_new_password_over_72_bytes_is_a_422(client: AsyncClient, state:
     response = await client.post(
         "/api/v1/auth/password/reset", json={"token": token, "new_password": "é" * 40}
     )
+
+    assert response.status_code == 422
+
+
+async def test_an_oversized_token_is_a_422(client: AsyncClient) -> None:
+    response = await client.post("/api/v1/auth/verify-email", json={"token": "x" * 129})
 
     assert response.status_code == 422
 

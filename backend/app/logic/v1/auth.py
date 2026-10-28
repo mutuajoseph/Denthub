@@ -6,12 +6,13 @@ Handles password hashing, token generation/verification, and signup/login flows.
 from __future__ import annotations
 
 import secrets
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Literal, cast
 
 import bcrypt
 import jwt
-from pydantic import AfterValidator, BaseModel, EmailStr
+from pydantic import AfterValidator, BaseModel, EmailStr, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.exceptions import (
@@ -153,8 +154,13 @@ def _check_new_password(value: str) -> str:
 NewPassword = Annotated[str, AfterValidator(_check_new_password)]
 
 
+#: Emailed tokens are 43 characters (``secrets.token_urlsafe(32)``); anything
+#: far longer is not one of ours.
+EmailedToken = Annotated[str, Field(max_length=128)]
+
+
 class VerifyEmailRequest(BaseModel):
-    token: str
+    token: EmailedToken
 
 
 class ForgotPasswordRequest(BaseModel):
@@ -168,12 +174,12 @@ class ForgotPasswordResponse(BaseModel):
 
 
 class ResetPasswordRequest(BaseModel):
-    token: str
+    token: EmailedToken
     new_password: NewPassword
 
 
 class ChangePasswordRequest(BaseModel):
-    current_password: str
+    current_password: str = Field(max_length=256)
     new_password: NewPassword
 
 
@@ -499,24 +505,34 @@ async def _send_verification_email(state: AppState, user: User, token: str) -> N
             text=(
                 f"Hi {user.full_name},\n\n"
                 f"Confirm this is your email address by opening the link below. "
-                f"It works once and expires in 48 hours.\n\n{link}\n\n"
+                f"It works once and expires in {_hours(VERIFY_EMAIL_TTL)}.\n\n{link}\n\n"
                 "If you didn't create a DentHub account, you can ignore this email."
             ),
         )
     )
 
 
+def _hours(ttl: timedelta) -> str:
+    hours = int(ttl.total_seconds() // 3600)
+    return "an hour" if hours == 1 else f"{hours} hours"
+
+
+async def _spend_token(
+    session: AsyncSession, token: str, purpose: TokenPurpose, now: datetime
+) -> User:
+    """The active User a live token belongs to, spending the token; else a 400."""
+    user_id = await UserTokenRepository.spend(session, token=token, purpose=purpose, now=now)
+    user = await UserRepository.get_by_id(session, user_id) if user_id else None
+    if user is None or not user.is_active:
+        raise InvalidRequestError(message="This link is invalid or has expired")
+    return user
+
+
 async def verify_email(state: AppState, data: VerifyEmailRequest) -> None:
     """Spend a verification token and mark its User's email verified."""
     now = _utcnow()
     async with state.db_session_maker() as session:
-        user_id = await UserTokenRepository.spend(
-            session, token=data.token, purpose="verify_email", now=now
-        )
-        user = await UserRepository.get_by_id(session, user_id) if user_id else None
-        if user is None:
-            raise InvalidRequestError(message="This link is invalid or has expired")
-
+        user = await _spend_token(session, data.token, "verify_email", now)
         user.email_verified_at = user.email_verified_at or now
         await session.commit()
 
@@ -536,32 +552,46 @@ async def resend_verification_email(state: AppState, *, actor: User) -> None:
 FORGOT_PASSWORD_MESSAGE = "If that email has a DentHub account, we've sent a reset link to it."
 
 
-async def forgot_password(state: AppState, data: ForgotPasswordRequest) -> ForgotPasswordResponse:
-    """Email a reset link if the account exists; answer the same way regardless."""
-    async with state.db_session_maker() as session:
-        user = await UserRepository.get_by_email(session, data.email)
-        token = None
-        if user is not None and user.is_active:
-            token = await _issue_token(session, user, "reset_password", RESET_PASSWORD_TTL)
-            await session.commit()
+#: Runs work after the response is sent (the route passes FastAPI's
+#: ``BackgroundTasks.add_task``), so logic stays free of the request.
+Defer = Callable[..., Any]
 
-    if user is not None and token is not None:
-        link = f"{state.settings.frontend_url}/reset-password?token={token}"
-        await state.mailer.send(
-            OutgoingEmail(
-                to=user.email,
-                subject="Reset your DentHub password",
-                text=(
-                    f"Hi {user.full_name},\n\n"
-                    "Open the link below to choose a new password. It works once and "
-                    f"expires in an hour.\n\n{link}\n\n"
-                    "If you didn't ask for this, you can ignore this email; your "
-                    "password hasn't changed."
-                ),
-            )
-        )
 
+def forgot_password(
+    data: ForgotPasswordRequest, *, state: AppState, defer: Defer
+) -> ForgotPasswordResponse:
+    """Answer at once, the same way for every email; the reset work runs afterwards.
+
+    Looking the account up, issuing the token, and sending through the provider
+    all happen after the response, so neither the body, the status, nor the
+    response time says whether the email has an account.
+    """
+    defer(_send_password_reset, state, data.email)
     return ForgotPasswordResponse(message=FORGOT_PASSWORD_MESSAGE)
+
+
+async def _send_password_reset(state: AppState, email: str) -> None:
+    async with state.db_session_maker() as session:
+        user = await UserRepository.get_by_email(session, email)
+        if user is None or not user.is_active:
+            return
+        token = await _issue_token(session, user, "reset_password", RESET_PASSWORD_TTL)
+        await session.commit()
+
+    link = f"{state.settings.frontend_url}/reset-password?token={token}"
+    await state.mailer.send(
+        OutgoingEmail(
+            to=user.email,
+            subject="Reset your DentHub password",
+            text=(
+                f"Hi {user.full_name},\n\n"
+                "Open the link below to choose a new password. It works once and "
+                f"expires in {_hours(RESET_PASSWORD_TTL)}.\n\n{link}\n\n"
+                "If you didn't ask for this, you can ignore this email; your "
+                "password hasn't changed."
+            ),
+        )
+    )
 
 
 def _set_password(user: User, new_password: str, now: datetime) -> None:
@@ -574,13 +604,7 @@ async def reset_password(state: AppState, data: ResetPasswordRequest) -> None:
     """Spend a reset token and set its User's new password."""
     now = _utcnow()
     async with state.db_session_maker() as session:
-        user_id = await UserTokenRepository.spend(
-            session, token=data.token, purpose="reset_password", now=now
-        )
-        user = await UserRepository.get_by_id(session, user_id) if user_id else None
-        if user is None:
-            raise InvalidRequestError(message="This link is invalid or has expired")
-
+        user = await _spend_token(session, data.token, "reset_password", now)
         _set_password(user, data.new_password, now)
         await session.commit()
 

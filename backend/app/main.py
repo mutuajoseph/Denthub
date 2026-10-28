@@ -52,17 +52,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         engine = create_async_engine(settings.database_url, echo=settings.dev_mode)
         db_session_maker = async_sessionmaker(bind=engine, expire_on_commit=False)
 
-        http = httpx.AsyncClient(timeout=10.0)
-        mailer: Mailer = (
-            ResendMailer(
+        # The HTTP client exists only for Resend, and the mailer that owns it is
+        # the AppState singleton; the lifespan closes it on shutdown.
+        http: httpx.AsyncClient | None = None
+        mailer: Mailer
+        if settings.resend_api_key:
+            http = httpx.AsyncClient(timeout=10.0)
+            mailer = ResendMailer(
                 api_key=settings.resend_api_key,
                 sender=settings.mail_from,
                 http=http,
                 logger=logger,
             )
-            if settings.resend_api_key
-            else ConsoleMailer(logger=logger, log_body=settings.environment == "local")
-        )
+        else:
+            mailer = ConsoleMailer(logger=logger, log_body=settings.environment == "local")
 
         app.state.app_state = AppState(
             settings=settings,
@@ -74,7 +77,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         logger.info("app.startup", app=settings.app_name, environment=settings.environment)
         yield
 
-        await http.aclose()
+        if http is not None:
+            await http.aclose()
         logger.info("db.shutdown")
         await engine.dispose()
         logger.info("app.shutdown", app=settings.app_name)

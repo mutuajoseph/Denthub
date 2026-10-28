@@ -1,11 +1,12 @@
 """Authentication routes — thin HTTP adapters over authentication logic.
 
-Provides endpoints for signup, login, and fetching the current authenticated user profile.
+Signup, login (public and staff), the current user, email verification, and the
+password lifecycle (forgot, reset, change).
 """
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, BackgroundTasks, Depends, status
 
 from app.dependencies import current_staff, current_user, get_app_state
 from app.logic.v1.auth import (
@@ -91,7 +92,7 @@ async def confirm_email(
     data: VerifyEmailRequest,
     state: AppState = Depends(get_app_state),
 ) -> None:
-    """Spend an emailed verification token. Public: the token is the credential."""
+    """Spend an emailed verification token. Public (#120): the token is the credential."""
     await verify_email(state, data)
 
 
@@ -116,10 +117,14 @@ async def resend_email_verification(
 )
 async def request_password_reset(
     data: ForgotPasswordRequest,
+    background: BackgroundTasks,
     state: AppState = Depends(get_app_state),
 ) -> ForgotPasswordResponse:
-    """Email a reset link if the account exists; the answer never says which."""
-    return await forgot_password(state, data)
+    """Email a reset link if the account exists; the answer never says which.
+
+    Public, as decided on #120: anyone may ask, and only the inbox owner can act.
+    """
+    return forgot_password(data, state=state, defer=background.add_task)
 
 
 @router.post(
@@ -131,7 +136,7 @@ async def complete_password_reset(
     data: ResetPasswordRequest,
     state: AppState = Depends(get_app_state),
 ) -> None:
-    """Set a new password with an emailed reset token. Public: the token is the credential."""
+    """Set a new password with an emailed reset token (public, #120: the token is the key)."""
     await reset_password(state, data)
 
 
