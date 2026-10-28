@@ -23,6 +23,7 @@ from app.repositories.health_record import HealthRecordEntry, PatientHealthRecor
 from app.repositories.job import JobPosting, JobSalaryRange
 from app.repositories.listing import Branch, Facility, OpeningHour, Specialist
 from app.repositories.magazine import MagazineArticle, MagazineArticleTag
+from app.repositories.profile import Profile
 from app.repositories.product import Product, Supplier
 from app.repositories.training import (
     TrainingCourse,
@@ -387,6 +388,16 @@ def build_users() -> list[User]:
             password_hash=SEEDED_PASSWORD_HASH,
         )
         for row in PATIENTS
+    ]
+
+
+def build_profiles(patients: list[User], clinician: User) -> list[Profile]:
+    """The Profiles the #117 backfill gives the seeded users: a Patient Profile
+    each for the Patients, and a Specialist Profile for the ``facility_dentist``
+    clinician (who has no ``facility_id``, so no membership)."""
+    return [
+        *(Profile(user_id=patient.id, kind="patient") for patient in patients),
+        Profile(user_id=clinician.id, kind="specialist"),
     ]
 
 
@@ -920,6 +931,7 @@ __all__ = [
     "INTERNATIONAL_PRODUCTS",
     "LOCAL_PRODUCTS",
     "PATIENTS",
+    "build_profiles",
     "SEEDED_PASSWORD",
     "build_appointments",
     "build_countries",

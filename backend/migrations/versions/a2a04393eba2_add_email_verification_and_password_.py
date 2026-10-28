@@ -1,7 +1,7 @@
 """add email verification and password reset tokens
 
 Revision ID: a2a04393eba2
-Revises: 4b75c2480490
+Revises: a03c4a379430
 Create Date: 2026-10-28 19:29:14.695440
 
 """
@@ -15,7 +15,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = 'a2a04393eba2'
-down_revision: Union[str, Sequence[str], None] = '4b75c2480490'
+down_revision: Union[str, Sequence[str], None] = 'a03c4a379430'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

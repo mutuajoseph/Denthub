@@ -111,6 +111,7 @@ class Specialist(Base):
     """An individual dental professional: a dentist, specialist, or intern."""
 
     __tablename__ = "specialists"
+    __table_args__ = (UniqueConstraint("user_id", name="uq_specialists_user_id"),)
 
     id: Mapped[str] = mapped_column(
         String(36),
@@ -120,6 +121,13 @@ class Specialist(Base):
     name: Mapped[str] = mapped_column(String(150), nullable=False, index=True)
     #: The stable handle a profile URL carries, never the display name.
     slug: Mapped[str] = mapped_column(String(150), unique=True, index=True, nullable=False)
+    #: The User who runs this listing (ADR-0006, #117): one listing per User.
+    #: Null for seeded listings and any listing nobody has claimed yet.
+    user_id: Mapped[str | None] = mapped_column(
+        String(36),
+        ForeignKey("users.id", ondelete="SET NULL", name="fk_specialists_user_id"),
+        nullable=True,
+    )
     country_code: Mapped[str] = mapped_column(String(2), default="KE", index=True, nullable=False)
     subdivision_code: Mapped[str] = mapped_column(String(30), index=True, nullable=False)
 

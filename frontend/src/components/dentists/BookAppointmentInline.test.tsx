@@ -16,6 +16,8 @@ const patient: AuthUser = {
   is_staff: false,
   account_status: "active",
   email_verified: true,
+  profiles: [],
+  memberships: [],
 };
 
 const facilityOwner: AuthUser = {
@@ -26,6 +28,8 @@ const facilityOwner: AuthUser = {
   is_staff: false,
   account_status: "active",
   email_verified: true,
+  profiles: [],
+  memberships: [],
 };
 
 describe("BookAppointmentInline", () => {

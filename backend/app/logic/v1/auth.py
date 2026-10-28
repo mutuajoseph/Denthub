@@ -21,6 +21,12 @@ from app.exceptions import (
     InvalidRequestError,
     UnauthorizedException,
 )
+from app.repositories.profile import (
+    PROFILE_FOR_ACCOUNT_TYPE,
+    FacilityPermission,
+    ProfileKind,
+    ProfileRepository,
+)
 from app.repositories.user import User, UserRepository
 from app.repositories.user_token import TokenPurpose, UserTokenRepository
 from app.utils.mailer import OutgoingEmail
@@ -101,8 +107,27 @@ def is_staff_surface_role(role: str) -> bool:
     return role in STAFF_SURFACE_ROLES
 
 
+class ProfileSummary(BaseModel):
+    """One Profile a User holds (``CONTEXT.md`` "Profile")."""
+
+    kind: ProfileKind
+
+
+class MembershipSummary(BaseModel):
+    """One Facility Membership, with the Facility's name so a client can say
+    who the User is acting for without a second lookup."""
+
+    facility_id: str
+    facility_name: str
+    permissions: list[FacilityPermission]
+
+
 class UserResponse(BaseModel):
-    """Public view of a user."""
+    """Public view of a user.
+
+    ``role`` is unchanged while clients migrate off it (ADR-0006); ``profiles``
+    and ``memberships`` are what the User actually acts as.
+    """
 
     id: str
     email: str
@@ -111,6 +136,8 @@ class UserResponse(BaseModel):
     is_staff: bool
     account_status: AccountStatus = "active"
     email_verified: bool = False
+    profiles: list[ProfileSummary] = []
+    memberships: list[MembershipSummary] = []
 
 
 class AuthResponseModel(BaseModel):
@@ -299,6 +326,12 @@ async def signup_user(
             account_status=account_status,
         )
 
+        # Write the new shape beside users.role from the expand release on
+        # (ADR-0006), so no signup ever needs backfilling.
+        kind = PROFILE_FOR_ACCOUNT_TYPE.get(data.account_type)
+        if kind is not None:
+            await ProfileRepository.add(session, user_id=user.id, kind=kind)
+
         verify_token = await _issue_token(session, user, "verify_email", VERIFY_EMAIL_TTL)
         await session.commit()
 
@@ -313,7 +346,7 @@ async def signup_user(
     return AuthResponseModel(
         access_token=token,
         token_type="bearer",
-        user=user_response(user),
+        user=await describe_user(state, user),
     )
 
 
@@ -348,7 +381,7 @@ async def login_user(
         return AuthResponseModel(
             access_token=token,
             token_type="bearer",
-            user=user_response(user),
+            user=await user_response(session, user),
         )
 
 
@@ -393,7 +426,7 @@ async def login_staff(
         return AuthResponseModel(
             access_token=token,
             token_type="bearer",
-            user=user_response(user),
+            user=await user_response(session, user),
         )
 
 
@@ -463,8 +496,10 @@ async def authenticate(state: AppState, token: str, *, scope: str) -> User:
     return user
 
 
-def user_response(user: User) -> UserResponse:
+async def user_response(session: AsyncSession, user: User) -> UserResponse:
     """The public shape of a User, as ``/auth/me`` and the sign-in routes return it."""
+    kinds = await ProfileRepository.kinds_for_user(session, user.id)
+    memberships = await ProfileRepository.memberships_for_user(session, user.id)
     return UserResponse(
         id=user.id,
         email=user.email,
@@ -473,7 +508,22 @@ def user_response(user: User) -> UserResponse:
         is_staff=is_staff_role(user.role),
         account_status=cast(AccountStatus, user.account_status),
         email_verified=user.email_verified_at is not None,
+        profiles=[ProfileSummary(kind=kind) for kind in kinds],
+        memberships=[
+            MembershipSummary(
+                facility_id=m.facility_id,
+                facility_name=m.facility_name,
+                permissions=m.permissions,
+            )
+            for m in memberships
+        ],
     )
+
+
+async def describe_user(state: AppState, user: User) -> UserResponse:
+    """``user_response`` in its own session, for ``/auth/me`` and ``/auth/staff/me``."""
+    async with state.db_session_maker() as session:
+        return await user_response(session, user)
 
 
 # --- Emailed tokens: email verification and password reset (#120) -----------
@@ -633,4 +683,6 @@ async def change_password(
         user.role,
         password_changed_at=user.password_changed_at,
     )
-    return AuthResponseModel(access_token=token, token_type="bearer", user=user_response(user))
+    return AuthResponseModel(
+        access_token=token, token_type="bearer", user=await describe_user(state, user)
+    )

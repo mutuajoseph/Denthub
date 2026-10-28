@@ -105,6 +105,8 @@ describe("auth contract", () => {
             role: "facility_admin",
             is_staff: false,
             account_status: "active",
+            profiles: [],
+            memberships: [],
           },
         }),
     });
@@ -146,6 +148,8 @@ describe("auth contract", () => {
               role: "unrecognized",
               is_staff: false,
               account_status: "active",
+              profiles: [],
+              memberships: [],
             },
           }),
       }),

@@ -13,6 +13,8 @@ function makeUser(accountStatus: AuthUser["account_status"]): AuthUser {
     is_staff: false,
     account_status: accountStatus,
     email_verified: true,
+    profiles: [],
+    memberships: [],
   };
 }
 

@@ -20,13 +20,13 @@ from app.logic.v1.auth import (
     UserSignup,
     VerifyEmailRequest,
     change_password,
+    describe_user,
     forgot_password,
     login_staff,
     login_user,
     resend_verification_email,
     reset_password,
     signup_user,
-    user_response,
     verify_email,
 )
 from app.repositories.user import User
@@ -55,9 +55,12 @@ async def login(
 
 
 @router.get("/me", response_model=UserResponse, responses=standard_error_responses(401, 403))
-async def me(actor: User = Depends(current_user)) -> UserResponse:
-    """Retrieve details of the currently authenticated user."""
-    return user_response(actor)
+async def me(
+    actor: User = Depends(current_user),
+    state: AppState = Depends(get_app_state),
+) -> UserResponse:
+    """The signed-in User, with the Profiles and Facility Memberships they hold."""
+    return await describe_user(state, actor)
 
 
 @router.post(
@@ -78,9 +81,12 @@ async def staff_login(
     response_model=UserResponse,
     responses=standard_error_responses(401, 403),
 )
-async def staff_me(actor: User = Depends(current_staff)) -> UserResponse:
+async def staff_me(
+    actor: User = Depends(current_staff),
+    state: AppState = Depends(get_app_state),
+) -> UserResponse:
     """Retrieve details of the current user, requiring a staff access token."""
-    return user_response(actor)
+    return await describe_user(state, actor)
 
 
 @router.post(
