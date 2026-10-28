@@ -7,7 +7,6 @@ description: >
   Use when the user says "open a PR", "create a PR", "make a pull request",
   "ship this", or "prepare this for review".
 argument-hint: "[branch-name]"
-disable-model-invocation: true
 allowed-tools:
   - Bash(git *)
   - Bash(gh *)
