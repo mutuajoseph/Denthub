@@ -79,6 +79,12 @@ class User(Base):
         ),
         nullable=True,
     )
+    #: When the User proved they own ``email`` (#120); null until then. Nothing
+    #: is gated on it yet, ``/auth/me`` only reports it.
+    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    #: When the password last changed (UTC). Access tokens issued before it are
+    #: refused, so a reset or change ends every existing session.
+    password_changed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )

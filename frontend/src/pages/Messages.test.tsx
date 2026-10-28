@@ -40,6 +40,7 @@ const patient: AuthUser = {
   full_name: "Amina Wanjiku",
   is_staff: false,
   account_status: "active",
+  email_verified: true,
 };
 
 function minutesAgo(minutes: number): string {

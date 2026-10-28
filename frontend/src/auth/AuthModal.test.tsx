@@ -1,7 +1,9 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { CountryConfig } from "../lib/countryConfigApi";
@@ -27,6 +29,10 @@ const ukConfig: CountryConfig = {
   insuranceProviders: [],
   regions: [],
 };
+
+function WithQueryClient({ children }: { children: ReactNode }) {
+  return <QueryClientProvider client={new QueryClient()}>{children}</QueryClientProvider>;
+}
 
 type StyleRule = { selector: string; className: string };
 
@@ -58,7 +64,7 @@ function blockOf(css: string, header: string): string {
 describe("AuthModal theming", () => {
   it("renders every auth view with theme tokens instead of hardcoded colours", async () => {
     const user = userEvent.setup();
-    const { container } = render(<AuthModal onClose={vi.fn()} />);
+    const { container } = render(<AuthModal onClose={vi.fn()} />, { wrapper: WithQueryClient });
 
     expect(container.querySelector("dialog")).not.toBeNull();
     expect(screen.getByText("Welcome back to DentHub")).toBeInTheDocument();
@@ -88,7 +94,7 @@ describe("AuthModal theming", () => {
   });
 
   it("paints the modal surfaces with design tokens", () => {
-    const { container } = render(<AuthModal onClose={vi.fn()} />);
+    const { container } = render(<AuthModal onClose={vi.fn()} />, { wrapper: WithQueryClient });
     const dialog = container.querySelector("dialog");
 
     expect(dialog?.className).toContain("bg-paper");
@@ -122,7 +128,7 @@ describe("AuthModal theming", () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
 
-    render(<AuthModal onClose={onClose} />);
+    render(<AuthModal onClose={onClose} />, { wrapper: WithQueryClient });
     await user.keyboard("{Escape}");
 
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -134,7 +140,7 @@ describe("AuthModal theming", () => {
       useCountryConfigStore.setState({ config: ukConfig, regions: [], lastCountry: "GB" });
     });
 
-    const { container } = render(<AuthModal onClose={vi.fn()} />);
+    const { container } = render(<AuthModal onClose={vi.fn()} />, { wrapper: WithQueryClient });
     const heading = screen.getByRole("heading", { level: 1 });
 
     expect(heading).toHaveTextContent("DentHub");

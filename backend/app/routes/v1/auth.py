@@ -5,18 +5,28 @@ Provides endpoints for signup, login, and fetching the current authenticated use
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, status
 
 from app.dependencies import current_staff, current_user, get_app_state
 from app.logic.v1.auth import (
     AuthResponseModel,
+    ChangePasswordRequest,
+    ForgotPasswordRequest,
+    ForgotPasswordResponse,
+    ResetPasswordRequest,
     UserLogin,
     UserResponse,
     UserSignup,
+    VerifyEmailRequest,
+    change_password,
+    forgot_password,
     login_staff,
     login_user,
+    resend_verification_email,
+    reset_password,
     signup_user,
     user_response,
+    verify_email,
 )
 from app.repositories.user import User
 from app.utils.openapi_helpers import standard_error_responses
@@ -70,3 +80,70 @@ async def staff_login(
 async def staff_me(actor: User = Depends(current_staff)) -> UserResponse:
     """Retrieve details of the current user, requiring a staff access token."""
     return user_response(actor)
+
+
+@router.post(
+    "/verify-email",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses=standard_error_responses(),
+)
+async def confirm_email(
+    data: VerifyEmailRequest,
+    state: AppState = Depends(get_app_state),
+) -> None:
+    """Spend an emailed verification token. Public: the token is the credential."""
+    await verify_email(state, data)
+
+
+@router.post(
+    "/verify-email/resend",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses=standard_error_responses(401, 403),
+)
+async def resend_email_verification(
+    actor: User = Depends(current_user),
+    state: AppState = Depends(get_app_state),
+) -> None:
+    """Email the signed-in User a fresh verification link."""
+    await resend_verification_email(state, actor=actor)
+
+
+@router.post(
+    "/password/forgot",
+    response_model=ForgotPasswordResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    responses=standard_error_responses(),
+)
+async def request_password_reset(
+    data: ForgotPasswordRequest,
+    state: AppState = Depends(get_app_state),
+) -> ForgotPasswordResponse:
+    """Email a reset link if the account exists; the answer never says which."""
+    return await forgot_password(state, data)
+
+
+@router.post(
+    "/password/reset",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses=standard_error_responses(),
+)
+async def complete_password_reset(
+    data: ResetPasswordRequest,
+    state: AppState = Depends(get_app_state),
+) -> None:
+    """Set a new password with an emailed reset token. Public: the token is the credential."""
+    await reset_password(state, data)
+
+
+@router.post(
+    "/password/change",
+    response_model=AuthResponseModel,
+    responses=standard_error_responses(401, 403),
+)
+async def update_password(
+    data: ChangePasswordRequest,
+    actor: User = Depends(current_user),
+    state: AppState = Depends(get_app_state),
+) -> AuthResponseModel:
+    """Change the signed-in User's password; returns a fresh session, ends the rest."""
+    return await change_password(state, actor=actor, data=data)

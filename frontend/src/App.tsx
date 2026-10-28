@@ -67,6 +67,12 @@ const OralCareShopPage = lazy(() => import("./pages/OralCareShopPage"));
 const SignInPage = lazy(() =>
   import("./pages/SignInPage").then((module) => ({ default: module.SignInPage })),
 );
+const ResetPassword = lazy(() =>
+  import("./pages/ResetPassword").then((module) => ({ default: module.ResetPassword })),
+);
+const VerifyEmail = lazy(() =>
+  import("./pages/VerifyEmail").then((module) => ({ default: module.VerifyEmail })),
+);
 const StaffAccessPage = lazy(() =>
   import("./pages/StaffAccessPage").then((module) => ({ default: module.StaffAccessPage })),
 );
@@ -127,6 +133,8 @@ const App = () => {
             <Route path="/suppliers" element={<Suppliers />} />
             <Route path="/suppliers/:slug" element={<Suppliers />} />
             <Route path="/sign-in" element={<SignInPage onSuccess={handleLoginSuccess} />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route
               path="/staff/access"
               element={<StaffAccessPage onSuccess={handleLoginSuccess} />}
