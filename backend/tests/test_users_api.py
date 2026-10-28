@@ -40,12 +40,21 @@ async def _login(client: AsyncClient, email: str, password: str) -> dict[str, st
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
 
+async def _staff_login(client: AsyncClient, email: str, password: str) -> dict[str, str]:
+    response = await client.post(
+        "/api/v1/auth/staff/login",
+        json={"email": email, "password": password},
+    )
+    assert response.status_code == 200
+    return {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+
 async def test_admin_approves_a_pending_professional(
     client: AsyncClient,
     session_maker: async_sessionmaker[Any],
 ) -> None:
     email, password = await _create_admin(session_maker)
-    admin_headers = await _login(client, email, password)
+    admin_headers = await _staff_login(client, email, password)
 
     signup = await client.post(
         "/api/v1/auth/register",
@@ -83,7 +92,7 @@ async def test_approve_is_rejected_for_non_admin_roles(
     session_maker: async_sessionmaker[Any],
 ) -> None:
     admin_email, admin_password = await _create_admin(session_maker)
-    admin_headers = await _login(client, admin_email, admin_password)
+    admin_headers = await _staff_login(client, admin_email, admin_password)
 
     signup = await client.post(
         "/api/v1/auth/register",
@@ -147,7 +156,7 @@ async def test_approve_of_an_unknown_user_is_404(
     session_maker: async_sessionmaker[Any],
 ) -> None:
     email, password = await _create_admin(session_maker)
-    admin_headers = await _login(client, email, password)
+    admin_headers = await _staff_login(client, email, password)
 
     response = await client.post(
         f"/api/v1/users/{uuid.uuid4()}/approve",
@@ -162,7 +171,7 @@ async def test_approve_is_idempotent(
     session_maker: async_sessionmaker[Any],
 ) -> None:
     email, password = await _create_admin(session_maker)
-    admin_headers = await _login(client, email, password)
+    admin_headers = await _staff_login(client, email, password)
 
     signup = await client.post(
         "/api/v1/auth/register",
@@ -183,3 +192,62 @@ async def test_approve_is_idempotent(
 
     assert response.status_code == 200
     assert response.json()["account_status"] == "active"
+
+
+async def test_approve_refuses_an_admins_public_token(
+    client: AsyncClient,
+    session_maker: async_sessionmaker[Any],
+) -> None:
+    # Approval is an admin-console action, so it belongs to the staff surface
+    # (ADR-0004): an admin who signed in publicly holds no authority here.
+    email, password = await _create_admin(session_maker)
+    public_headers = await _login(client, email, password)
+
+    signup = await client.post(
+        "/api/v1/auth/register",
+        json={
+            "full_name": "Achieng Otieno",
+            "email": "achieng@example.com",
+            "password": "correct horse battery staple",
+            "account_type": "specialist",
+        },
+    )
+    user_id = signup.json()["user"]["id"]
+
+    response = await client.post(
+        f"/api/v1/users/{user_id}/approve",
+        headers=public_headers,
+    )
+
+    assert response.status_code == 403
+
+
+async def test_approval_is_audited_with_the_status_change(
+    client: AsyncClient,
+    session_maker: async_sessionmaker[Any],
+) -> None:
+    email, password = await _create_admin(session_maker)
+    admin_headers = await _staff_login(client, email, password)
+
+    signup = await client.post(
+        "/api/v1/auth/register",
+        json={
+            "full_name": "Mwangi Njoroge",
+            "email": "mwangi@example.com",
+            "password": "correct horse battery staple",
+            "account_type": "training_provider",
+        },
+    )
+    user_id = signup.json()["user"]["id"]
+
+    await client.post(f"/api/v1/users/{user_id}/approve", headers=admin_headers)
+
+    audit = await client.get("/api/v1/admin/audit", headers=admin_headers)
+    entry = audit.json()["items"][0]
+    assert entry["actor_email"] == email
+    assert entry["actor_role"] == "admin"
+    assert entry["action"] == "user.approve"
+    assert entry["entity_type"] == "user"
+    assert entry["entity_id"] == user_id
+    assert entry["before"] == {"account_status": "pending"}
+    assert entry["after"] == {"account_status": "active"}
