@@ -34,6 +34,8 @@ const operator: AuthUser = {
   role: "platform_operator",
   is_staff: true,
   account_status: "active",
+  profiles: [],
+  memberships: [],
 };
 
 function overview(overrides: Partial<OperationsOverviewWire> = {}): OperationsOverviewWire {

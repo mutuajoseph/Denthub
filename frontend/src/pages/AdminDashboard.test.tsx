@@ -54,6 +54,8 @@ const admin: AuthUser = {
   role: "admin",
   is_staff: true,
   account_status: "active",
+  profiles: [],
+  memberships: [],
 };
 
 function country(overrides: Partial<AdminCountryWire> = {}): AdminCountryWire {
