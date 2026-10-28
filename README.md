@@ -49,9 +49,6 @@ Vite proxies `/api` → the backend, so the client calls `/api/v1/...` same-orig
 
 > **Port 8000 in use?** Run the backend on another port and point the proxy at it:
 > `BACKEND_PORT=8010 npx concurrently "uv run --directory backend python -m uvicorn app.main:app --reload --port 8010" "pnpm --filter frontend dev"`
->
-> **Apple Silicon: "the greenlet library is required"?** Run
-> `uv pip install --directory backend greenlet` (see `backend/AGENTS.md`).
 
 ## Project docs & guides
 
