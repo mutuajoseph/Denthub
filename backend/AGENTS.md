@@ -114,7 +114,7 @@ length at the Pydantic boundary to return a 422, not a 500.
   nothing and writes an empty migration.
 - The local database is `denthub.db` in `backend/`. Seed the demo catalogue with
   `uv run python -m app.scripts.seed_products`.
-- **Apple Silicon:** SQLAlchemy only pulls in `greenlet` for some CPU names, and
-  `arm64` is not one of them. Without it every async DB call fails with "the
-  greenlet library is required". Depending on `sqlalchemy[asyncio]` fixes it;
-  until then, `uv pip install greenlet`.
+- **Keep the `[asyncio]` extra on `sqlalchemy`.** Plain SQLAlchemy pulls in
+  `greenlet` only for some CPU names, and Apple Silicon's `arm64` is not one of
+  them; without it every async DB call fails with "the greenlet library is
+  required".
