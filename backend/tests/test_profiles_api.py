@@ -140,3 +140,39 @@ async def test_a_membership_needs_at_least_one_permission(state: AppState) -> No
         session.add(FacilityMembership(user_id=user.id, facility_id=facility.id))
         with pytest.raises(IntegrityError):
             await session.commit()
+
+
+@pytest.mark.parametrize(
+    ("account_type", "profiles"),
+    [
+        ("patient", [{"kind": "patient"}]),
+        ("international_patient", [{"kind": "patient"}]),
+        ("dentist", [{"kind": "specialist"}]),
+        ("specialist", [{"kind": "specialist"}]),
+        ("intern", [{"kind": "specialist"}]),
+        ("supplier", [{"kind": "supplier"}]),
+        ("training_provider", [{"kind": "training_provider"}]),
+        ("facility_owner", []),
+    ],
+)
+async def test_signup_creates_the_profile_its_account_type_implies(
+    client: AsyncClient, account_type: str, profiles: list[dict[str, str]]
+) -> None:
+    response = await client.post(
+        "/api/v1/auth/register",
+        json={
+            "full_name": "New Account",
+            "email": f"{account_type}@example.com",
+            "password": "correct horse battery staple",
+            "account_type": account_type,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["user"]["profiles"] == profiles
+    me = await client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {response.json()['access_token']}"},
+    )
+    assert me.json()["profiles"] == profiles
+    assert me.json()["role"] == account_type

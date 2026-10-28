@@ -35,6 +35,20 @@ PROFILE_KINDS = get_args(ProfileKind)
 
 FacilityPermission = Literal["owner", "front_office", "clinical"]
 
+#: The Profile each signup Account Type creates (``CONTEXT.md`` "Account
+#: Type"). A Facility signup creates no Profile: owning a Facility is a
+#: membership, and the Facility itself is created by #118. The #117 migration
+#: keeps its own frozen copy of this mapping for the backfill.
+PROFILE_FOR_ACCOUNT_TYPE: dict[str, ProfileKind] = {
+    "patient": "patient",
+    "international_patient": "patient",
+    "dentist": "specialist",
+    "specialist": "specialist",
+    "intern": "specialist",
+    "supplier": "supplier",
+    "training_provider": "training_provider",
+}
+
 
 class Profile(Base):
     """One account type a User holds (``CONTEXT.md`` "Profile").
@@ -120,6 +134,11 @@ class MembershipView:
 
 
 class ProfileRepository:
+    @staticmethod
+    async def add(session: AsyncSession, *, user_id: str, kind: ProfileKind) -> None:
+        session.add(Profile(user_id=user_id, kind=kind))
+        await session.flush()
+
     @staticmethod
     async def kinds_for_user(session: AsyncSession, user_id: str) -> list[ProfileKind]:
         stmt = select(Profile.kind).where(Profile.user_id == user_id).order_by(Profile.kind)

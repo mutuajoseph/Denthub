@@ -14,7 +14,12 @@ from pydantic import BaseModel, EmailStr
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.exceptions import ConflictError, ForbiddenException, UnauthorizedException
-from app.repositories.profile import FacilityPermission, ProfileKind, ProfileRepository
+from app.repositories.profile import (
+    PROFILE_FOR_ACCOUNT_TYPE,
+    FacilityPermission,
+    ProfileKind,
+    ProfileRepository,
+)
 from app.repositories.user import User, UserRepository
 from app.utils.state import AppState
 
@@ -246,6 +251,12 @@ async def signup_user(
             phone=data.phone,
             account_status=account_status,
         )
+
+        # Write the new shape beside users.role from the expand release on
+        # (ADR-0006), so no signup ever needs backfilling.
+        kind = PROFILE_FOR_ACCOUNT_TYPE.get(data.account_type)
+        if kind is not None:
+            await ProfileRepository.add(session, user_id=user.id, kind=kind)
 
         await session.commit()
 
