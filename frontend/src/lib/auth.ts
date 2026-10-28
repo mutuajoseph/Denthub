@@ -3,6 +3,29 @@ import { postJson } from "./apiClient";
 
 export type AccountStatus = "active" | "pending";
 
+/** One Profile a User holds (`CONTEXT.md` "Profile"; ADR-0006). */
+export type ProfileKind = "patient" | "specialist" | "supplier" | "training_provider";
+export type FacilityPermission = "owner" | "front_office" | "clinical";
+
+export interface ProfileSummary {
+  kind: ProfileKind;
+}
+
+/** A User's link to one Facility, with what they may do there. */
+export interface MembershipSummary {
+  facility_id: string;
+  facility_name: string;
+  permissions: FacilityPermission[];
+}
+
+const PROFILE_KINDS: readonly ProfileKind[] = [
+  "patient",
+  "specialist",
+  "supplier",
+  "training_provider",
+];
+const FACILITY_PERMISSIONS: readonly FacilityPermission[] = ["owner", "front_office", "clinical"];
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -10,6 +33,9 @@ export interface AuthUser {
   full_name: string;
   is_staff: boolean;
   account_status: AccountStatus;
+  /** What the User acts as. The app still routes on `role` until it migrates (ADR-0006). */
+  profiles: ProfileSummary[];
+  memberships: MembershipSummary[];
 }
 
 export interface AuthResponse {
@@ -37,6 +63,33 @@ type UnknownRecord = Record<string, unknown>;
 
 function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function parseProfiles(value: unknown): ProfileSummary[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) =>
+    isRecord(item) && PROFILE_KINDS.includes(item.kind as ProfileKind)
+      ? [{ kind: item.kind as ProfileKind }]
+      : [],
+  );
+}
+
+function parseMemberships(value: unknown): MembershipSummary[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    if (
+      !isRecord(item) ||
+      typeof item.facility_id !== "string" ||
+      typeof item.facility_name !== "string" ||
+      !Array.isArray(item.permissions)
+    ) {
+      return [];
+    }
+    const permissions = item.permissions.filter((p): p is FacilityPermission =>
+      FACILITY_PERMISSIONS.includes(p as FacilityPermission),
+    );
+    return [{ facility_id: item.facility_id, facility_name: item.facility_name, permissions }];
+  });
 }
 
 function parseAuthResponse(value: unknown): AuthResponse {
@@ -72,6 +125,9 @@ function parseAuthResponse(value: unknown): AuthResponse {
       role,
       is_staff: user.is_staff === true,
       account_status: user.account_status,
+      // A session stored before #117 has neither field; it reads as none held.
+      profiles: parseProfiles(user.profiles),
+      memberships: parseMemberships(user.memberships),
     },
   };
 }

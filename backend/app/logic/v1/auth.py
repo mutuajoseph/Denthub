@@ -11,8 +11,10 @@ from typing import Any, Literal, cast
 import bcrypt
 import jwt
 from pydantic import BaseModel, EmailStr
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.exceptions import ConflictError, ForbiddenException, UnauthorizedException
+from app.repositories.profile import FacilityPermission, ProfileKind, ProfileRepository
 from app.repositories.user import User, UserRepository
 from app.utils.state import AppState
 
@@ -82,8 +84,27 @@ def is_staff_surface_role(role: str) -> bool:
     return role in STAFF_SURFACE_ROLES
 
 
+class ProfileSummary(BaseModel):
+    """One Profile a User holds (``CONTEXT.md`` "Profile")."""
+
+    kind: ProfileKind
+
+
+class MembershipSummary(BaseModel):
+    """One Facility Membership, with the Facility's name so a client can say
+    who the User is acting for without a second lookup."""
+
+    facility_id: str
+    facility_name: str
+    permissions: list[FacilityPermission]
+
+
 class UserResponse(BaseModel):
-    """Public view of a user."""
+    """Public view of a user.
+
+    ``role`` is unchanged while clients migrate off it (ADR-0006); ``profiles``
+    and ``memberships`` are what the User actually acts as.
+    """
 
     id: str
     email: str
@@ -91,6 +112,8 @@ class UserResponse(BaseModel):
     full_name: str
     is_staff: bool
     account_status: AccountStatus = "active"
+    profiles: list[ProfileSummary] = []
+    memberships: list[MembershipSummary] = []
 
 
 class AuthResponseModel(BaseModel):
@@ -236,7 +259,7 @@ async def signup_user(
         return AuthResponseModel(
             access_token=token,
             token_type="bearer",
-            user=user_response(user),
+            user=await user_response(session, user),
         )
 
 
@@ -270,7 +293,7 @@ async def login_user(
         return AuthResponseModel(
             access_token=token,
             token_type="bearer",
-            user=user_response(user),
+            user=await user_response(session, user),
         )
 
 
@@ -314,7 +337,7 @@ async def login_staff(
         return AuthResponseModel(
             access_token=token,
             token_type="bearer",
-            user=user_response(user),
+            user=await user_response(session, user),
         )
 
 
@@ -381,8 +404,10 @@ async def authenticate(state: AppState, token: str, *, scope: str) -> User:
     return user
 
 
-def user_response(user: User) -> UserResponse:
+async def user_response(session: AsyncSession, user: User) -> UserResponse:
     """The public shape of a User, as ``/auth/me`` and the sign-in routes return it."""
+    kinds = await ProfileRepository.kinds_for_user(session, user.id)
+    memberships = await ProfileRepository.memberships_for_user(session, user.id)
     return UserResponse(
         id=user.id,
         email=user.email,
@@ -390,4 +415,19 @@ def user_response(user: User) -> UserResponse:
         full_name=user.full_name,
         is_staff=is_staff_role(user.role),
         account_status=cast(AccountStatus, user.account_status),
+        profiles=[ProfileSummary(kind=kind) for kind in kinds],
+        memberships=[
+            MembershipSummary(
+                facility_id=m.facility_id,
+                facility_name=m.facility_name,
+                permissions=m.permissions,
+            )
+            for m in memberships
+        ],
     )
+
+
+async def describe_user(state: AppState, user: User) -> UserResponse:
+    """``user_response`` in its own session, for ``/auth/me`` and ``/auth/staff/me``."""
+    async with state.db_session_maker() as session:
+        return await user_response(session, user)

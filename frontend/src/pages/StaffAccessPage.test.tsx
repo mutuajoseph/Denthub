@@ -24,6 +24,8 @@ const staffAuth: AuthResponse = {
     role: "admin",
     is_staff: true,
     account_status: "active",
+    profiles: [],
+    memberships: [],
   },
 };
 

@@ -13,10 +13,10 @@ from app.logic.v1.auth import (
     UserLogin,
     UserResponse,
     UserSignup,
+    describe_user,
     login_staff,
     login_user,
     signup_user,
-    user_response,
 )
 from app.repositories.user import User
 from app.utils.openapi_helpers import standard_error_responses
@@ -44,9 +44,12 @@ async def login(
 
 
 @router.get("/me", response_model=UserResponse, responses=standard_error_responses(401, 403))
-async def me(actor: User = Depends(current_user)) -> UserResponse:
-    """Retrieve details of the currently authenticated user."""
-    return user_response(actor)
+async def me(
+    actor: User = Depends(current_user),
+    state: AppState = Depends(get_app_state),
+) -> UserResponse:
+    """The signed-in User, with the Profiles and Facility Memberships they hold."""
+    return await describe_user(state, actor)
 
 
 @router.post(
@@ -67,6 +70,9 @@ async def staff_login(
     response_model=UserResponse,
     responses=standard_error_responses(401, 403),
 )
-async def staff_me(actor: User = Depends(current_staff)) -> UserResponse:
+async def staff_me(
+    actor: User = Depends(current_staff),
+    state: AppState = Depends(get_app_state),
+) -> UserResponse:
     """Retrieve details of the current user, requiring a staff access token."""
-    return user_response(actor)
+    return await describe_user(state, actor)

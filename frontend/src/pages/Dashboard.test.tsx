@@ -29,6 +29,8 @@ const patient: AuthUser = {
   role: "patient",
   is_staff: false,
   account_status: "active",
+  profiles: [],
+  memberships: [],
 };
 
 const facilityOwner: AuthUser = {
@@ -38,6 +40,8 @@ const facilityOwner: AuthUser = {
   role: "facility_owner",
   is_staff: false,
   account_status: "active",
+  profiles: [],
+  memberships: [],
 };
 
 function appointment(overrides: Partial<AppointmentWire> = {}): AppointmentWire {

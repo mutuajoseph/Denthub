@@ -152,6 +152,8 @@ const patient: AuthUser = {
   role: "patient",
   is_staff: false,
   account_status: "active",
+  profiles: [],
+  memberships: [],
 };
 
 function makeConfig(code: string): CountryConfig {

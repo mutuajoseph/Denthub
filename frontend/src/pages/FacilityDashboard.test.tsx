@@ -25,6 +25,8 @@ const owner: AuthUser = {
   role: "facility_owner",
   is_staff: false,
   account_status: "active",
+  profiles: [],
+  memberships: [],
 };
 
 function appointment(overrides: Partial<AppointmentWire> = {}): AppointmentWire {

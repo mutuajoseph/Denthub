@@ -41,6 +41,8 @@ function makeUser(role: Role): AuthUser {
     role,
     is_staff: false,
     account_status: "active",
+    profiles: [],
+    memberships: [],
   };
 }
 

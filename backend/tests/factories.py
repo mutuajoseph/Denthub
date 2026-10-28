@@ -23,6 +23,7 @@ from app.repositories.health_record import HealthRecordEntry, PatientHealthRecor
 from app.repositories.job import JobPosting, JobSalaryRange
 from app.repositories.listing import Branch, Facility, OpeningHour, Specialist
 from app.repositories.magazine import MagazineArticle, MagazineArticleTag
+from app.repositories.profile import Profile
 from app.repositories.product import Product, Supplier
 from app.repositories.training import (
     TrainingCourse,
@@ -388,6 +389,11 @@ def build_users() -> list[User]:
         )
         for row in PATIENTS
     ]
+
+
+def build_patient_profiles(patients: list[User]) -> list[Profile]:
+    """A Patient Profile for each seeded Patient, as the #117 backfill gives them."""
+    return [Profile(user_id=patient.id, kind="patient") for patient in patients]
 
 
 def build_operator(*, division: str = "jobs", tier: str = "lead") -> User:
@@ -920,6 +926,7 @@ __all__ = [
     "INTERNATIONAL_PRODUCTS",
     "LOCAL_PRODUCTS",
     "PATIENTS",
+    "build_patient_profiles",
     "SEEDED_PASSWORD",
     "build_appointments",
     "build_countries",

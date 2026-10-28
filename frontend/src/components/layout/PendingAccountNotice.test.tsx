@@ -12,6 +12,8 @@ function makeUser(accountStatus: AuthUser["account_status"]): AuthUser {
     role: "dentist",
     is_staff: false,
     account_status: accountStatus,
+    profiles: [],
+    memberships: [],
   };
 }
 
