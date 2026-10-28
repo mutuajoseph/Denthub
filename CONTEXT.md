@@ -47,8 +47,9 @@ or intern). One of the two professional account types chosen at signup.
 _Avoid_: Doctor, practitioner
 
 **Facility**:
-The account type for a dental clinic or practice that employs Facility Staff.
-The other professional account type chosen at signup.
+A dental clinic or practice: the business that has one or more Branches and
+employs Facility Staff. Users act for it through a Facility Membership; it is
+not a Profile.
 _Avoid_: Clinic, practice
 
 **Branch**:
@@ -70,7 +71,7 @@ _Avoid_: Staff (unqualified), team
 The link between a User and a Facility, carrying that User's permission set
 there (owner, Front Office, or clinical). A User may hold memberships at many
 Facilities.
-_Avoid_: Facility role, employment, facility_id
+_Avoid_: Facility role, employment
 
 **Invitation**:
 An owner's emailed offer of a Facility Membership with a given permission set,
@@ -93,7 +94,7 @@ _Avoid_: Verified user, approved doctor
 How far a Facility or Specialist profile has been checked by DentHub, one of
 four grades in order: unverified, basic, verified, featured. Staff set it; it
 grades the profile, it is not a set of independent flags.
-_Avoid_: isVerified, approved/excellence flags
+_Avoid_: Verified flag, approved/excellence flags
 
 **Supplier**:
 A business selling oral-care or dental products, either local or
@@ -128,9 +129,9 @@ _Avoid_: Level, rank
 **Appointment**:
 A Patient's requested visit to a Branch, optionally with a named Specialist,
 moving PENDING → CONFIRMED → IN_PROGRESS (checked in) → COMPLETED, or ending
-DECLINED, CANCELLED, or NO_SHOW. Its slot is wall-clock time in
-the Listing's Country — "9:00 on the 3rd" at that clinic — not an absolute
-instant, the same rule Opening Hours follow.
+DECLINED, CANCELLED, or NO_SHOW. Its slot is wall-clock time at its Branch —
+"9:00 on the 3rd" at that clinic — not an absolute instant, the same rule
+Opening Hours follow.
 _Avoid_: Booking, visit
 
 **Health Record**:
@@ -261,9 +262,8 @@ elsewhere).
 _Avoid_: County (as a generic term), area
 
 **Opening Hours**:
-A Branch's per-day open and close times, stored per weekday rather than as a
-summary string, so "open now" is computed in the Branch's Country at read time
-rather than stored as a flag that goes stale.
+A Branch's open and close times for each weekday, in the Branch's local
+time; whether a Branch is open now is always worked out from them.
 _Avoid_: Business hours string, availability
 
 ### Content and careers

@@ -11,8 +11,12 @@ This is a plan, not a contract. Each section becomes a parent issue with
 PR-sized sub-issues; request and response models are settled in those issues,
 and the Pydantic models remain the source of truth.
 
-Each row is marked **New** (no such route) or **Change** (the route exists
-and its behaviour or shape changes).
+Each row is marked **New** (no such route), **Change** (the route exists
+and its behaviour or shape changes), **Keep** (stays as is, listed for
+context), or **Retire** (to be removed).
+
+**Public (proposed)** marks a route outside the modules PRD §2 opens to
+everyone; it stays role-gated until its issue confirms it public.
 
 ## Conventions
 
@@ -56,14 +60,14 @@ routes are role-gated and the roles are the user's call).
 
 ## Bugs on `main` (fix first, each its own `fix:` issue, test red first)
 
-1. **A Specialist Appointment can never be confirmed.** It is stored with
+1. **A Specialist Appointment can never be confirmed** (#113). It is stored with
    `facility_id = NULL`, and the only confirm path requires the caller's
    Facility to match
    ([`facility.py:174`](../backend/app/logic/v1/facility.py)). The interim fix
    lets the booked Specialist's linked account confirm it; the structural fix
    is ADR-0008 (P1).
 2. **`POST /users/{id}/approve` accepts a public-scope token and writes no
-   audit row** ([`users.py`](../backend/app/logic/v1/users.py)), unlike every
+   audit row** (#114) ([`users.py`](../backend/app/logic/v1/users.py)), unlike every
    `/admin` route. Require a staff token, and audit it.
 
 ---
@@ -119,7 +123,7 @@ Health Records are live, so that point has passed.
 | PATCH | `/admin/staff/{id}` | New | Super | Change role, Division, tier, active |
 | GET | `/admin/users[/{id}]` | New | Admin | Search Users with Profiles and memberships |
 | POST | `/admin/users/{id}/suspend` · `/reactivate` | New | Admin | `account_status` becomes `active \| suspended`; suspension revokes refresh tokens |
-| POST | `/users/{id}/approve` | Change | — | Retired once Verification lands; professional "pending" is read from Verification instead |
+| POST | `/users/{id}/approve` | Retire | — | Retired once Verification lands; professional "pending" is read from Verification instead |
 
 ### Uploads
 
@@ -143,8 +147,7 @@ Health Records are live, so that point has passed.
 
 | Method | Path | Status | Who | Logic |
 |---|---|---|---|---|
-| GET | `/config/treatments` | New | Public | Platform-wide treatment list for Services |
-| GET | `/config/country/insurance-providers` | New | Public | Per-Country insurers (table exists, no route) |
+| GET | `/config/treatments` | New | Public (proposed) | Platform-wide treatment list for Services |
 | CRUD | `/admin/specialties` · `/admin/treatments` · `/admin/countries/{code}/insurance-providers` · `/subdivisions` | New | Admin | Reference-data editing |
 
 ---
@@ -162,7 +165,7 @@ Health Records are live, so that point has passed.
 | PUT | `.../branches/{bid}/services` · `/insurance` | New | FM:owner | Services (treatment plus `price_from`) and accepted insurers |
 | GET | `/facilities/{id}/members` | New | FM:any | Members and permission sets |
 | POST, DELETE | `/facilities/{id}/invitations[/{iid}]` | New | FM:owner | Emailed Invitation, 7-day expiry |
-| POST | `/invitations/{token}/accept` | New | Public (token) | Creates the User if new, then the membership |
+| POST | `/invitations/{token}/accept` | New | Public (proposed; the token is the credential) | Creates the User if new, then the membership |
 | PATCH, DELETE | `/facilities/{id}/members/{user_id}` | New | FM:owner | Change or remove; the last owner cannot be removed or demoted |
 | GET | `/facilities/{id}/dashboard` | Change | FM:any | Moves from `/facility/dashboard` (which reads `users.facility_id`) |
 | GET | `/facilities/{id}/patients` | New | FM:front_office · FM:clinical | Patients with Appointments here, contact details only |
@@ -172,7 +175,7 @@ Health Records are live, so that point has passed.
 | Method | Path | Status | Who | Logic |
 |---|---|---|---|---|
 | GET | `/facilities` · `/dentists` | Change | Public | Add filters: `insurance`, `treatment` plus `max_price`, `open_now`, `min_rating`. Today only Subdivision, tier, and Specialty |
-| GET | `/branches/{id}` | New | Public | Hours, Services, insurance, open now |
+| GET | `/branches/{id}` | New | Public (proposed) | Hours, Services, insurance, open now |
 
 ### Appointments (ADR-0008)
 
@@ -208,7 +211,7 @@ Every route writes an audit event.
 | Method | Path | Status | Who | Logic |
 |---|---|---|---|---|
 | POST | `/appointments/{id}/review` | New | Patient | After COMPLETED, once per Appointment; rates the Branch (and Specialist). Replaces the seeded `rating` / `review_count` with maintained aggregates |
-| GET | `/branches/{id}/reviews` · `/dentists/{id}/reviews` | New | Public | Visible Reviews with replies |
+| GET | `/branches/{id}/reviews` · `/dentists/{id}/reviews` | New | Public (proposed) | Visible Reviews with replies |
 | POST | `/facilities/{id}/reviews/{rid}/reply` | New | FM:owner | One public reply |
 | PATCH | `/admin/moderation/reviews/{id}` · `/operations/reviews/{id}` | New | Admin · Op:Dentist (L) | Hide or unhide; recomputes the aggregate |
 
@@ -216,7 +219,7 @@ Every route writes an audit event.
 
 | Method | Path | Status | Who | Logic |
 |---|---|---|---|---|
-| GET | `/emergency` | New | Public | Branches with `accepts_emergencies` open now, plus On Call clinicians with the Branch's emergency phone |
+| GET | `/emergency` | New | Public (proposed) | Branches with `accepts_emergencies` open now, plus On Call clinicians with the Branch's emergency phone |
 | PUT, DELETE | `/facilities/{id}/branches/{bid}/on-call` | New | FM:clinical (self) | Declare or end On Call until a time |
 
 ### International: Consultation Requests and Quotes
@@ -240,7 +243,7 @@ have it. Suppliers keep one Country and the local/international `scope`.
 | Method | Path | Status | Who | Logic |
 |---|---|---|---|---|
 | GET | `/products` · `/products/{id}` · `/products/categories` | Change | Public | Enforce `ORAL_CARE_SHOP` (503). Rename `dentist_recommended` to a Shop-curated badge |
-| GET | `/suppliers` · `/suppliers/{slug}` | New | Public | Supplier directory and storefront (only `/suppliers/me` exists) |
+| GET | `/suppliers` · `/suppliers/{slug}` | New | Public (proposed) | Supplier directory and storefront (only `/suppliers/me` exists). Browsing public, acting needs a Verified Medic (`CONTEXT.md`), which answers PRD §8 Q1 against PRD §2's table; confirm in the issue |
 | PATCH | `/suppliers/me` | New | Supplier | Edit the store (only create exists) |
 | PATCH | `/operations/products/{id}` | New | Op:Shop (L) | Hide, unhide, set the badge |
 | POST | `/orders` | New | Patient (Retail) · VM (Bulk) | `{ supplier_id, lines }`, priced per line at its quantity tier and snapshotted → SUBMITTED; opens a Conversation |
@@ -302,7 +305,7 @@ certificates do not.
 | GET | `/training/me/enrolments` | New | TP | Enrolment inbox |
 | POST | `/training/me/enrolments/{id}/complete` | New | TP | Issues the CPD Certificate (points, verification code) |
 | GET | `/me/enrolments` · `/me/cpd-certificates` | New | VM | Own |
-| GET | `/cpd-certificates/verify/{code}` | New | Public | Verification |
+| GET | `/cpd-certificates/verify/{code}` | New | Public (proposed) | Verification |
 | PATCH | `/operations/courses/{id}` | New | Op:Training (L) | Take down |
 
 ### Magazine
