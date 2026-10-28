@@ -20,7 +20,7 @@ Not applicable:
 
 ## Checklist
 
-- [ ] PR title follows Conventional Commits (it sets the release version) and the body says `Closes #N`
+- [ ] PR title follows Conventional Commits (it sets the release version) and the body says `Refs #N` (never a closing keyword: the maintainer closes issues)
 - [ ] Definition of done passes for each side touched: lint, format, types, build, **and tests** (see `AGENTS.md`)
 - [ ] Schema change? The `AGENTS.md` schema checklist is done (migration, single Alembic head, factories + seed, client types)
 - [ ] API contract change? Matching types in `frontend/src/lib/` updated in this PR
