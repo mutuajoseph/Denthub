@@ -115,18 +115,34 @@ the PR opens.
 Each incoming PR runs these steps in order. Check out the branch first
 (`gh pr checkout N`).
 
-1. **Review.** Run `code-review` against `main`'s merge-base. Post the findings
-   to the PR as one comment, each finding rated:
+1. **Review.** Run `code-review` against `main`'s merge-base.
+2. **Security scan.** Run `security-review` on the same diff.
+
+   Post as **mutuajoseph** (`GH_TOKEN=$(gh auth token --user mutuajoseph)`);
+   the active `gh` account may be one without access here. Each pass is its own
+   PR review (`gh api repos/mutuajoseph/Denthub/pulls/N/reviews`, event
+   `COMMENT`; GitHub refuses "Request changes" on your own PR, so the merge
+   gate does the blocking):
+   - every finding on a diff line becomes an inline comment on that line,
+     opening with its rating and axis (`**High** · Spec: ...`; the axes are
+     Standards, Spec, Security);
+   - the review summary carries the findings with no diff line to anchor to
+     (a missing requirement, say) and the count ("1 High, 2 Medium, 0 Low");
+     a clean pass still posts "No findings".
+
+   Ratings:
    - **High**: blocks the merge (wrong behaviour, security, data loss, broken
      API contract or migration).
-   - **Medium**: fix in this PR, or open an issue and link it in the reply.
+   - **Medium**: fix in this PR, or open an issue and link it in the thread.
    - **Low**: the author's call.
-2. **Security scan.** Run `security-review` on the same diff and post the result
-   to the PR as its own comment, rated the same way. A High here blocks the
-   merge too. Post it even when it finds nothing ("No findings"), so anyone
-   working on the PR can see the scan ran.
-3. **Merge gate.** Merge once every item holds:
-   - no High findings left open from steps 1–2;
+3. **Re-review on new commits.** When commits land after a review, re-run both
+   passes from the last reviewed SHA. Resolve each earlier thread whose finding
+   is now fixed (reply "Fixed in `<sha>`", then the `resolveReviewThread`
+   GraphQL mutation) and post any new findings as a fresh review. A High thread
+   is resolved only by a re-review that confirms the fix, or by the user
+   resolving it by hand to accept the risk.
+4. **Merge gate.** Merge once every item holds:
+   - no unresolved High review threads;
    - CI quality and test jobs green;
    - the title is a Conventional Commit that matches the change;
    - one Alembic head after rebasing on `main`, if the PR adds a migration;
@@ -134,7 +150,7 @@ Each incoming PR runs these steps in order. Check out the branch first
 
    Then `gh pr merge N --squash`, adding `[skip release]` for changes that only
    touch docs or CI (see "Branches, commits, and PRs").
-4. The linked issue stays open after the merge until the user says to close it.
+5. The linked issue stays open after the merge until the user says to close it.
 
 ## Definition of done
 
