@@ -87,7 +87,13 @@ def upgrade() -> None:
 
 
 def _backfill(profiles: sa.Table, memberships: sa.Table) -> None:
-    """One Profile and at most one membership per existing user, from its role."""
+    """One Profile and at most one membership per existing user, from its role.
+
+    Deliberately skipped (settled on #117): staff roles, which hold neither, and
+    a facility role whose ``facility_id`` is null (#81), which has no Facility
+    to be a member of. A ``facility_owner`` or ``front_office`` user in that
+    state ends up with nothing until someone links them to a Facility.
+    """
     users = sa.table(
         'users',
         sa.column('id', sa.String),

@@ -64,4 +64,13 @@ describe("stored auth: Profiles and Facility Memberships (#117)", () => {
     expect(user?.profiles).toEqual([{ kind: "patient" }]);
     expect(user?.memberships[0]?.permissions).toEqual(["clinical"]);
   });
+
+  it("drops a membership left with no known permission", () => {
+    store({
+      ...baseUser,
+      memberships: [{ facility_id: "f-1", facility_name: "Smile", permissions: ["root"] }],
+    });
+
+    expect(getStoredAuth()?.user.memberships).toEqual([]);
+  });
 });

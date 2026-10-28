@@ -27,7 +27,7 @@ from tests.factories import (
     build_jobs,
     build_listings,
     build_magazine_articles,
-    build_patient_profiles,
+    build_profiles,
     build_products,
     build_specialties,
     build_training,
@@ -73,7 +73,7 @@ async def session_maker() -> AsyncIterator[async_sessionmaker[AsyncSession]]:
             session.add(clinician)
             await session.flush()
 
-            for profile in build_patient_profiles(users):
+            for profile in build_profiles(users, clinician):
                 session.add(profile)
 
             for appointment in build_appointments(users, facilities, specialists):

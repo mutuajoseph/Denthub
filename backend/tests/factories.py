@@ -391,9 +391,14 @@ def build_users() -> list[User]:
     ]
 
 
-def build_patient_profiles(patients: list[User]) -> list[Profile]:
-    """A Patient Profile for each seeded Patient, as the #117 backfill gives them."""
-    return [Profile(user_id=patient.id, kind="patient") for patient in patients]
+def build_profiles(patients: list[User], clinician: User) -> list[Profile]:
+    """The Profiles the #117 backfill gives the seeded users: a Patient Profile
+    each for the Patients, and a Specialist Profile for the ``facility_dentist``
+    clinician (who has no ``facility_id``, so no membership)."""
+    return [
+        *(Profile(user_id=patient.id, kind="patient") for patient in patients),
+        Profile(user_id=clinician.id, kind="specialist"),
+    ]
 
 
 def build_operator(*, division: str = "jobs", tier: str = "lead") -> User:
@@ -926,7 +931,7 @@ __all__ = [
     "INTERNATIONAL_PRODUCTS",
     "LOCAL_PRODUCTS",
     "PATIENTS",
-    "build_patient_profiles",
+    "build_profiles",
     "SEEDED_PASSWORD",
     "build_appointments",
     "build_countries",

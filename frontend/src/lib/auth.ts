@@ -88,6 +88,8 @@ function parseMemberships(value: unknown): MembershipSummary[] {
     const permissions = item.permissions.filter((p): p is FacilityPermission =>
       FACILITY_PERMISSIONS.includes(p as FacilityPermission),
     );
+    // A membership always holds at least one permission (a database check).
+    if (permissions.length === 0) return [];
     return [{ facility_id: item.facility_id, facility_name: item.facility_name, permissions }];
   });
 }
