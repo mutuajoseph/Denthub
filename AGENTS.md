@@ -110,6 +110,32 @@ the PR opens.
   default `github.com` key is a different account with no access here. Push
   through `origin` as configured.
 
+## Reviewing and merging PRs
+
+Each incoming PR runs these steps in order. Check out the branch first
+(`gh pr checkout N`).
+
+1. **Review.** Run `code-review` against `main`'s merge-base. Post the findings
+   to the PR as one comment, each finding rated:
+   - **High**: blocks the merge (wrong behaviour, security, data loss, broken
+     API contract or migration).
+   - **Medium**: fix in this PR, or open an issue and link it in the reply.
+   - **Low**: the author's call.
+2. **Security scan.** Run `security-review` on the same diff and post the result
+   to the PR as its own comment, rated the same way. A High here blocks the
+   merge too. Post it even when it finds nothing ("No findings"), so anyone
+   working on the PR can see the scan ran.
+3. **Merge gate.** Merge once every item holds:
+   - no High findings left open from steps 1–2;
+   - CI quality and test jobs green;
+   - the title is a Conventional Commit that matches the change;
+   - one Alembic head after rebasing on `main`, if the PR adds a migration;
+   - the user has said to merge this specific PR.
+
+   Then `gh pr merge N --squash`, adding `[skip release]` for changes that only
+   touch docs or CI (see "Branches, commits, and PRs").
+4. The linked issue stays open after the merge until the user says to close it.
+
 ## Definition of done
 
 A change is done when every command below passes for the side(s) it touched,
