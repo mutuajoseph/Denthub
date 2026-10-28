@@ -4,15 +4,24 @@ description: >
   Opens a draft GitHub pull request for the current branch. Runs this repo's
   pre-commit checks, grills the user on design decisions, collects screenshots,
   posts the review thread as a PR comment, and addresses feedback before handoff.
-  Use when the user says "open a PR", "create a PR", "make a pull request",
-  "ship this", or "prepare this for review".
+  Use when the user asks to open a PR, "ship this", or "prepare this for review".
 argument-hint: "[branch-name]"
 allowed-tools:
-  - Bash(git *)
-  - Bash(gh *)
-  - Bash(pnpm *)
-  - Bash(uv *)
-  - Bash(make *)
+  - Bash(git branch *)
+  - Bash(git status *)
+  - Bash(git fetch *)
+  - Bash(git diff *)
+  - Bash(git log *)
+  - Bash(git remote show *)
+  - Bash(git add *)
+  - Bash(git commit *)
+  - Bash(git push -u origin *)
+  - Bash(gh pr create --draft *)
+  - Bash(gh pr view *)
+  - Bash(gh pr edit *)
+  - Bash(gh pr comment *)
+  - Bash(uv run --directory backend *)
+  - Bash(pnpm --filter frontend *)
   - Read
   - Write
   - Edit
