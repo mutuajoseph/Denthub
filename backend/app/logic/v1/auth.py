@@ -236,14 +236,7 @@ async def signup_user(
         return AuthResponseModel(
             access_token=token,
             token_type="bearer",
-            user=UserResponse(
-                id=user.id,
-                email=user.email,
-                role=user.role,
-                full_name=user.full_name,
-                is_staff=is_staff_role(user.role),
-                account_status=cast(AccountStatus, user.account_status),
-            ),
+            user=user_response(user),
         )
 
 
@@ -277,14 +270,7 @@ async def login_user(
         return AuthResponseModel(
             access_token=token,
             token_type="bearer",
-            user=UserResponse(
-                id=user.id,
-                email=user.email,
-                role=user.role,
-                full_name=user.full_name,
-                is_staff=is_staff_role(user.role),
-                account_status=cast(AccountStatus, user.account_status),
-            ),
+            user=user_response(user),
         )
 
 
@@ -328,14 +314,7 @@ async def login_staff(
         return AuthResponseModel(
             access_token=token,
             token_type="bearer",
-            user=UserResponse(
-                id=user.id,
-                email=user.email,
-                role=user.role,
-                full_name=user.full_name,
-                is_staff=is_staff_role(user.role),
-                account_status=cast(AccountStatus, user.account_status),
-            ),
+            user=user_response(user),
         )
 
 
@@ -373,55 +352,37 @@ async def _load_user_from_payload(state: AppState, payload: dict[str, Any]) -> U
         return user
 
 
-async def get_user_from_token(state: AppState, token: str) -> User:
-    """Load the token's subject from the database, rejecting invalid tokens."""
-    return await _load_user_from_payload(state, _decode_or_unauthorized(state, token))
+async def authenticate(state: AppState, token: str, *, scope: str) -> User:
+    """The active User behind a token minted for ``scope``, or a 401/403.
 
-
-async def get_current_user(
-    state: AppState,
-    token: str,
-) -> UserResponse:
-    """Verify authentication token and return current user details."""
-
-    user = await get_user_from_token(state, token)
-
-    if not user.is_active:
-        raise ForbiddenException(message="User account is deactivated")
-
-    return UserResponse(
-        id=user.id,
-        email=user.email,
-        role=user.role,
-        full_name=user.full_name,
-        is_staff=is_staff_role(user.role),
-        account_status=cast(AccountStatus, user.account_status),
-    )
-
-
-async def get_current_staff(
-    state: AppState,
-    token: str,
-) -> UserResponse:
-    """Return the current user, requiring a staff-surface token.
-
-    A public token presented here is refused: the ``scope`` claim, not the
-    stored role alone, decides whether a caller is on the staff surface.
+    The one gate every authenticated route goes through (via the dependencies in
+    ``app/dependencies.py``). A token for the other surface is refused (403), so
+    a staff token never reaches a public route and a public token never reaches
+    a staff one (ADR-0004). The issuer must match the scope too: a token whose
+    claims disagree was not minted by ``create_access_token`` and is a 401.
     """
-
     payload = _decode_or_unauthorized(state, token)
 
-    if payload.get("scope") != STAFF_SCOPE:
-        raise ForbiddenException(message="A staff access token is required for this route")
+    if payload.get("scope") != scope:
+        raise ForbiddenException(message=f"A {scope} access token is required for this route")
+
+    expected_issuer = STAFF_TOKEN_ISSUER if scope == STAFF_SCOPE else PUBLIC_TOKEN_ISSUER
+    if payload.get("iss") != expected_issuer:
+        raise UnauthorizedException(message="Invalid or expired access token")
 
     user = await _load_user_from_payload(state, payload)
 
     if not user.is_active:
         raise ForbiddenException(message="User account is deactivated")
 
-    if not is_staff_surface_role(user.role):
+    if scope == STAFF_SCOPE and not is_staff_surface_role(user.role):
         raise ForbiddenException(message="This account may not use the staff surface")
 
+    return user
+
+
+def user_response(user: User) -> UserResponse:
+    """The public shape of a User, as ``/auth/me`` and the sign-in routes return it."""
     return UserResponse(
         id=user.id,
         email=user.email,

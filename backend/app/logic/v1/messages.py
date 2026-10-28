@@ -19,7 +19,6 @@ from typing import Literal, cast
 from pydantic import BaseModel, Field
 
 from app.exceptions import ForbiddenException, InvalidRequestError, NotFoundException
-from app.logic.v1.auth import get_user_from_token
 from app.repositories.message import (
     Conversation,
     ConversationRepository,
@@ -176,17 +175,12 @@ def _validate_limit(limit: int) -> int:
     return max(1, min(limit, MAX_PAGE_SIZE))
 
 
-async def _require_messaging_user(state: AppState, token: str) -> User:
+def _require_messaging_user(actor: User) -> User:
     """The calling user, or a 403 when messaging is not theirs to use."""
-    user = await get_user_from_token(state, token)
-
-    if not user.is_active:
-        raise ForbiddenException(message="User account is deactivated")
-
-    if user.role not in MESSAGING_ROLES:
+    if actor.role not in MESSAGING_ROLES:
         raise ForbiddenException(message="Messaging is available to marketplace accounts only")
 
-    return user
+    return actor
 
 
 def _serialize_conversation(conversation: Conversation, *, viewer_id: str) -> ConversationResponse:
@@ -245,12 +239,12 @@ def _serialize_message(message: Message, *, sender_name: str) -> MessageResponse
 async def list_conversations(
     state: AppState,
     *,
-    token: str,
+    actor: User,
     limit: int = MESSAGES_PAGE_SIZE,
     offset: int = 0,
 ) -> ConversationPage:
     """The caller's threads, newest activity first."""
-    user = await _require_messaging_user(state, token)
+    user = _require_messaging_user(actor)
     limit = _validate_limit(limit)
     offset = max(0, offset)
 
@@ -277,7 +271,7 @@ async def list_conversations(
 async def get_thread(
     state: AppState,
     *,
-    token: str,
+    actor: User,
     conversation_id: str,
     limit: int = MESSAGES_PAGE_SIZE,
     offset: int = 0,
@@ -287,7 +281,7 @@ async def get_thread(
     A stranger's thread and an unknown id are the same 404, so thread ids
     cannot be probed for existence.
     """
-    user = await _require_messaging_user(state, token)
+    user = _require_messaging_user(actor)
     limit = _validate_limit(limit)
     offset = max(0, offset)
 
@@ -326,7 +320,7 @@ async def get_thread(
 async def start_conversation(
     state: AppState,
     *,
-    token: str,
+    actor: User,
     recipient_id: str,
     body: str,
 ) -> ConversationResponse:
@@ -335,7 +329,7 @@ async def start_conversation(
     The message is written either way, so "message this person again" never
     forks a second thread — the canonical pair keeps exactly one.
     """
-    user = await _require_messaging_user(state, token)
+    user = _require_messaging_user(actor)
 
     if recipient_id == user.id:
         raise InvalidRequestError(message="You cannot message yourself")
@@ -390,12 +384,12 @@ async def start_conversation(
 async def send_message(
     state: AppState,
     *,
-    token: str,
+    actor: User,
     conversation_id: str,
     body: str,
 ) -> MessageResponse:
     """Send one message into a thread the caller belongs to, bumping the other side."""
-    user = await _require_messaging_user(state, token)
+    user = _require_messaging_user(actor)
 
     async with state.db_session_maker() as session:
         conversation = await ConversationRepository.get_for_user(
@@ -427,11 +421,11 @@ async def send_message(
 async def mark_conversation_read(
     state: AppState,
     *,
-    token: str,
+    actor: User,
     conversation_id: str,
 ) -> ConversationResponse:
     """Zero the caller's unread counter for a thread. Idempotent."""
-    user = await _require_messaging_user(state, token)
+    user = _require_messaging_user(actor)
 
     async with state.db_session_maker() as session:
         conversation = await ConversationRepository.get_for_user(

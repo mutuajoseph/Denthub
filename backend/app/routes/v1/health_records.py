@@ -13,9 +13,8 @@ because an authenticated, role-gated route can return them (root ``AGENTS.md``,
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from app.dependencies import get_app_state
+from app.dependencies import current_user, get_app_state
 from app.logic.v1.health_records import (
     HealthRecordEntryRequest,
     HealthRecordEntryResponse,
@@ -25,11 +24,11 @@ from app.logic.v1.health_records import (
     get_health_record,
     update_health_record,
 )
+from app.repositories.user import User
 from app.utils.openapi_helpers import standard_error_responses
 from app.utils.state import AppState
 
 router = APIRouter(prefix="/health-records", tags=["health-records"])
-security = HTTPBearer(auto_error=True)
 
 
 @router.get(
@@ -39,13 +38,13 @@ security = HTTPBearer(auto_error=True)
 )
 async def read_health_record(
     patient_id: str,
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    actor: User = Depends(current_user),
     state: AppState = Depends(get_app_state),
 ) -> HealthRecordResponse:
     """The Patient's Health Record, for the Patient or a treating Medic."""
     return await get_health_record(
         state,
-        token=credentials.credentials,
+        actor=actor,
         patient_id=patient_id,
     )
 
@@ -59,13 +58,13 @@ async def read_health_record(
 async def append_health_record_entry(
     patient_id: str,
     request: HealthRecordEntryRequest,
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    actor: User = Depends(current_user),
     state: AppState = Depends(get_app_state),
 ) -> HealthRecordEntryResponse:
     """Append one entry to the Patient's record."""
     return await add_health_record_entry(
         state,
-        token=credentials.credentials,
+        actor=actor,
         patient_id=patient_id,
         request=request,
     )
@@ -79,13 +78,13 @@ async def append_health_record_entry(
 async def edit_health_record(
     patient_id: str,
     request: HealthRecordUpdateRequest,
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    actor: User = Depends(current_user),
     state: AppState = Depends(get_app_state),
 ) -> HealthRecordResponse:
     """Update the Patient's own record-level facts (maternal status)."""
     return await update_health_record(
         state,
-        token=credentials.credentials,
+        actor=actor,
         patient_id=patient_id,
         request=request,
     )

@@ -10,9 +10,8 @@ constraint.
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from app.dependencies import get_app_state
+from app.dependencies import current_staff, get_app_state
 from app.logic.v1.operations import (
     DivisionJob,
     DivisionJobList,
@@ -22,11 +21,11 @@ from app.logic.v1.operations import (
     list_division_jobs,
     set_job_status,
 )
+from app.repositories.user import User
 from app.utils.openapi_helpers import standard_error_responses
 from app.utils.state import AppState
 
 router = APIRouter(prefix="/operations", tags=["operations"])
-security = HTTPBearer(auto_error=True)
 
 
 @router.get(
@@ -35,11 +34,11 @@ security = HTTPBearer(auto_error=True)
     responses=standard_error_responses(401, 403),
 )
 async def read_overview(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    actor: User = Depends(current_staff),
     state: AppState = Depends(get_app_state),
 ) -> OperationsOverview:
     """The caller's Division, tier, and whether they may write."""
-    return await get_overview(state, token=credentials.credentials)
+    return await get_overview(state, actor=actor)
 
 
 @router.get(
@@ -48,11 +47,11 @@ async def read_overview(
     responses=standard_error_responses(401, 403),
 )
 async def read_division_jobs(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    actor: User = Depends(current_staff),
     state: AppState = Depends(get_app_state),
 ) -> DivisionJobList:
     """Job postings in the caller's Division, whatever their status."""
-    return await list_division_jobs(state, token=credentials.credentials)
+    return await list_division_jobs(state, actor=actor)
 
 
 @router.patch(
@@ -63,13 +62,13 @@ async def read_division_jobs(
 async def patch_job_status(
     posting_id: str,
     request: UpdateJobStatusRequest,
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    actor: User = Depends(current_staff),
     state: AppState = Depends(get_app_state),
 ) -> DivisionJob:
     """Publish or hide a Job posting. A Lead-only action."""
     return await set_job_status(
         state,
-        token=credentials.credentials,
+        actor=actor,
         posting_id=posting_id,
         request=request,
     )

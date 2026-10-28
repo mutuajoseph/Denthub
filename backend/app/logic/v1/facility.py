@@ -20,12 +20,11 @@ from pydantic import BaseModel
 
 from app.exceptions import ForbiddenException, InvalidRequestError, NotFoundException
 from app.logic.v1.appointments import AppointmentResponse, _serialize
-from app.logic.v1.auth import get_user_from_token
 from app.logic.v1.country import CountryConfigurationMissingException
 from app.repositories.appointment import AppointmentRepository, AppointmentStatus
 from app.repositories.country import CountryRepository
 from app.repositories.listing import FacilityRepository
-from app.repositories.user import UserRepository
+from app.repositories.user import User, UserRepository
 from app.utils.state import AppState
 
 FACILITY_DASHBOARD_LIMIT = 50
@@ -74,17 +73,12 @@ class FacilityDashboardResponse(BaseModel):
     staff: list[FacilityStaffResponse]
 
 
-async def _require_facility(state: AppState, token: str) -> tuple[str, str]:
+def _require_facility(actor: User) -> tuple[str, str]:
     """The signed-in Facility account's ``(user_id, facility_id)``.
 
     Rejects a non-facility role (403) and a facility-scoped account that is not
     yet linked to a Facility (403) — the dashboard needs a clinic to scope to.
     """
-    actor = await get_user_from_token(state, token)
-
-    if not actor.is_active:
-        raise ForbiddenException(message="User account is deactivated")
-
     if actor.role not in FACILITY_ROLES:
         raise ForbiddenException(message="Only facility accounts may manage a facility")
 
@@ -97,7 +91,7 @@ async def _require_facility(state: AppState, token: str) -> tuple[str, str]:
 async def get_facility_dashboard(
     state: AppState,
     *,
-    token: str,
+    actor: User,
     limit: int = FACILITY_DASHBOARD_LIMIT,
 ) -> FacilityDashboardResponse:
     """One clinic's day: its upcoming Appointments today, pending queue, and staff.
@@ -105,7 +99,7 @@ async def get_facility_dashboard(
     Scoped to the Facility the caller is linked to; a clinic with no Facility is
     a 403 (see ``_require_facility``).
     """
-    _user_id, facility_id = await _require_facility(state, token)
+    _user_id, facility_id = _require_facility(actor)
 
     async with state.db_session_maker() as session:
         facility = await FacilityRepository.get(session, facility_id)
@@ -155,7 +149,7 @@ async def get_facility_dashboard(
 async def update_facility_appointment(
     state: AppState,
     *,
-    token: str,
+    actor: User,
     appointment_id: str,
     request: FacilityAppointmentUpdateRequest,
 ) -> AppointmentResponse:
@@ -165,7 +159,7 @@ async def update_facility_appointment(
     another clinic is a 404. A step that is not the next one in the workflow —
     skipping, going backwards, or touching a terminal state — is a 400.
     """
-    _user_id, facility_id = await _require_facility(state, token)
+    _user_id, facility_id = _require_facility(actor)
 
     async with state.db_session_maker() as session:
         appointment = await AppointmentRepository.get(session, appointment_id)

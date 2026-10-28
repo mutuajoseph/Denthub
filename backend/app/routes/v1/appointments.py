@@ -9,9 +9,8 @@ envelope, because an authenticated, role-gated route can return them.
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from app.dependencies import get_app_state
+from app.dependencies import current_user, get_app_state
 from app.logic.v1.appointments import (
     APPOINTMENTS_PAGE_SIZE,
     AppointmentPage,
@@ -22,11 +21,11 @@ from app.logic.v1.appointments import (
     list_my_appointments,
     update_my_appointment,
 )
+from app.repositories.user import User
 from app.utils.openapi_helpers import standard_error_responses
 from app.utils.state import AppState
 
 router = APIRouter(prefix="/appointments", tags=["appointments"])
-security = HTTPBearer(auto_error=True)
 
 
 @router.post(
@@ -36,13 +35,13 @@ security = HTTPBearer(auto_error=True)
 )
 async def book(
     request: AppointmentRequest,
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    actor: User = Depends(current_user),
     state: AppState = Depends(get_app_state),
 ) -> AppointmentResponse:
     """Book a Listing for the signed-in Patient as a PENDING Appointment."""
     return await book_appointment(
         state,
-        token=credentials.credentials,
+        actor=actor,
         request=request,
     )
 
@@ -55,13 +54,13 @@ async def book(
 async def read_mine(
     limit: int = Query(default=APPOINTMENTS_PAGE_SIZE, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    actor: User = Depends(current_user),
     state: AppState = Depends(get_app_state),
 ) -> AppointmentPage:
     """One page of the signed-in Patient's Appointments, soonest slot first."""
     return await list_my_appointments(
         state,
-        token=credentials.credentials,
+        actor=actor,
         limit=limit,
         offset=offset,
     )
@@ -75,13 +74,13 @@ async def read_mine(
 async def update_mine(
     appointment_id: str,
     request: AppointmentUpdateRequest,
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    actor: User = Depends(current_user),
     state: AppState = Depends(get_app_state),
 ) -> AppointmentResponse:
     """Cancel or reschedule one of the signed-in Patient's own Appointments."""
     return await update_my_appointment(
         state,
-        token=credentials.credentials,
+        actor=actor,
         appointment_id=appointment_id,
         request=request,
     )

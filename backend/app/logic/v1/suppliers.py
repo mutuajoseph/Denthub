@@ -24,7 +24,7 @@ from app.exceptions import (
     InvalidRequestError,
     NotFoundException,
 )
-from app.logic.v1.auth import SUPPLIER_ROLES, get_user_from_token
+from app.logic.v1.auth import SUPPLIER_ROLES
 from app.logic.v1.products import DEFAULT_PAGE_SIZE, DEFAULT_WHOLESALE_MIN_QTY, MAX_PAGE_SIZE
 from app.repositories.product import Product, ProductRepository, Supplier, SupplierRepository
 from app.repositories.user import User
@@ -168,15 +168,10 @@ def _serialize_product(product: Product) -> SupplierProduct:
     )
 
 
-async def _require_supplier(state: AppState, token: str) -> User:
+def _require_supplier(actor: User) -> User:
     """Load the caller and reject everyone but an active supplier account."""
-    actor = await get_user_from_token(state, token)
-
     if actor.role not in SUPPLIER_ROLES:
         raise ForbiddenException(message="Only supplier accounts may manage a storefront")
-
-    if not actor.is_active:
-        raise ForbiddenException(message="User account is deactivated")
 
     return actor
 
@@ -211,13 +206,13 @@ async def _unique_slug(session: AsyncSession, name: str) -> str:
     raise ConflictError(message="Could not derive a unique store slug")
 
 
-async def get_my_store(state: AppState, *, token: str) -> SupplierStore:
+async def get_my_store(state: AppState, *, actor: User) -> SupplierStore:
     """Return the caller's storefront.
 
     404 when the account has not created one yet — the dashboard turns that
     into the create-store form.
     """
-    actor = await _require_supplier(state, token)
+    actor = _require_supplier(actor)
 
     async with state.db_session_maker() as session:
         store = await _owned_store(session, actor.id)
@@ -229,7 +224,7 @@ async def get_my_store(state: AppState, *, token: str) -> SupplierStore:
 async def create_my_store(
     state: AppState,
     *,
-    token: str,
+    actor: User,
     data: CreateStoreRequest,
     country_code: str,
 ) -> SupplierStore:
@@ -238,7 +233,7 @@ async def create_my_store(
     One store per account (409 on a second attempt); the store starts
     unverified and staff verify it later (#82).
     """
-    actor = await _require_supplier(state, token)
+    actor = _require_supplier(actor)
 
     country = country_code.strip().upper()
     if len(country) != 2 or not country.isalpha():
@@ -267,12 +262,12 @@ async def create_my_store(
 async def list_my_products(
     state: AppState,
     *,
-    token: str,
+    actor: User,
     limit: int = DEFAULT_PAGE_SIZE,
     offset: int = 0,
 ) -> SupplierProductList:
     """List the caller's own products, including the out-of-stock ones."""
-    actor = await _require_supplier(state, token)
+    actor = _require_supplier(actor)
     page_size = max(1, min(limit, MAX_PAGE_SIZE))
     start = max(0, offset)
 
@@ -294,7 +289,7 @@ async def list_my_products(
 async def create_product(
     state: AppState,
     *,
-    token: str,
+    actor: User,
     data: CreateProductRequest,
     currency: str,
 ) -> SupplierProduct:
@@ -303,7 +298,7 @@ async def create_product(
     The product is published into the store's market: ``country_code`` comes
     from the store, ``currency`` from the region headers the client sends.
     """
-    actor = await _require_supplier(state, token)
+    actor = _require_supplier(actor)
 
     async with state.db_session_maker() as session:
         store = await _owned_store(session, actor.id)
@@ -334,7 +329,7 @@ async def create_product(
 async def update_product(
     state: AppState,
     *,
-    token: str,
+    actor: User,
     product_id: str,
     data: UpdateProductRequest,
 ) -> SupplierProduct:
@@ -343,7 +338,7 @@ async def update_product(
     A product belonging to another store reads as 404, exactly as an unknown
     id does, so ownership is never observable from the response.
     """
-    actor = await _require_supplier(state, token)
+    actor = _require_supplier(actor)
 
     updates = data.model_dump(exclude_unset=True)
     for key in _REQUIRED_ON_UPDATE:

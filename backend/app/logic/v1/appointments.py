@@ -32,7 +32,7 @@ from app.exceptions import (
     InvalidRequestError,
     NotFoundException,
 )
-from app.logic.v1.auth import PATIENT_ROLES, get_user_from_token
+from app.logic.v1.auth import PATIENT_ROLES
 from app.logic.v1.country import CountryConfigurationMissingException
 from app.repositories.appointment import (
     Appointment,
@@ -41,6 +41,7 @@ from app.repositories.appointment import (
 )
 from app.repositories.country import CountryRepository
 from app.repositories.listing import FacilityRepository, SpecialistRepository
+from app.repositories.user import User
 from app.utils.state import AppState
 
 APPOINTMENTS_PAGE_SIZE = 20
@@ -125,13 +126,8 @@ AppointmentUpdateRequest = Annotated[
 ]
 
 
-async def _require_patient(state: AppState, token: str) -> str:
+def _require_patient(actor: User) -> str:
     """Return the signed-in Patient's id, rejecting anyone who is not one."""
-    actor = await get_user_from_token(state, token)
-
-    if not actor.is_active:
-        raise ForbiddenException(message="User account is deactivated")
-
     if actor.role not in PATIENT_ROLES:
         raise ForbiddenException(message="Only patients may book appointments")
 
@@ -204,7 +200,7 @@ async def _listing_name(session: AsyncSession, appointment: Appointment) -> str 
 async def book_appointment(
     state: AppState,
     *,
-    token: str,
+    actor: User,
     request: AppointmentRequest,
 ) -> AppointmentResponse:
     """Book a Listing for the signed-in Patient as a ``PENDING`` Appointment.
@@ -213,7 +209,7 @@ async def book_appointment(
     for the same Patient and Listing (409), and a time that has already passed on
     the clinic's clock (400).
     """
-    patient_id = await _require_patient(state, token)
+    patient_id = _require_patient(actor)
 
     async with state.db_session_maker() as session:
         resolved = await _resolve_listing(session, request.listing_type, request.listing_id)
@@ -262,12 +258,12 @@ async def book_appointment(
 async def list_my_appointments(
     state: AppState,
     *,
-    token: str,
+    actor: User,
     limit: int = APPOINTMENTS_PAGE_SIZE,
     offset: int = 0,
 ) -> AppointmentPage:
     """One page of the signed-in Patient's Appointments, soonest slot first."""
-    patient_id = await _require_patient(state, token)
+    patient_id = _require_patient(actor)
 
     page_size = max(1, min(limit, MAX_PAGE_SIZE))
     start = max(0, offset)
@@ -351,7 +347,7 @@ async def _apply_reschedule(
 async def update_my_appointment(
     state: AppState,
     *,
-    token: str,
+    actor: User,
     appointment_id: str,
     request: AppointmentUpdateRequest,
 ) -> AppointmentResponse:
@@ -362,7 +358,7 @@ async def update_my_appointment(
     else's booking exists. Only a ``PENDING`` or ``CONFIRMED`` Appointment may be
     changed — anything the clinic has started or finished is a 400.
     """
-    patient_id = await _require_patient(state, token)
+    patient_id = _require_patient(actor)
 
     async with state.db_session_maker() as session:
         appointment = await AppointmentRepository.get(session, appointment_id)

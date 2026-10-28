@@ -7,16 +7,15 @@ account.
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from app.dependencies import get_app_state
+from app.dependencies import current_admin, get_app_state
 from app.logic.v1.auth import UserResponse
 from app.logic.v1.users import approve_user
+from app.repositories.user import User
 from app.utils.openapi_helpers import standard_error_responses
 from app.utils.state import AppState
 
 router = APIRouter(prefix="/users", tags=["users"])
-security = HTTPBearer(auto_error=True)
 
 
 @router.post(
@@ -26,12 +25,12 @@ security = HTTPBearer(auto_error=True)
 )
 async def approve(
     user_id: str,
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    actor: User = Depends(current_admin),
     state: AppState = Depends(get_app_state),
 ) -> UserResponse:
     """Set a pending user account to active (admins and super-admins only)."""
     return await approve_user(
         state,
-        token=credentials.credentials,
+        actor=actor,
         user_id=user_id,
     )

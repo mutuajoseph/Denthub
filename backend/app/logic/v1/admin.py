@@ -29,8 +29,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.exceptions import ForbiddenException, NotFoundException
-from app.logic.v1.auth import ADMIN_ROLES, UserResponse, get_current_staff
+from app.exceptions import NotFoundException
 from app.repositories.admin import AdminAuditLog, AdminAuditRepository
 from app.repositories.country import (
     Country,
@@ -48,6 +47,7 @@ from app.repositories.listing import (
     VerificationTier,
 )
 from app.repositories.magazine import MagazineArticle, MagazineRepository
+from app.repositories.user import User
 from app.utils.state import AppState
 
 #: How many rows a console list returns when the caller asks for nothing else.
@@ -161,21 +161,6 @@ class AdminAuditList(BaseModel):
     items: list[AdminAuditEntry]
 
 
-async def _require_admin(state: AppState, token: str) -> UserResponse:
-    """The signed-in staff user, requiring a staff token and an admin role.
-
-    A public token is refused by ``get_current_staff`` before the role is even
-    considered; an Operator's staff token reaches this function but fails the
-    role check. Both are a 403.
-    """
-    actor = await get_current_staff(state, token)
-
-    if actor.role not in ADMIN_ROLES:
-        raise ForbiddenException(message="Only admins may use the admin console")
-
-    return actor
-
-
 def _serialize_flag(feature: CountryFeature) -> AdminCountryFeature:
     return AdminCountryFeature(
         feature=feature.feature,
@@ -259,7 +244,7 @@ def _limit(limit: int) -> int:
 async def _audit(
     session: AsyncSession,
     *,
-    actor: UserResponse,
+    actor: User,
     action: str,
     entity_type: str,
     entity_id: str,
@@ -280,9 +265,8 @@ async def _audit(
     )
 
 
-async def list_countries(state: AppState, *, token: str) -> AdminCountryList:
+async def list_countries(state: AppState, *, actor: User) -> AdminCountryList:
     """Every Country, active or retired, with its feature flags."""
-    await _require_admin(state, token)
 
     async with state.db_session_maker() as session:
         countries = await CountryRepository.list_all(session)
@@ -293,7 +277,7 @@ async def list_countries(state: AppState, *, token: str) -> AdminCountryList:
 async def update_country(
     state: AppState,
     *,
-    token: str,
+    actor: User,
     country_code: str,
     request: UpdateCountryRequest,
 ) -> AdminCountry:
@@ -305,7 +289,6 @@ async def update_country(
     than a hard takedown; gating the config endpoint itself is a public API
     change left to its own issue.
     """
-    actor = await _require_admin(state, token)
 
     async with state.db_session_maker() as session:
         country = await CountryRepository.get(session, country_code)
@@ -334,7 +317,7 @@ async def update_country(
 async def update_country_feature(
     state: AppState,
     *,
-    token: str,
+    actor: User,
     country_code: str,
     feature: str,
     request: UpdateCountryFeatureRequest,
@@ -345,7 +328,6 @@ async def update_country_feature(
     "switched off by staff" and "never configured" are different facts, and the
     console is where the first one is recorded.
     """
-    actor = await _require_admin(state, token)
 
     async with state.db_session_maker() as session:
         country = await CountryRepository.get(session, country_code)
@@ -395,9 +377,8 @@ async def update_country_feature(
         return _serialize_flag(row)
 
 
-async def list_verifications(state: AppState, *, token: str) -> VerificationList:
+async def list_verifications(state: AppState, *, actor: User) -> VerificationList:
     """Every Facility and Specialist with its current verification tier."""
-    await _require_admin(state, token)
 
     async with state.db_session_maker() as session:
         facilities = await FacilityRepository.list_all(session)
@@ -415,12 +396,11 @@ async def list_verifications(state: AppState, *, token: str) -> VerificationList
 async def _set_verification(
     state: AppState,
     *,
-    token: str,
+    actor: User,
     entity_type: VerificationEntityType,
     entity_id: str,
     request: UpdateVerificationTierRequest,
 ) -> VerificationItem:
-    actor = await _require_admin(state, token)
 
     async with state.db_session_maker() as session:
         if entity_type == "facility":
@@ -457,14 +437,14 @@ async def _set_verification(
 async def set_facility_verification(
     state: AppState,
     *,
-    token: str,
+    actor: User,
     facility_id: str,
     request: UpdateVerificationTierRequest,
 ) -> VerificationItem:
     """Set a Facility's single graded verification tier."""
     return await _set_verification(
         state,
-        token=token,
+        actor=actor,
         entity_type="facility",
         entity_id=facility_id,
         request=request,
@@ -474,14 +454,14 @@ async def set_facility_verification(
 async def set_specialist_verification(
     state: AppState,
     *,
-    token: str,
+    actor: User,
     specialist_id: str,
     request: UpdateVerificationTierRequest,
 ) -> VerificationItem:
     """Set a Specialist's single graded verification tier."""
     return await _set_verification(
         state,
-        token=token,
+        actor=actor,
         entity_type="specialist",
         entity_id=specialist_id,
         request=request,
@@ -489,10 +469,9 @@ async def set_specialist_verification(
 
 
 async def list_moderation(
-    state: AppState, *, token: str, limit: int = ADMIN_LIST_LIMIT
+    state: AppState, *, actor: User, limit: int = ADMIN_LIST_LIMIT
 ) -> ModerationList:
     """The newest Magazine Items and Job postings, whatever their status."""
-    await _require_admin(state, token)
     page_size = _limit(limit)
 
     async with state.db_session_maker() as session:
@@ -510,12 +489,11 @@ async def list_moderation(
 async def _set_moderation_status(
     state: AppState,
     *,
-    token: str,
+    actor: User,
     entity_type: ModerationEntityType,
     entity_id: str,
     request: UpdateModerationStatusRequest,
 ) -> ModerationItem:
-    actor = await _require_admin(state, token)
 
     async with state.db_session_maker() as session:
         if entity_type == "magazine":
@@ -552,14 +530,14 @@ async def _set_moderation_status(
 async def moderate_magazine(
     state: AppState,
     *,
-    token: str,
+    actor: User,
     article_id: str,
     request: UpdateModerationStatusRequest,
 ) -> ModerationItem:
     """Publish or hide a Magazine Item."""
     return await _set_moderation_status(
         state,
-        token=token,
+        actor=actor,
         entity_type="magazine",
         entity_id=article_id,
         request=request,
@@ -569,14 +547,14 @@ async def moderate_magazine(
 async def moderate_job(
     state: AppState,
     *,
-    token: str,
+    actor: User,
     posting_id: str,
     request: UpdateModerationStatusRequest,
 ) -> ModerationItem:
     """Publish or hide a Job posting."""
     return await _set_moderation_status(
         state,
-        token=token,
+        actor=actor,
         entity_type="job",
         entity_id=posting_id,
         request=request,
@@ -586,11 +564,10 @@ async def moderate_job(
 async def list_audit(
     state: AppState,
     *,
-    token: str,
+    actor: User,
     limit: int = ADMIN_LIST_LIMIT,
 ) -> AdminAuditList:
     """The newest staff writes first, so the console shows recent activity."""
-    await _require_admin(state, token)
     page_size = _limit(limit)
 
     async with state.db_session_maker() as session:

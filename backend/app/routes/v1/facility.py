@@ -10,9 +10,8 @@ return them (root ``AGENTS.md``, "Auth and security").
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from app.dependencies import get_app_state
+from app.dependencies import current_user, get_app_state
 from app.logic.v1.appointments import AppointmentResponse
 from app.logic.v1.facility import (
     FACILITY_DASHBOARD_LIMIT,
@@ -21,11 +20,11 @@ from app.logic.v1.facility import (
     get_facility_dashboard,
     update_facility_appointment,
 )
+from app.repositories.user import User
 from app.utils.openapi_helpers import standard_error_responses
 from app.utils.state import AppState
 
 router = APIRouter(prefix="/facility", tags=["facility"])
-security = HTTPBearer(auto_error=True)
 
 
 @router.get(
@@ -35,13 +34,13 @@ security = HTTPBearer(auto_error=True)
 )
 async def read_dashboard(
     limit: int = Query(default=FACILITY_DASHBOARD_LIMIT, ge=1, le=100),
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    actor: User = Depends(current_user),
     state: AppState = Depends(get_app_state),
 ) -> FacilityDashboardResponse:
     """One clinic's day: today's Appointments, the pending queue, and its staff."""
     return await get_facility_dashboard(
         state,
-        token=credentials.credentials,
+        actor=actor,
         limit=limit,
     )
 
@@ -54,13 +53,13 @@ async def read_dashboard(
 async def update_appointment(
     appointment_id: str,
     request: FacilityAppointmentUpdateRequest,
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    actor: User = Depends(current_user),
     state: AppState = Depends(get_app_state),
 ) -> AppointmentResponse:
     """Move one of the clinic's Appointments one step forward along the workflow."""
     return await update_facility_appointment(
         state,
-        token=credentials.credentials,
+        actor=actor,
         appointment_id=appointment_id,
         request=request,
     )

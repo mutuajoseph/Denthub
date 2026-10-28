@@ -27,14 +27,12 @@ from typing import Literal
 from pydantic import BaseModel
 
 from app.exceptions import ForbiddenException, NotFoundException
-from app.logic.v1.auth import UserResponse, get_current_staff
 from app.repositories.admin import AdminAuditRepository
 from app.repositories.job import JobPosting, JobsRepository
 from app.repositories.user import (
     OperatorDivision,
     OperatorTier,
     User,
-    UserRepository,
 )
 from app.utils.state import AppState
 
@@ -93,28 +91,25 @@ class OperatorContext:
         return self.tier == "lead"
 
 
-async def _require_operator(state: AppState, token: str) -> OperatorContext:
+def _require_operator(actor: User) -> OperatorContext:
     """The signed-in Operator with an assigned Division, or a 403.
 
-    A public token is refused by ``get_current_staff`` before the role is
-    considered; an Admin's staff token reaches this function but fails the role
-    check, because the console belongs to the Operator role.
+    ``actor`` comes from the ``current_staff`` dependency, which has already
+    refused a public token and re-read the user row on this request, so a
+    changed Division or tier applies immediately (ADR-0005). An Admin's staff
+    token reaches this function but fails the role check, because the console
+    belongs to the Operator role.
     """
-    actor: UserResponse = await get_current_staff(state, token)
-
     if actor.role != OPERATOR_ROLE:
         raise ForbiddenException(message="Only Platform Operators may use the operations console")
 
-    async with state.db_session_maker() as session:
-        user = await UserRepository.get_by_id(session, actor.id)
-
-    if user is None or user.operator_division is None or user.operator_tier is None:
+    if actor.operator_division is None or actor.operator_tier is None:
         raise ForbiddenException(message="This Operator has no Division assigned")
 
     return OperatorContext(
-        user=user,
-        division=user.operator_division,
-        tier=user.operator_tier,
+        user=actor,
+        division=actor.operator_division,
+        tier=actor.operator_tier,
     )
 
 
@@ -142,9 +137,9 @@ def _serialize_job(posting: JobPosting) -> DivisionJob:
     )
 
 
-async def get_overview(state: AppState, *, token: str) -> OperationsOverview:
+async def get_overview(state: AppState, *, actor: User) -> OperationsOverview:
     """The caller's Division, tier, and whether they may write."""
-    context = await _require_operator(state, token)
+    context = _require_operator(actor)
 
     return OperationsOverview(
         division=context.division,
@@ -153,13 +148,13 @@ async def get_overview(state: AppState, *, token: str) -> OperationsOverview:
     )
 
 
-async def list_division_jobs(state: AppState, *, token: str) -> DivisionJobList:
+async def list_division_jobs(state: AppState, *, actor: User) -> DivisionJobList:
     """Every Job posting in the caller's Division, whatever its status.
 
     Only an Operator scoped to the Jobs Division reaches the query; any other
     Division is refused first.
     """
-    context = await _require_operator(state, token)
+    context = _require_operator(actor)
     _require_division(context, JOBS_DIVISION)
 
     async with state.db_session_maker() as session:
@@ -171,12 +166,12 @@ async def list_division_jobs(state: AppState, *, token: str) -> DivisionJobList:
 async def set_job_status(
     state: AppState,
     *,
-    token: str,
+    actor: User,
     posting_id: str,
     request: UpdateJobStatusRequest,
 ) -> DivisionJob:
     """Publish or hide a Job posting. A Lead action within the Jobs Division."""
-    context = await _require_operator(state, token)
+    context = _require_operator(actor)
     _require_division(context, JOBS_DIVISION)
     _require_write(context)
 

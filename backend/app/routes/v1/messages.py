@@ -8,9 +8,8 @@ them undocumented.
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from app.dependencies import get_app_state
+from app.dependencies import current_user, get_app_state
 from app.logic.v1.messages import (
     MAX_PAGE_SIZE,
     MESSAGES_PAGE_SIZE,
@@ -26,11 +25,11 @@ from app.logic.v1.messages import (
     send_message,
     start_conversation,
 )
+from app.repositories.user import User
 from app.utils.openapi_helpers import standard_error_responses
 from app.utils.state import AppState
 
 router = APIRouter(prefix="/messages", tags=["messages"])
-security = HTTPBearer(auto_error=True)
 
 
 @router.get(
@@ -41,13 +40,13 @@ security = HTTPBearer(auto_error=True)
 async def read_conversations(
     limit: int = Query(default=MESSAGES_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE),
     offset: int = Query(default=0, ge=0),
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    actor: User = Depends(current_user),
     state: AppState = Depends(get_app_state),
 ) -> ConversationPage:
     """The caller's threads, newest activity first."""
     return await list_conversations(
         state,
-        token=credentials.credentials,
+        actor=actor,
         limit=limit,
         offset=offset,
     )
@@ -60,13 +59,13 @@ async def read_conversations(
 )
 async def open_conversation(
     payload: StartConversationRequest,
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    actor: User = Depends(current_user),
     state: AppState = Depends(get_app_state),
 ) -> ConversationResponse:
     """Open the thread with a recipient (or continue it) by sending a message."""
     return await start_conversation(
         state,
-        token=credentials.credentials,
+        actor=actor,
         recipient_id=payload.recipient_id,
         body=payload.body,
     )
@@ -81,13 +80,13 @@ async def read_thread(
     conversation_id: str,
     limit: int = Query(default=MESSAGES_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE),
     offset: int = Query(default=0, ge=0),
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    actor: User = Depends(current_user),
     state: AppState = Depends(get_app_state),
 ) -> ThreadPage:
     """One thread the caller belongs to, with its messages, newest first."""
     return await get_thread(
         state,
-        token=credentials.credentials,
+        actor=actor,
         conversation_id=conversation_id,
         limit=limit,
         offset=offset,
@@ -102,13 +101,13 @@ async def read_thread(
 async def write_message(
     conversation_id: str,
     payload: SendMessageRequest,
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    actor: User = Depends(current_user),
     state: AppState = Depends(get_app_state),
 ) -> MessageResponse:
     """Send one message into a thread the caller belongs to."""
     return await send_message(
         state,
-        token=credentials.credentials,
+        actor=actor,
         conversation_id=conversation_id,
         body=payload.body,
     )
@@ -121,12 +120,12 @@ async def write_message(
 )
 async def mark_read(
     conversation_id: str,
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    actor: User = Depends(current_user),
     state: AppState = Depends(get_app_state),
 ) -> ConversationResponse:
     """Clear the caller's unread count for a thread."""
     return await mark_conversation_read(
         state,
-        token=credentials.credentials,
+        actor=actor,
         conversation_id=conversation_id,
     )
