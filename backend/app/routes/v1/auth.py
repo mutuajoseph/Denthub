@@ -43,7 +43,7 @@ async def login(
     return await login_user(state, data)
 
 
-@router.get("/me", response_model=UserResponse, responses=standard_error_responses())
+@router.get("/me", response_model=UserResponse, responses=standard_error_responses(401, 403))
 async def me(actor: User = Depends(current_user)) -> UserResponse:
     """Retrieve details of the currently authenticated user."""
     return user_response(actor)
@@ -65,7 +65,7 @@ async def staff_login(
 @router.get(
     "/staff/me",
     response_model=UserResponse,
-    responses=standard_error_responses(),
+    responses=standard_error_responses(401, 403),
 )
 async def staff_me(actor: User = Depends(current_staff)) -> UserResponse:
     """Retrieve details of the current user, requiring a staff access token."""
