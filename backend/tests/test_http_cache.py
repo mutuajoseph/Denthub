@@ -17,8 +17,6 @@ from __future__ import annotations
 
 import hashlib
 
-import pytest
-
 BASE = "/api/v1"
 
 VARY = "Accept-Country, Accept-Currency, Accept-Language"

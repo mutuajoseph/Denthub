@@ -466,6 +466,21 @@ class SpecialistRepository:
     """Reads and writes for Specialists."""
 
     @staticmethod
+    async def get_by_user_id(session: AsyncSession, user_id: str) -> Specialist | None:
+        """Get a Specialist by their linked user_id."""
+        stmt = (
+            select(Specialist)
+            .options(
+                selectinload(Specialist.specialties),
+                selectinload(Specialist.branches).selectinload(Branch.opening_hours),
+                selectinload(Specialist.branches).selectinload(Branch.facility),
+            )
+            .where(Specialist.user_id == user_id)
+        )
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    @staticmethod
     async def search(
         session: AsyncSession,
         filters: SpecialistFilters,

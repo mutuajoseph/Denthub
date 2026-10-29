@@ -8,7 +8,7 @@ inserting rows whose country does not exist.
 from __future__ import annotations
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.config import Settings
 from app.repositories.database import Base

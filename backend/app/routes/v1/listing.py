@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Header, Query
 
-from app.dependencies import get_app_state
+from app.dependencies import current_user, get_app_state
 from app.logic.v1.country import DEFAULT_COUNTRY_CODE
 from app.logic.v1.listing import (
     LISTING_PAGE_SIZE,
@@ -24,6 +24,15 @@ from app.logic.v1.listing import (
     list_facilities,
     list_specialists,
 )
+from app.logic.v1.users import (
+    CreateSpecialistMeRequest,
+    SpecialistMeResponse,
+    UpdateSpecialistMeRequest,
+    create_dentist_me,
+    get_dentist_me,
+    update_dentist_me,
+)
+from app.repositories.user import User
 from app.utils.openapi_helpers import standard_error_responses
 from app.utils.state import AppState
 
@@ -96,6 +105,47 @@ async def read_specialists(
         limit=limit,
         offset=offset,
     )
+
+
+@router.get(
+    "/dentists/me",
+    response_model=SpecialistMeResponse | None,
+    responses=standard_error_responses(401, 403),
+)
+async def get_dentist_me_endpoint(
+    actor: User = Depends(current_user),
+    state: AppState = Depends(get_app_state),
+) -> SpecialistMeResponse | None:
+    """Return the authenticated user's specialist listing if they have one."""
+    return await get_dentist_me(state, user=actor)
+
+
+@router.patch(
+    "/dentists/me",
+    response_model=SpecialistMeResponse,
+    responses=standard_error_responses(401, 403),
+)
+async def patch_dentist_me_endpoint(
+    data: UpdateSpecialistMeRequest,
+    actor: User = Depends(current_user),
+    state: AppState = Depends(get_app_state),
+) -> SpecialistMeResponse:
+    """Update the authenticated user's specialist listing."""
+    return await update_dentist_me(state, user=actor, data=data)
+
+
+@router.post(
+    "/dentists/me",
+    response_model=SpecialistMeResponse,
+    responses=standard_error_responses(401, 403),
+)
+async def post_dentist_me_endpoint(
+    data: CreateSpecialistMeRequest,
+    actor: User = Depends(current_user),
+    state: AppState = Depends(get_app_state),
+) -> SpecialistMeResponse:
+    """Create a specialist listing for the authenticated user if they have a specialist profile."""
+    return await create_dentist_me(state, user=actor, data=data)
 
 
 @router.get(

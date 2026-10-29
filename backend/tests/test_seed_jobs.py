@@ -131,9 +131,7 @@ async def test_salary_and_specialty_replace_is_idempotent() -> None:
             await session.commit()
 
         async with state.db_session_maker() as session:
-            posting = (
-                await session.execute(select(JobPosting).limit(1))
-            ).scalars().first()
+            posting = (await session.execute(select(JobPosting).limit(1))).scalars().first()
             assert posting is not None
             specialty = (await SpecialtyRepository.list_all(session))[0]
 
@@ -148,17 +146,25 @@ async def test_salary_and_specialty_replace_is_idempotent() -> None:
 
         async with state.db_session_maker() as session:
             ranges = (
-                await session.execute(
-                    select(JobSalaryRange).where(JobSalaryRange.posting_id == posting.id)
-                )
-            ).scalars().all()
-            links = (
-                await session.execute(
-                    select(JobPostingSpecialty).where(
-                        JobPostingSpecialty.posting_id == posting.id
+                (
+                    await session.execute(
+                        select(JobSalaryRange).where(JobSalaryRange.posting_id == posting.id)
                     )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
+            links = (
+                (
+                    await session.execute(
+                        select(JobPostingSpecialty).where(
+                            JobPostingSpecialty.posting_id == posting.id
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
 
         assert len(ranges) == 1
         assert len(links) == 1

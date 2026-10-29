@@ -177,9 +177,7 @@ async def test_facility_signup_creates_the_facility_branch_and_owner_membership(
 
     async with state.db_session_maker() as session:
         facility = (
-            await session.execute(
-                select(Facility).where(Facility.id == membership["facility_id"])
-            )
+            await session.execute(select(Facility).where(Facility.id == membership["facility_id"]))
         ).scalar_one()
         assert facility.name == "Westlands Dental"
         assert facility.country_code == "KE"

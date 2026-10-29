@@ -42,7 +42,8 @@ async def _two_facilities(state: AppState) -> list[Facility]:
 
 
 def _bearer(state: AppState, user: User, scope: str = "public") -> dict[str, str]:
-    return {"Authorization": f"Bearer {create_access_token(state, user.id, user.role, scope=scope)}"}
+    token = create_access_token(state, user.id, user.role, scope=scope)
+    return {"Authorization": f"Bearer {token}"}
 
 
 async def test_me_lists_profiles_and_memberships_and_keeps_role(
@@ -184,3 +185,307 @@ async def test_signup_creates_the_profile_its_account_type_implies(
     )
     assert me.json()["profiles"] == profiles
     assert me.json()["role"] == account_type
+
+
+async def test_me_detailed_returns_phone_home_country_and_account_status(
+    client: AsyncClient, state: AppState
+) -> None:
+    """GET /auth/me returns detailed user info including phone,
+    home_country_code, and account_status."""
+    user = await _make_user(state, "patient")
+    # Update user with phone and home_country_code directly in DB
+    async with state.db_session_maker() as session:
+        db_user = await session.get(User, user.id)
+        db_user.phone = "+254700000000"
+        db_user.home_country_code = "KE"
+        db_user.account_status = "active"
+        await session.commit()
+
+    response = await client.get("/api/v1/auth/me", headers=_bearer(state, user))
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["id"] == user.id
+    assert body["email"] == user.email
+    assert body["full_name"] == user.full_name
+    assert body["phone"] == "+254700000000"
+    assert body["home_country_code"] == "KE"
+    assert body["account_status"] == "active"
+    assert body["role"] == "patient"
+    assert body["is_staff"] is False
+    assert "profiles" in body
+    assert "memberships" in body
+
+
+async def test_patch_me_updates_name_phone_and_home_country(
+    client: AsyncClient, state: AppState
+) -> None:
+    """PATCH /auth/me updates name, phone, and home_country_code."""
+    user = await _make_user(state, "patient")
+
+    response = await client.patch(
+        "/api/v1/auth/me",
+        json={"full_name": "Updated Name", "phone": "+254711111111", "home_country_code": "NG"},
+        headers=_bearer(state, user),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["full_name"] == "Updated Name"
+    assert body["phone"] == "+254711111111"
+    assert body["home_country_code"] == "NG"
+
+    # Verify persistence
+    async with state.db_session_maker() as session:
+        db_user = await session.get(User, user.id)
+        assert db_user.full_name == "Updated Name"
+        assert db_user.phone == "+254711111111"
+        assert db_user.home_country_code == "NG"
+
+
+async def test_patch_me_rejects_invalid_country_code(client: AsyncClient, state: AppState) -> None:
+    """PATCH /auth/me rejects invalid or inactive country code."""
+    user = await _make_user(state, "patient")
+
+    response = await client.patch(
+        "/api/v1/auth/me",
+        json={"home_country_code": "XX"},  # Invalid country code
+        headers=_bearer(state, user),
+    )
+
+    assert response.status_code == 409
+    assert "Invalid or inactive country" in response.json()["message"]
+
+
+async def test_add_profile_endpoint_adds_new_profile_kind(
+    client: AsyncClient, state: AppState
+) -> None:
+    """POST /auth/me/profiles adds a new profile kind to the user."""
+    user = await _make_user(state, "patient")
+    # Add patient profile manually (signup would do this)
+    async with state.db_session_maker() as session:
+        from app.repositories.profile import Profile
+
+        session.add(Profile(user_id=user.id, kind="patient"))
+        await session.commit()
+
+    response = await client.post(
+        "/api/v1/auth/me/profiles",
+        json={"profile_kind": "specialist"},
+        headers=_bearer(state, user),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["profile_kind"] == "specialist"
+    assert "successfully" in body["message"]
+
+    # Verify the profile was added
+    me = await client.get("/api/v1/auth/me", headers=_bearer(state, user))
+    assert me.status_code == 200
+    profiles = [p["kind"] for p in me.json()["profiles"]]
+    assert "patient" in profiles
+    assert "specialist" in profiles
+
+
+async def test_add_profile_rejects_duplicate_kind(client: AsyncClient, state: AppState) -> None:
+    """POST /auth/me/profiles rejects adding a profile kind the user already has."""
+    user = await _make_user(state, "patient")
+    # Add patient profile manually
+    async with state.db_session_maker() as session:
+        from app.repositories.profile import Profile
+
+        session.add(Profile(user_id=user.id, kind="patient"))
+        await session.commit()
+
+    response = await client.post(
+        "/api/v1/auth/me/profiles",
+        json={"profile_kind": "patient"},
+        headers=_bearer(state, user),
+    )
+
+    assert response.status_code == 409
+    assert "already has a patient profile" in response.json()["message"]
+
+
+async def test_get_dentist_me_returns_none_without_specialist_profile(
+    client: AsyncClient, state: AppState
+) -> None:
+    """GET /dentists/me returns null when user has no specialist profile."""
+    user = await _make_user(state, "patient")
+    # Add patient profile (but not specialist)
+    async with state.db_session_maker() as session:
+        from app.repositories.profile import Profile
+
+        session.add(Profile(user_id=user.id, kind="patient"))
+        await session.commit()
+
+    response = await client.get("/api/v1/dentists/me", headers=_bearer(state, user))
+
+    assert response.status_code == 200
+    assert response.json() is None
+
+
+async def test_get_dentist_me_returns_listing_for_specialist(
+    client: AsyncClient, state: AppState
+) -> None:
+    """GET /dentists/me returns the specialist listing when user has specialist profile."""
+    from app.repositories.listing import Specialist
+
+    user = await _make_user(state, "specialist")
+    # Add specialist profile
+    async with state.db_session_maker() as session:
+        from app.repositories.profile import Profile
+
+        session.add(Profile(user_id=user.id, kind="specialist"))
+        await session.execute(
+            Specialist.__table__.insert().values(
+                id=str(uuid.uuid4()),
+                name="Dr. Test Specialist",
+                slug="dr-test-specialist",
+                user_id=user.id,
+                country_code="KE",
+                subdivision_code="NAIROBI",
+                currency="KES",
+                verification_tier="unverified",
+            )
+        )
+        await session.commit()
+
+    response = await client.get("/api/v1/dentists/me", headers=_bearer(state, user))
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body is not None
+    assert body["name"] == "Dr. Test Specialist"
+    assert body["slug"] == "dr-test-specialist"
+    assert "specialties" in body
+    assert "branches" in body
+    assert "verification_tier" in body
+    assert "list_price" in body
+    assert "currency" in body
+    assert "rating" in body
+    assert "review_count" in body
+
+
+async def test_post_dentist_me_creates_listing_for_specialist(
+    client: AsyncClient, state: AppState
+) -> None:
+    """POST /dentists/me creates a specialist listing for user with specialist profile."""
+    user = await _make_user(state, "specialist")
+    # Add specialist profile
+    async with state.db_session_maker() as session:
+        from app.repositories.profile import Profile
+
+        session.add(Profile(user_id=user.id, kind="specialist"))
+        await session.commit()
+
+    response = await client.post(
+        "/api/v1/dentists/me",
+        json={
+            "name": "Dr. New Specialist",
+            "slug": "dr-new-specialist",
+            "specialty_codes": [],
+            "branch_ids": [],
+            "list_price": "5000.00",
+        },
+        headers=_bearer(state, user),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["name"] == "Dr. New Specialist"
+    assert body["slug"] == "dr-new-specialist"
+    assert body["list_price"] == "5000.00"
+    assert body["currency"] == "KES"
+    assert body["verification_tier"] == "unverified"
+
+
+async def test_post_dentist_me_rejects_without_specialist_profile(
+    client: AsyncClient, state: AppState
+) -> None:
+    """POST /dentists/me rejects when user has no specialist profile."""
+    user = await _make_user(state, "patient")
+
+    response = await client.post(
+        "/api/v1/dentists/me",
+        json={"name": "Dr. Test", "slug": "dr-test"},
+        headers=_bearer(state, user),
+    )
+
+    assert response.status_code == 409
+    assert "must have a specialist profile" in response.json()["message"]
+
+
+async def test_post_dentist_me_rejects_duplicate_listing(
+    client: AsyncClient, state: AppState
+) -> None:
+    """POST /dentists/me rejects when user already has a specialist listing."""
+    from app.repositories.listing import Specialist
+
+    user = await _make_user(state, "specialist")
+    # Add specialist profile and existing listing
+    async with state.db_session_maker() as session:
+        from app.repositories.profile import Profile
+
+        session.add(Profile(user_id=user.id, kind="specialist"))
+        await session.execute(
+            Specialist.__table__.insert().values(
+                id=str(uuid.uuid4()),
+                name="Existing Specialist",
+                slug="existing-specialist",
+                user_id=user.id,
+                country_code="KE",
+                subdivision_code="NAIROBI",
+                currency="KES",
+                verification_tier="unverified",
+            )
+        )
+        await session.commit()
+
+    response = await client.post(
+        "/api/v1/dentists/me",
+        json={"name": "Dr. New", "slug": "dr-new"},
+        headers=_bearer(state, user),
+    )
+
+    assert response.status_code == 409
+    assert "already exists" in response.json()["message"]
+
+
+async def test_patch_dentist_me_updates_listing(client: AsyncClient, state: AppState) -> None:
+    """PATCH /dentists/me updates the specialist listing."""
+    from app.repositories.listing import Specialist
+
+    user = await _make_user(state, "specialist")
+    # Add specialist profile and listing
+    async with state.db_session_maker() as session:
+        from app.repositories.profile import Profile
+
+        session.add(Profile(user_id=user.id, kind="specialist"))
+        spec_id = str(uuid.uuid4())
+        await session.execute(
+            Specialist.__table__.insert().values(
+                id=spec_id,
+                name="Dr. Original",
+                slug="dr-original",
+                user_id=user.id,
+                country_code="KE",
+                subdivision_code="NAIROBI",
+                currency="KES",
+                verification_tier="unverified",
+                list_price="3000.00",
+            )
+        )
+        await session.commit()
+
+    response = await client.patch(
+        "/api/v1/dentists/me",
+        json={"name": "Dr. Updated", "list_price": "6000.00"},
+        headers=_bearer(state, user),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["name"] == "Dr. Updated"
+    assert body["list_price"] == "6000.00"

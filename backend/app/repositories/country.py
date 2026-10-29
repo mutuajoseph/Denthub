@@ -314,6 +314,13 @@ class SpecialtyRepository:
         return list(result.scalars().all())
 
     @staticmethod
+    async def get_by_code(session: AsyncSession, code: str) -> Specialty | None:
+        """Get a Specialty by its code."""
+        stmt = select(Specialty).where(Specialty.code == code.upper())
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    @staticmethod
     async def create(session: AsyncSession, **kwargs: Any) -> Specialty:
         """Create and persist a Specialty."""
         specialty = Specialty(**kwargs)
