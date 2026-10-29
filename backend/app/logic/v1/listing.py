@@ -381,7 +381,7 @@ async def get_facility(state: AppState, *, facility_id: str) -> FacilityDetail:
     async with state.db_session_maker() as session:
         facility = await FacilityRepository.get(session, facility_id)
 
-        if facility is None:
+        if facility is None or not facility.listed:
             raise NotFoundException(message="Facility not found")
 
         country = await _resolve_country(session, facility.country_code)

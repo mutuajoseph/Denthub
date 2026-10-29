@@ -148,7 +148,8 @@ async def _resolve_listing(
     if listing_type == "facility":
         facility = await FacilityRepository.get(session, listing_id)
 
-        if facility is None:
+        # An unlisted Facility is not bookable: it has not passed staff review.
+        if facility is None or not facility.listed:
             return None
 
         return facility.id, None, facility.country_code, facility.name

@@ -49,12 +49,25 @@ export interface LoginRequest {
   password: string;
 }
 
+/**
+ * The Facility a Facility signup creates, and its first Branch's place. The
+ * country is the request's `Accept-Country`, so `subdivision_code` must be one
+ * of that market's subdivisions.
+ */
+export interface FacilitySignup {
+  name: string;
+  subdivision_code: string;
+  address: string;
+}
+
 export interface RegisterRequest {
   full_name: string;
   email: string;
   phone?: string;
   password: string;
   account_type: Role;
+  /** Required for, and only for, a Facility owner signup. */
+  facility?: FacilitySignup;
 }
 
 export const AUTH_STORAGE_KEY = "denthub_auth";
@@ -200,6 +213,7 @@ export async function register(data: RegisterRequest): Promise<AuthResponse> {
     password: data.password,
     account_type: accountType,
     ...(data.phone === undefined ? {} : { phone: data.phone }),
+    ...(data.facility === undefined ? {} : { facility: data.facility }),
   });
 }
 

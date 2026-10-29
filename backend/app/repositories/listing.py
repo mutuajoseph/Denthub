@@ -32,6 +32,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
     select,
+    true,
 )
 from sqlalchemy import (
     Enum as SAEnum,
@@ -77,6 +78,12 @@ class Facility(Base):
         ),
         default="unverified",
         nullable=False,
+    )
+    #: Whether the directory shows it. A Facility created at signup stays
+    #: unlisted until staff approve its owner (#118), so no unreviewed clinic
+    #: reaches search, its profile page, or booking.
+    listed: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default=true(), nullable=False
     )
 
     #: Every monetary record carries its own currency (root ``AGENTS.md``), so a
@@ -284,7 +291,10 @@ class FacilityFilters:
         self.verification_tier = verification_tier
 
     def conditions(self) -> list[ColumnElement[bool]]:
-        clauses: list[ColumnElement[bool]] = [Facility.country_code == self.country_code]
+        clauses: list[ColumnElement[bool]] = [
+            Facility.country_code == self.country_code,
+            Facility.listed.is_(True),
+        ]
 
         if self.subdivision_code:
             clauses.append(Facility.subdivision_code == self.subdivision_code)
@@ -363,6 +373,7 @@ class FacilityRepository:
             .select_from(Facility)
             .where(
                 Facility.country_code == country_code,
+                Facility.listed.is_(True),
                 Facility.verification_tier != "unverified",
             )
         )
@@ -375,7 +386,7 @@ class FacilityRepository:
         stmt = (
             select(func.count(func.distinct(Facility.subdivision_code)))
             .select_from(Facility)
-            .where(Facility.country_code == country_code)
+            .where(Facility.country_code == country_code, Facility.listed.is_(True))
         )
         result = await session.execute(stmt)
         return int(result.scalar_one())
@@ -453,6 +464,16 @@ class FacilityRepository:
         session.add(facility)
         await session.flush()
         return facility
+
+    @staticmethod
+    async def list_unlisted(session: AsyncSession, facility_ids: list[str]) -> list[Facility]:
+        """The Facilities among ``facility_ids`` the directory does not show yet."""
+        if not facility_ids:
+            return []
+
+        stmt = select(Facility).where(Facility.id.in_(facility_ids), Facility.listed.is_(False))
+        result = await session.execute(stmt)
+        return list(result.scalars().all())
 
     @staticmethod
     async def update(facility: Facility, **kwargs: Any) -> Facility:

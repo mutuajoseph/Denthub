@@ -5,7 +5,7 @@ Provides endpoints for signup, login, and fetching the current authenticated use
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Header
 
 from app.dependencies import current_staff, current_user, get_app_state
 from app.logic.v1.auth import (
@@ -18,6 +18,7 @@ from app.logic.v1.auth import (
     login_user,
     signup_user,
 )
+from app.logic.v1.country import DEFAULT_COUNTRY_CODE
 from app.repositories.user import User
 from app.utils.openapi_helpers import standard_error_responses
 from app.utils.state import AppState
@@ -28,10 +29,14 @@ router = APIRouter(tags=["auth"])
 @router.post("/register", response_model=AuthResponseModel, responses=standard_error_responses())
 async def signup(
     data: UserSignup,
+    accept_country: str = Header(default=DEFAULT_COUNTRY_CODE, alias="Accept-Country"),
     state: AppState = Depends(get_app_state),
 ) -> AuthResponseModel:
-    """Create a new user profile and return access token."""
-    return await signup_user(state, data)
+    """Create a new user profile and return access token.
+
+    ``Accept-Country`` is the market a Facility signup's Facility is in.
+    """
+    return await signup_user(state, data, country_code=accept_country)
 
 
 @router.post("/login", response_model=AuthResponseModel, responses=standard_error_responses())

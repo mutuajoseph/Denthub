@@ -152,7 +152,6 @@ async def test_a_membership_needs_at_least_one_permission(state: AppState) -> No
         ("intern", [{"kind": "specialist"}]),
         ("supplier", [{"kind": "supplier"}]),
         ("training_provider", [{"kind": "training_provider"}]),
-        ("facility_owner", []),
     ],
 )
 async def test_signup_creates_the_profile_its_account_type_implies(
