@@ -181,6 +181,24 @@ class AppointmentRepository:
         return list(result.scalars().all())
 
     @staticmethod
+    async def list_all_for_patient(
+        session: AsyncSession,
+        *,
+        patient_id: str,
+    ) -> list[Appointment]:
+        """Every Appointment a Patient booked, soonest slot first (#128 export).
+
+        The data export is not paginated: it must be complete for the caller.
+        """
+        stmt = (
+            select(Appointment)
+            .where(Appointment.patient_id == patient_id)
+            .order_by(Appointment.scheduled_at.asc(), Appointment.created_at.asc())
+        )
+        result = await session.execute(stmt)
+        return list(result.scalars().all())
+
+    @staticmethod
     async def count_for_patient(session: AsyncSession, *, patient_id: str) -> int:
         """Count a Patient's Appointments."""
         stmt = (

@@ -117,6 +117,30 @@ class UserRepository:
         return user
 
     @staticmethod
+    async def anonymize(
+        session: AsyncSession,
+        user: User,
+        *,
+        email: str,
+        full_name: str,
+        password_hash: str,
+    ) -> User:
+        """Scrub the identity fields while keeping the row for its foreign keys.
+
+        A User row is referenced by appointments and retained clinical entries
+        with RESTRICT foreign keys (#128), so erasure anonymises rather than
+        deleting it. ``is_active`` blocks both login and token authentication.
+        """
+        user.full_name = full_name
+        user.email = email
+        user.phone = None
+        user.password_hash = password_hash
+        user.is_active = False
+        user.facility_id = None
+        await session.flush()
+        return user
+
+    @staticmethod
     async def names_by_ids(session: AsyncSession, user_ids: list[str]) -> dict[str, str]:
         """Resolve full names for a batch of user ids, keyed by id (#84).
 

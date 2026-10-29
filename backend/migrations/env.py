@@ -32,6 +32,7 @@ from app.repositories.country import (  # noqa: F401
     Specialty,
     Subdivision,
 )
+from app.repositories.deletion import DeletionRequest  # noqa: F401
 from app.repositories.health_record import (  # noqa: F401
     HealthRecordEntry,
     PatientHealthRecord,

@@ -294,6 +294,10 @@ describe("App routes", () => {
     }
   });
 
+  it("titles the account settings route", () => {
+    expect(getPageMeta("/settings", "DentHub").title).toMatch(/settings/i);
+  });
+
   it("titles typed and legacy dentist profile routes alike", () => {
     for (const path of ["/dentists/facility/f-1", "/dentists/sp-1", "/dentist/sp-1"]) {
       expect(getPageMeta(path, "DentHub").title).toMatch(/dentist profile/i);
@@ -307,6 +311,24 @@ describe("App routes", () => {
       await screen.findByRole("heading", { name: /sign in to your account/i }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: /page not found/i })).toBeNull();
+  });
+
+  it("sends a guest from /settings to the routed sign-in page", async () => {
+    renderApp("/settings");
+
+    expect(
+      await screen.findByRole("heading", { name: /sign in to your account/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("renders the settings page for a signed-in public account", async () => {
+    seedAuth(ROLE.PATIENT);
+
+    renderApp("/settings");
+
+    expect(await screen.findByRole("heading", { name: /^settings$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /download my data/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete my account" })).toBeInTheDocument();
   });
 
   it("renders the standalone staff surface at /staff/access", async () => {

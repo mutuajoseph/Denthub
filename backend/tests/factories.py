@@ -19,6 +19,7 @@ from app.repositories.country import (
     Specialty,
     Subdivision,
 )
+from app.repositories.deletion import DeletionRequest
 from app.repositories.health_record import HealthRecordEntry, PatientHealthRecord
 from app.repositories.job import JobPosting, JobSalaryRange
 from app.repositories.listing import Branch, Facility, OpeningHour, Specialist
@@ -389,6 +390,23 @@ def build_users() -> list[User]:
         )
         for row in PATIENTS
     ]
+
+
+def build_deletion_request(
+    *,
+    user_id: str,
+    retention_days: int = 2555,
+    now: datetime | None = None,
+) -> DeletionRequest:
+    """A completed account-erasure row for the deleted-user fixtures (#128)."""
+    requested_at = now or datetime.now(UTC).replace(tzinfo=None)
+    return DeletionRequest(
+        user_id=user_id,
+        status="completed",
+        requested_at=requested_at,
+        retention_until=requested_at + timedelta(days=retention_days),
+        completed_at=requested_at,
+    )
 
 
 def build_profiles(patients: list[User], clinician: User) -> list[Profile]:
@@ -935,6 +953,7 @@ __all__ = [
     "SEEDED_PASSWORD",
     "build_appointments",
     "build_countries",
+    "build_deletion_request",
     "build_health_record_clinician",
     "build_health_records",
     "build_jobs",

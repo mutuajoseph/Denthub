@@ -32,6 +32,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
     select,
+    update,
 )
 from sqlalchemy import (
     Enum as SAEnum,
@@ -535,6 +536,17 @@ class SpecialistRepository:
         stmt = select(Specialist).order_by(Specialist.name.asc())
         result = await session.execute(stmt)
         return list(result.scalars().all())
+
+    @staticmethod
+    async def detach_user(session: AsyncSession, *, user_id: str) -> None:
+        """Remove the User link from any Specialist listing they own (#128).
+
+        The public listing is marketplace data; deleting the account must not
+        delete it. Only the identity link is cleared.
+        """
+        await session.execute(
+            update(Specialist).where(Specialist.user_id == user_id).values(user_id=None)
+        )
 
     @staticmethod
     async def find_by_slug(session: AsyncSession, slug: str) -> Specialist | None:

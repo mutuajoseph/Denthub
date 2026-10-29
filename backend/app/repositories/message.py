@@ -315,6 +315,25 @@ class MessageRepository:
         return message
 
     @staticmethod
+    async def list_sent_by_user(
+        session: AsyncSession,
+        *,
+        sender_id: str,
+    ) -> list[Message]:
+        """Every Message the User sent, oldest first, for the data export (#128).
+
+        The caller's own sent Messages only: the other participant's messages in
+        the same thread belong to them, not to the exporting User.
+        """
+        stmt = (
+            select(Message)
+            .where(Message.sender_id == sender_id)
+            .order_by(Message.created_at.asc(), Message.id.asc())
+        )
+        result = await session.execute(stmt)
+        return list(result.scalars().all())
+
+    @staticmethod
     async def list_for_conversation(
         session: AsyncSession,
         *,

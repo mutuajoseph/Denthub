@@ -51,6 +51,8 @@ def test_production_with_real_secret_starts(monkeypatch: pytest.MonkeyPatch) -> 
     monkeypatch.setenv("JWT_SECRET_KEY", "a-real-secret-from-the-dashboard")
 
     assert Settings.from_env().jwt_secret_key == "a-real-secret-from-the-dashboard"
+
+
 def test_production_without_cors_refuses_to_start(monkeypatch: pytest.MonkeyPatch) -> None:
     """Production must have an explicit CORS_ORIGINS value."""
     _clear_secrets(monkeypatch)
@@ -58,4 +60,29 @@ def test_production_without_cors_refuses_to_start(monkeypatch: pytest.MonkeyPatc
     monkeypatch.setenv("JWT_SECRET_KEY", "a-real-secret-from-the-dashboard")
 
     with pytest.raises(RuntimeError, match="CORS_ORIGINS"):
+        Settings.from_env()
+
+
+def test_clinical_retention_days_defaults_to_seven_years(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("CLINICAL_RETENTION_DAYS", raising=False)
+
+    assert Settings.from_env().clinical_retention_days == 2555
+
+
+def test_clinical_retention_days_is_configurable(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CLINICAL_RETENTION_DAYS", "3650")
+
+    assert Settings.from_env().clinical_retention_days == 3650
+
+
+@pytest.mark.parametrize("value", ["0", "-1", "not-a-number"])
+def test_clinical_retention_days_must_be_a_positive_integer(
+    monkeypatch: pytest.MonkeyPatch,
+    value: str,
+) -> None:
+    monkeypatch.setenv("CLINICAL_RETENTION_DAYS", value)
+
+    with pytest.raises(RuntimeError, match="CLINICAL_RETENTION_DAYS"):
         Settings.from_env()
