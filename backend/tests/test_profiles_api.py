@@ -158,15 +158,23 @@ async def test_a_membership_needs_at_least_one_permission(state: AppState) -> No
 async def test_signup_creates_the_profile_its_account_type_implies(
     client: AsyncClient, account_type: str, profiles: list[dict[str, str]]
 ) -> None:
-    response = await client.post(
-        "/api/v1/auth/register",
-        json={
-            "full_name": "New Account",
-            "email": f"{account_type}@example.com",
-            "password": "correct horse battery staple",
-            "account_type": account_type,
-        },
-    )
+    payload: dict[str, str] = {
+        "full_name": "New Account",
+        "email": f"{account_type}@example.com",
+        "password": "correct horse battery staple",
+        "account_type": account_type,
+    }
+    if account_type == "facility_owner":
+        payload.update(
+            {
+                "facility_name": "New Clinic",
+                "country_code": "KE",
+                "subdivision_code": "NAIROBI",
+                "address": "Kileleshwa Road, Nairobi",
+            }
+        )
+
+    response = await client.post("/api/v1/auth/register", json=payload)
 
     assert response.status_code == 200
     assert response.json()["user"]["profiles"] == profiles

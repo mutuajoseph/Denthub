@@ -117,6 +117,10 @@ describe("auth contract", () => {
       email: "clinic@example.com",
       password: "password123",
       account_type: ROLE.FACILITY_OWNER,
+      facility_name: "Westlands Dental",
+      country_code: "KE",
+      subdivision_code: "NAIROBI",
+      address: "Kileleshwa Road, Nairobi",
     });
 
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
@@ -126,6 +130,10 @@ describe("auth contract", () => {
       email: "clinic@example.com",
       password: "password123",
       account_type: ROLE.FACILITY_OWNER,
+      facility_name: "Westlands Dental",
+      country_code: "KE",
+      subdivision_code: "NAIROBI",
+      address: "Kileleshwa Road, Nairobi",
     });
     expect(response.user.role).toBe(ROLE.FACILITY_OWNER);
     expect(response.user.is_staff).toBe(false);

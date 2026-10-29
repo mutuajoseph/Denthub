@@ -5,15 +5,23 @@ Handles password hashing, token generation/verification, and signup/login flows.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal, cast
 
 import bcrypt
 import jwt
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.exceptions import ConflictError, ForbiddenException, UnauthorizedException
+from app.exceptions import (
+    ConflictError,
+    ForbiddenException,
+    InvalidRequestError,
+    UnauthorizedException,
+)
+from app.repositories.country import Country, CountryRepository, SubdivisionRepository
+from app.repositories.listing import BranchRepository, FacilityRepository
 from app.repositories.profile import (
     PROFILE_FOR_ACCOUNT_TYPE,
     FacilityPermission,
@@ -142,6 +150,30 @@ class UserSignup(BaseModel):
     password: str
     account_type: AccountType = "patient"
     phone: str | None = None
+    #: Facility signup creates the Facility and its first Branch, so it needs
+    #: the marketplace fields those rows require. Ignored for every other
+    #: account type.
+    facility_name: str | None = None
+    country_code: str | None = None
+    subdivision_code: str | None = None
+    address: str | None = None
+
+    @model_validator(mode="after")
+    def _facility_details_are_required(self) -> UserSignup:
+        """A Facility account cannot be created without where it practises."""
+        if self.account_type != "facility_owner":
+            return self
+
+        required = {
+            "facility_name": self.facility_name,
+            "country_code": self.country_code,
+            "subdivision_code": self.subdivision_code,
+            "address": self.address,
+        }
+        missing = [field for field, value in required.items() if value is None or not value.strip()]
+        if missing:
+            raise ValueError("A Facility signup requires " + ", ".join(missing) + ".")
+        return self
 
 
 class UserLogin(BaseModel):
@@ -221,6 +253,85 @@ def decode_access_token(
     )
 
 
+@dataclass(frozen=True)
+class _FacilitySignup:
+    country: Country
+    name: str
+    subdivision_code: str
+    address: str
+
+
+def _required(value: str | None, field: str) -> str:
+    if value is None or not value.strip():
+        raise InvalidRequestError(message=f"{field} is required for a Facility signup.")
+    return value.strip()
+
+
+async def _resolve_facility_signup(
+    session: AsyncSession,
+    data: UserSignup,
+) -> _FacilitySignup:
+    country = await CountryRepository.get(
+        session,
+        _required(data.country_code, "country_code").upper(),
+    )
+    if country is None or not country.is_active:
+        raise InvalidRequestError(message="Choose a supported country for the Facility.")
+
+    subdivision_code = _required(data.subdivision_code, "subdivision_code").upper()
+    subdivision = await SubdivisionRepository.get(
+        session,
+        country_code=country.code,
+        code=subdivision_code,
+    )
+    if subdivision is None:
+        raise InvalidRequestError(message="Choose a subdivision in the Facility's country.")
+
+    return _FacilitySignup(
+        country=country,
+        name=_required(data.facility_name, "facility_name"),
+        subdivision_code=subdivision.code,
+        address=_required(data.address, "address"),
+    )
+
+
+async def _create_facility_for_signup(
+    session: AsyncSession,
+    *,
+    user: User,
+    data: UserSignup,
+    details: _FacilitySignup,
+) -> None:
+    facility = await FacilityRepository.create(
+        session,
+        name=details.name,
+        country_code=details.country.code,
+        subdivision_code=details.subdivision_code,
+        address=details.address,
+        phone=data.phone,
+        email=data.email,
+        currency=details.country.currency,
+    )
+    await BranchRepository.create(
+        session,
+        facility_id=facility.id,
+        subdivision_code=details.subdivision_code,
+        address=details.address,
+        phone=data.phone,
+        email=data.email,
+    )
+    await ProfileRepository.add_facility_membership(
+        session,
+        user_id=user.id,
+        facility_id=facility.id,
+        owner=True,
+    )
+    # Existing facility-scoped routes still read this column until ADR-0006's
+    # contract step removes it.
+    user.facility_id = facility.id
+    await session.flush()
+
+
 async def signup_user(
     state: AppState,
     data: UserSignup,
@@ -236,6 +347,12 @@ async def signup_user(
 
         if existing:
             raise ConflictError(message="A user with this email already exists")
+
+        facility_signup = (
+            await _resolve_facility_signup(session, data)
+            if data.account_type == "facility_owner"
+            else None
+        )
 
         # Hash password and save user. Professional accounts start life pending
         # (staff review); patient accounts are active immediately.
@@ -257,6 +374,14 @@ async def signup_user(
         kind = PROFILE_FOR_ACCOUNT_TYPE.get(data.account_type)
         if kind is not None:
             await ProfileRepository.add(session, user_id=user.id, kind=kind)
+
+        if facility_signup is not None:
+            await _create_facility_for_signup(
+                session,
+                user=user,
+                data=data,
+                details=facility_signup,
+            )
 
         await session.commit()
 

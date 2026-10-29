@@ -7,6 +7,7 @@ import {
   GraduationCap,
   Lock,
   Mail,
+  MapPin,
   Package,
   Phone,
   Plane,
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
+import { useCountryConfig } from "../hooks/useCountryConfig";
 import { useRegion } from "../hooks/useRegion";
 import { type AuthResponse, register } from "../lib/auth";
 import { ROLE } from "./roles";
@@ -94,6 +96,14 @@ const labelClass = "text-xs font-medium text-charcoal";
 
 export default function Register({ onClose, onSignIn, onRegisterSuccess }: RegisterProps) {
   const { brandName, countryName } = useRegion();
+  const {
+    apiCountry,
+    config,
+    regions,
+    subdivisionLabel,
+    loading: countryLoading,
+    error: countryError,
+  } = useCountryConfig();
   const [step, setStep] = useState(1);
   const [accountType, setAccountType] = useState<AccountTypeId | "">("");
 
@@ -101,12 +111,17 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [facilityName, setFacilityName] = useState("");
+  const [subdivisionCode, setSubdivisionCode] = useState("");
+  const [address, setAddress] = useState("");
 
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const selectedAccount = ACCOUNT_TYPES.find((account) => account.id === accountType);
+  const isFacility = selectedAccount?.role === ROLE.FACILITY_OWNER;
+  const countryLabel = config?.name || countryName;
 
   const selectAccount = (id: AccountTypeId) => {
     setAccountType(id);
@@ -122,6 +137,11 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
       return;
     }
 
+    if (isFacility && !subdivisionCode) {
+      setError(`Please select a ${subdivisionLabel.toLowerCase()}.`);
+      return;
+    }
+
     setError("");
     setLoading(true);
 
@@ -132,6 +152,14 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
         phone: phone.trim() || undefined,
         password,
         account_type: selectedAccount.role,
+        ...(isFacility
+          ? {
+              facility_name: facilityName.trim(),
+              country_code: apiCountry,
+              subdivision_code: subdivisionCode,
+              address: address.trim(),
+            }
+          : {}),
       });
 
       onRegisterSuccess?.(response);
@@ -265,6 +293,93 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
                 className={inputClass}
               />
             </div>
+
+            {isFacility && (
+              <>
+                {/* Facility name */}
+                <label htmlFor="facility-name" className={`${labelClass} mt-1.5`}>
+                  Clinic name
+                </label>
+
+                <div className={fieldShellClass}>
+                  <Building2 className="h-4 w-4 text-slate" />
+
+                  <input
+                    id="facility-name"
+                    name="facility_name"
+                    type="text"
+                    placeholder="Westlands Dental"
+                    required
+                    autoComplete="organization"
+                    value={facilityName}
+                    onChange={(event) => setFacilityName(event.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+
+                {/* Country */}
+                <span className={`${labelClass} mt-1.5`}>Country</span>
+
+                <div className={fieldShellClass}>
+                  <span className="text-sm text-ink">{countryLabel}</span>
+                </div>
+
+                {/* Subdivision */}
+                <label htmlFor="subdivision" className={`${labelClass} mt-1.5`}>
+                  {subdivisionLabel}
+                </label>
+
+                <div className={fieldShellClass}>
+                  <select
+                    id="subdivision"
+                    name="subdivision_code"
+                    required
+                    disabled={countryLoading}
+                    value={subdivisionCode}
+                    onChange={(event) => setSubdivisionCode(event.target.value)}
+                    className={inputClass}
+                  >
+                    <option value="" disabled>
+                      {countryLoading
+                        ? `Loading ${subdivisionLabel.toLowerCase()}s...`
+                        : `Select ${subdivisionLabel.toLowerCase()}`}
+                    </option>
+                    {regions.map((region) => (
+                      <option key={region.code} value={region.code}>
+                        {region.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {countryError && (
+                  <p role="alert" className="mt-1 text-xs text-red-700">
+                    {countryError}
+                  </p>
+                )}
+
+                {/* Address */}
+                <label htmlFor="address" className={`${labelClass} mt-1.5`}>
+                  Street address
+                </label>
+
+                <div className={fieldShellClass}>
+                  <MapPin className="h-4 w-4 text-slate" />
+
+                  <input
+                    id="address"
+                    name="address"
+                    type="text"
+                    placeholder="Kileleshwa Road, Nairobi"
+                    required
+                    autoComplete="street-address"
+                    value={address}
+                    onChange={(event) => setAddress(event.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+              </>
+            )}
 
             {/* Password */}
             <label htmlFor="password" className={`${labelClass} mt-1.5`}>

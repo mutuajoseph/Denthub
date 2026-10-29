@@ -271,6 +271,21 @@ class CountryFeatureRepository:
 
 class SubdivisionRepository:
     @staticmethod
+    async def get(
+        session: AsyncSession,
+        *,
+        country_code: str,
+        code: str,
+    ) -> Subdivision | None:
+        """One Subdivision by its per-Country code."""
+        stmt = select(Subdivision).where(
+            Subdivision.country_code == country_code.upper(),
+            Subdivision.code == code.upper(),
+        )
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    @staticmethod
     async def list_all(session: AsyncSession, *, country_code: str) -> list[Subdivision]:
         """Every Subdivision in a Country, alphabetical by name."""
         stmt = (
