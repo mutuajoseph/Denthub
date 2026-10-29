@@ -23,7 +23,7 @@ describe("canonical roles", () => {
       ROLE.DENTIST,
       ROLE.SPECIALIST,
       ROLE.INTERN,
-      ROLE.FACILITY_OWNER,
+      ROLE.FACILITY,
       ROLE.FRONT_OFFICE,
       ROLE.FACILITY_DENTIST,
       ROLE.SUPPLIER,
@@ -39,8 +39,8 @@ describe("canonical roles", () => {
     expect(normalizeRole(" Patient ")).toBe(ROLE.PATIENT);
     expect(normalizeRole("international patient")).toBe(ROLE.INTERNATIONAL_PATIENT);
     expect(normalizeRole("dental specialist")).toBe(ROLE.SPECIALIST);
-    expect(normalizeRole("facility admin")).toBe(ROLE.FACILITY_OWNER);
-    expect(normalizeRole("clinic owner")).toBe(ROLE.FACILITY_OWNER);
+    expect(normalizeRole("facility")).toBe(ROLE.FACILITY);
+    expect(normalizeRole("clinic")).toBe(ROLE.FACILITY);
     expect(normalizeRole("front-office")).toBe(ROLE.FRONT_OFFICE);
     expect(normalizeRole("receptionist")).toBe(ROLE.FRONT_OFFICE);
     expect(normalizeRole("facility specialist")).toBe(ROLE.FACILITY_DENTIST);
@@ -54,7 +54,7 @@ describe("canonical roles", () => {
   it("matches roles and classifies staff and portal access", () => {
     const facilityUser = { role: "facility_admin" };
 
-    expect(roleMatches(facilityUser, [ROLE.FACILITY_OWNER, ROLE.FRONT_OFFICE])).toBe(true);
+    expect(roleMatches(facilityUser, [ROLE.FACILITY, ROLE.FRONT_OFFICE])).toBe(true);
     expect(isFacilityRole(facilityUser)).toBe(true);
     expect(isSupplierRole("supplier")).toBe(true);
     expect(isTrainingProviderRole("training provider")).toBe(true);
@@ -116,7 +116,7 @@ describe("auth contract", () => {
       full_name: "Clinic Owner",
       email: "clinic@example.com",
       password: "password123",
-      account_type: ROLE.FACILITY_OWNER,
+      account_type: ROLE.FACILITY,
       facility_name: "Westlands Dental",
       country_code: "KE",
       subdivision_code: "NAIROBI",
@@ -129,13 +129,13 @@ describe("auth contract", () => {
       full_name: "Clinic Owner",
       email: "clinic@example.com",
       password: "password123",
-      account_type: ROLE.FACILITY_OWNER,
+      account_type: ROLE.FACILITY,
       facility_name: "Westlands Dental",
       country_code: "KE",
       subdivision_code: "NAIROBI",
       address: "Kileleshwa Road, Nairobi",
     });
-    expect(response.user.role).toBe(ROLE.FACILITY_OWNER);
+    expect(response.user.role).toBe(ROLE.FACILITY);
     expect(response.user.is_staff).toBe(false);
     expect(getStoredAuth()).toEqual(response);
   });

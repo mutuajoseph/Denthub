@@ -32,7 +32,7 @@ from app.exceptions import (
     InvalidRequestError,
     NotFoundException,
 )
-from app.logic.v1.auth import PATIENT_ROLES
+from app.logic.v1.auth import PATIENT_ROLES, is_staff_role
 from app.logic.v1.country import CountryConfigurationMissingException
 from app.repositories.appointment import (
     Appointment,
@@ -41,6 +41,7 @@ from app.repositories.appointment import (
 )
 from app.repositories.country import CountryRepository
 from app.repositories.listing import FacilityRepository, SpecialistRepository
+from app.repositories.profile import ProfileRepository
 from app.repositories.user import User
 from app.utils.state import AppState
 
@@ -126,9 +127,51 @@ AppointmentUpdateRequest = Annotated[
 ]
 
 
-def _require_patient(actor: User) -> str:
+async def _derive_user_role(session: AsyncSession, user: User) -> str:
+    """Derive a user's role from their profiles and memberships.
+
+    Per ADR-0006: users.role is null for non-staff users; derive a role for
+    authorization checks until all code migrates to profile-based checks.
+    """
+    if is_staff_role(user.role):
+        return user.role
+
+    kinds = await ProfileRepository.kinds_for_user(session, user.id)
+    if kinds:
+        # Map first profile kind to legacy role name
+        profile_to_role = {
+            "patient": "patient",
+            "specialist": "specialist",
+            "supplier": "supplier",
+            "training_provider": "training_provider",
+        }
+        return profile_to_role.get(kinds[0], "patient")
+
+    memberships = await ProfileRepository.memberships_for_user(session, user.id)
+    if memberships:
+        # Facility membership: owner -> facility_owner, clinical -> facility_dentist,
+        # front_office -> front_office
+        perms = memberships[0].permissions
+        if "owner" in perms:
+            return "facility_owner"
+        elif "clinical" in perms:
+            return "facility_dentist"
+        elif "front_office" in perms:
+            return "front_office"
+        else:
+            return "facility_owner"
+
+    # Fallback to user.role for legacy users who have a role but no profiles/memberships
+    if user.role:
+        return user.role
+
+    return "patient"
+
+
+async def _require_patient(session: AsyncSession, actor: User) -> str:
     """Return the signed-in Patient's id, rejecting anyone who is not one."""
-    if actor.role not in PATIENT_ROLES:
+    derived_role = await _derive_user_role(session, actor)
+    if derived_role not in PATIENT_ROLES:
         raise ForbiddenException(message="Only patients may book appointments")
 
     return actor.id
@@ -209,9 +252,8 @@ async def book_appointment(
     for the same Patient and Listing (409), and a time that has already passed on
     the clinic's clock (400).
     """
-    patient_id = _require_patient(actor)
-
     async with state.db_session_maker() as session:
+        patient_id = await _require_patient(session, actor)
         resolved = await _resolve_listing(session, request.listing_type, request.listing_id)
 
         if resolved is None:
@@ -263,12 +305,11 @@ async def list_my_appointments(
     offset: int = 0,
 ) -> AppointmentPage:
     """One page of the signed-in Patient's Appointments, soonest slot first."""
-    patient_id = _require_patient(actor)
-
-    page_size = max(1, min(limit, MAX_PAGE_SIZE))
-    start = max(0, offset)
-
     async with state.db_session_maker() as session:
+        patient_id = await _require_patient(session, actor)
+
+        page_size = max(1, min(limit, MAX_PAGE_SIZE))
+        start = max(0, offset)
         rows = await AppointmentRepository.list_for_patient(
             session,
             patient_id=patient_id,
@@ -358,9 +399,8 @@ async def update_my_appointment(
     else's booking exists. Only a ``PENDING`` or ``CONFIRMED`` Appointment may be
     changed — anything the clinic has started or finished is a 400.
     """
-    patient_id = _require_patient(actor)
-
     async with state.db_session_maker() as session:
+        patient_id = await _require_patient(session, actor)
         appointment = await AppointmentRepository.get(session, appointment_id)
 
         if appointment is None or appointment.patient_id != patient_id:

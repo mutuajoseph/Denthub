@@ -8,6 +8,7 @@ from typing import Any
 
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import delete, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.exceptions import ConflictError, NotFoundException
 from app.logic.v1.auth import UserResponse, is_staff_role
@@ -19,7 +20,6 @@ from app.repositories.admin import AdminAuditRepository
 from app.repositories.country import CountryRepository, SpecialtyRepository
 from app.repositories.listing import (
     Branch,
-    BranchRepository,
     DentistBranch,
     SpecialistRepository,
     SpecialistSpecialty,
@@ -30,6 +30,48 @@ from app.repositories.profile import (
 )
 from app.repositories.user import User, UserRepository
 from app.utils.state import AppState
+
+
+async def _derive_user_role(session: AsyncSession, user: User) -> str:
+    """Derive a user's role from their profiles and memberships.
+
+    Per ADR-0006: users.role is null for non-staff users; derive a role for
+    backward compatibility until all code migrates to profile-based checks.
+    Falls back to user.role for legacy users who have a role but no profiles/memberships.
+    """
+    if is_staff_role(user.role):
+        return user.role
+
+    kinds = await ProfileRepository.kinds_for_user(session, user.id)
+    if kinds:
+        # Map first profile kind to legacy role name
+        profile_to_role = {
+            "patient": "patient",
+            "specialist": "specialist",
+            "supplier": "supplier",
+            "training_provider": "training_provider",
+        }
+        return profile_to_role.get(kinds[0], "patient")
+
+    memberships = await ProfileRepository.memberships_for_user(session, user.id)
+    if memberships:
+        # Facility membership: owner -> facility_owner, clinical -> facility_dentist,
+        # front_office -> front_office
+        perms = memberships[0].permissions
+        if "owner" in perms:
+            return "facility_owner"
+        elif "clinical" in perms:
+            return "facility_dentist"
+        elif "front_office" in perms:
+            return "front_office"
+        else:
+            return "facility_owner"
+
+    # Fallback to user.role for legacy users who have a role but no profiles/memberships
+    if user.role:
+        return user.role
+
+    return "patient"
 
 
 async def approve_user(
@@ -70,10 +112,11 @@ async def approve_user(
         )
         await session.commit()
 
+        derived_role = await _derive_user_role(session, user)
         return UserResponse(
             id=user.id,
             email=user.email,
-            role=user.role,
+            role=derived_role,
             full_name=user.full_name,
             is_staff=is_staff_role(user.role),
             account_status="active",
@@ -95,7 +138,9 @@ class UserMeResponse(BaseModel):
     role: str
     is_staff: bool
     profiles: list[dict[str, str]]  # Each: {"kind": "patient"} - same as ProfileSummary
-    memberships: list[dict[str, Any]]  # Each: {"facility_id", "facility_name", "permissions"} - same as MembershipSummary
+    memberships: list[
+        dict[str, Any]
+    ]  # Each: {"facility_id", "facility_name", "permissions"} - same as MembershipSummary
 
 
 class UpdateMeRequest(BaseModel):
@@ -127,6 +172,7 @@ async def get_me(state: AppState, *, user: User) -> UserMeResponse:
             raise NotFoundException(message="User not found")
         kinds = await ProfileRepository.kinds_for_user(session, db_user.id)
         memberships = await ProfileRepository.memberships_for_user(session, db_user.id)
+        derived_role = await _derive_user_role(session, db_user)
         return UserMeResponse(
             id=db_user.id,
             email=db_user.email,
@@ -134,7 +180,7 @@ async def get_me(state: AppState, *, user: User) -> UserMeResponse:
             phone=db_user.phone,
             home_country_code=db_user.home_country_code,
             account_status=db_user.account_status,
-            role=db_user.role,
+            role=derived_role,
             is_staff=is_staff_role(db_user.role),
             profiles=[{"kind": k} for k in kinds],
             memberships=[
@@ -176,6 +222,7 @@ async def update_me(
         # Reload with profiles and memberships
         kinds = await ProfileRepository.kinds_for_user(session, db_user.id)
         memberships = await ProfileRepository.memberships_for_user(session, db_user.id)
+        derived_role = await _derive_user_role(session, db_user)
         return UserMeResponse(
             id=db_user.id,
             email=db_user.email,
@@ -183,7 +230,7 @@ async def update_me(
             phone=db_user.phone,
             home_country_code=db_user.home_country_code,
             account_status=db_user.account_status,
-            role=db_user.role,
+            role=derived_role,
             is_staff=is_staff_role(db_user.role),
             profiles=[{"kind": k} for k in kinds],
             memberships=[

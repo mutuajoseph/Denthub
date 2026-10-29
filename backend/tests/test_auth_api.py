@@ -34,7 +34,7 @@ def facility_signup_payload(**overrides: Any) -> dict[str, Any]:
     payload: dict[str, Any] = signup_payload(
         full_name="Clinic Owner",
         email="clinic@example.com",
-        account_type="facility_owner",
+        account_type="facility",
         facility_name="Westlands Dental",
         country_code="KE",
         subdivision_code="NAIROBI",
@@ -100,7 +100,8 @@ async def test_professional_signup_starts_pending(client: AsyncClient) -> None:
 
     assert response.status_code == 200
     body = response.json()
-    assert body["user"]["role"] == "dentist"
+    # Per PRD §2 and ADR-0006: Dentist/Specialist/Intern all map to "specialist" role
+    assert body["user"]["role"] == "specialist"
     assert body["user"]["account_status"] == "pending"
 
 
@@ -159,6 +160,7 @@ async def test_facility_signup_creates_the_facility_branch_and_owner_membership(
 
     assert signup.status_code == 200
     body = signup.json()
+    # Per ADR-0006: users.role is null for non-staff users; user_response derives a role from profiles/memberships
     assert body["user"]["role"] == "facility_owner"
     assert body["user"]["account_status"] == "pending"
     assert body["user"]["profiles"] == []

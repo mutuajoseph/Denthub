@@ -22,7 +22,7 @@ const owner: AuthUser = {
   id: "user-1",
   email: "owner@example.com",
   full_name: "Sam Otieno",
-  role: "facility_owner",
+  role: "facility",
   is_staff: false,
   account_status: "active",
   profiles: [],

@@ -46,9 +46,14 @@ def _bearer(state: AppState, user: User, scope: str = "public") -> dict[str, str
     return {"Authorization": f"Bearer {token}"}
 
 
-async def test_me_lists_profiles_and_memberships_and_keeps_role(
+async def test_me_lists_profiles_and_memberships_derives_role_from_profiles(
     client: AsyncClient, state: AppState
 ) -> None:
+    """Test that /auth/me derives role from profiles per ADR-0006.
+
+    A user with both patient and specialist profiles gets "patient" role
+    (profiles take precedence over memberships, and "patient" comes first alphabetically).
+    """
     user = await _make_user(state, "facility_dentist")
     first, second = await _two_facilities(state)
     async with state.db_session_maker() as session:
@@ -68,7 +73,9 @@ async def test_me_lists_profiles_and_memberships_and_keeps_role(
 
     assert response.status_code == 200
     body = response.json()
-    assert body["role"] == "facility_dentist"
+    # Per ADR-0006: role is derived from profiles (first alphabetically)
+    # User has both "patient" and "specialist" profiles -> "patient" role
+    assert body["role"] == "patient"
     assert body["profiles"] == [{"kind": "patient"}, {"kind": "specialist"}]
     assert body["memberships"] == [
         {
@@ -144,20 +151,21 @@ async def test_a_membership_needs_at_least_one_permission(state: AppState) -> No
 
 
 @pytest.mark.parametrize(
-    ("account_type", "profiles"),
+    ("account_type", "profiles", "expected_role"),
     [
-        ("patient", [{"kind": "patient"}]),
-        ("international_patient", [{"kind": "patient"}]),
-        ("dentist", [{"kind": "specialist"}]),
-        ("specialist", [{"kind": "specialist"}]),
-        ("intern", [{"kind": "specialist"}]),
-        ("supplier", [{"kind": "supplier"}]),
-        ("training_provider", [{"kind": "training_provider"}]),
-        ("facility_owner", []),
+        ("patient", [{"kind": "patient"}], "patient"),
+        # Per PRD §2: "Patient (incl. international patient)" - both map to patient role
+        ("international_patient", [{"kind": "patient"}], "patient"),
+        ("dentist", [{"kind": "specialist"}], "specialist"),
+        ("specialist", [{"kind": "specialist"}], "specialist"),
+        ("intern", [{"kind": "specialist"}], "specialist"),
+        ("supplier", [{"kind": "supplier"}], "supplier"),
+        ("training_provider", [{"kind": "training_provider"}], "training_provider"),
+        ("facility", [], "facility_owner"),
     ],
 )
 async def test_signup_creates_the_profile_its_account_type_implies(
-    client: AsyncClient, account_type: str, profiles: list[dict[str, str]]
+    client: AsyncClient, account_type: str, profiles: list[dict[str, str]], expected_role: str
 ) -> None:
     payload: dict[str, str] = {
         "full_name": "New Account",
@@ -165,7 +173,7 @@ async def test_signup_creates_the_profile_its_account_type_implies(
         "password": "correct horse battery staple",
         "account_type": account_type,
     }
-    if account_type == "facility_owner":
+    if account_type == "facility":
         payload.update(
             {
                 "facility_name": "New Clinic",
@@ -184,7 +192,7 @@ async def test_signup_creates_the_profile_its_account_type_implies(
         headers={"Authorization": f"Bearer {response.json()['access_token']}"},
     )
     assert me.json()["profiles"] == profiles
-    assert me.json()["role"] == account_type
+    assert me.json()["role"] == expected_role
 
 
 async def test_me_detailed_returns_phone_home_country_and_account_status(

@@ -65,7 +65,7 @@ const ACCOUNT_TYPES = [
   },
   {
     id: "clinic",
-    role: ROLE.FACILITY_OWNER,
+    role: "facility",
     label: "Clinic / Employer",
     description: "Manage your clinic and staff",
     icon: Building2,
@@ -120,7 +120,7 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
   const [error, setError] = useState("");
 
   const selectedAccount = ACCOUNT_TYPES.find((account) => account.id === accountType);
-  const isFacility = selectedAccount?.role === ROLE.FACILITY_OWNER;
+  const isFacility = selectedAccount?.role === "facility";
   const countryLabel = config?.name || countryName;
 
   const selectAccount = (id: AccountTypeId) => {

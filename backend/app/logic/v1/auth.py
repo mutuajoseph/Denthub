@@ -39,7 +39,7 @@ AccountType = Literal[
     "dentist",
     "specialist",
     "intern",
-    "facility_owner",
+    "facility",
     "supplier",
     "training_provider",
 ]
@@ -51,7 +51,7 @@ AccountStatus = Literal["active", "pending"]
 #: Account types whose signup is held for staff review. Patient accounts are
 #: active immediately: nothing about a patient profile is gated behind review.
 PROFESSIONAL_ACCOUNT_TYPES: frozenset[str] = frozenset(
-    {"dentist", "specialist", "intern", "facility_owner", "supplier", "training_provider"}
+    {"dentist", "specialist", "intern", "facility", "supplier", "training_provider"}
 )
 
 #: Roles a human granted, as opposed to roles a signup could ever ask for.
@@ -152,7 +152,7 @@ class UserSignup(BaseModel):
     phone: str | None = None
     #: Facility signup creates the Facility and its first Branch, so it needs
     #: the marketplace fields those rows require. Ignored for every other
-    #: account type.
+    #: account type. "facility" is the account type per PRD §2 (not "facility_owner").
     facility_name: str | None = None
     country_code: str | None = None
     subdivision_code: str | None = None
@@ -161,7 +161,7 @@ class UserSignup(BaseModel):
     @model_validator(mode="after")
     def _facility_details_are_required(self) -> UserSignup:
         """A Facility account cannot be created without where it practises."""
-        if self.account_type != "facility_owner":
+        if self.account_type != "facility":
             return self
 
         required = {
@@ -350,7 +350,7 @@ async def signup_user(
 
         facility_signup = (
             await _resolve_facility_signup(session, data)
-            if data.account_type == "facility_owner"
+            if data.account_type == "facility"
             else None
         )
 
@@ -359,12 +359,16 @@ async def signup_user(
         account_status = "pending" if data.account_type in PROFESSIONAL_ACCOUNT_TYPES else "active"
         password_hash = hash_password(data.password)
 
+        # Per ADR-0006: users.role narrows to nullable platform_role for Platform Staff only.
+        # Non-staff users get their role via Profiles and Memberships, so role is null here.
+        user_role: str | None = None
+
         user = await UserRepository.create(
             session,
             full_name=data.full_name,
             email=data.email,
             password_hash=password_hash,
-            role=data.account_type,
+            role=user_role,
             phone=data.phone,
             account_status=account_status,
         )
@@ -544,10 +548,40 @@ async def user_response(session: AsyncSession, user: User) -> UserResponse:
     """The public shape of a User, as ``/auth/me`` and the sign-in routes return it."""
     kinds = await ProfileRepository.kinds_for_user(session, user.id)
     memberships = await ProfileRepository.memberships_for_user(session, user.id)
+
+    # Per ADR-0006: users.role is null for non-staff users; derive a role for
+    # backward compatibility until the frontend migrates off it.
+    # Platform Staff keep their role; non-staff get a derived role from profiles/memberships.
+    if is_staff_role(user.role):
+        derived_role = user.role
+    elif kinds:
+        # Map first profile kind to legacy role name
+        profile_to_role = {
+            "patient": "patient",
+            "specialist": "specialist",
+            "supplier": "supplier",
+            "training_provider": "training_provider",
+        }
+        derived_role = profile_to_role.get(kinds[0], "patient")
+    elif memberships:
+        # Facility membership: owner -> facility_owner, clinical -> facility_dentist,
+        # front_office -> front_office
+        perms = memberships[0].permissions
+        if "owner" in perms:
+            derived_role = "facility_owner"
+        elif "clinical" in perms:
+            derived_role = "facility_dentist"
+        elif "front_office" in perms:
+            derived_role = "front_office"
+        else:
+            derived_role = "facility_owner"
+    else:
+        derived_role = "patient"
+
     return UserResponse(
         id=user.id,
         email=user.email,
-        role=user.role,
+        role=derived_role,
         full_name=user.full_name,
         is_staff=is_staff_role(user.role),
         account_status=cast(AccountStatus, user.account_status),

@@ -77,7 +77,7 @@ describe("RouteGuard", () => {
   });
 
   it("renders content for an allowed facility role", () => {
-    renderGuard({ user: makeUser(ROLE.FACILITY_OWNER), scope: "facility" });
+    renderGuard({ user: makeUser(ROLE.FACILITY), scope: "facility" });
 
     expect(screen.getByText("Private content")).toBeInTheDocument();
   });
