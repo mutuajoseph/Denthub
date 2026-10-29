@@ -57,6 +57,14 @@ class User(Base):
         index=True,
     )
 
+    #: The user's preferred/home country code (ISO-3166 alpha-2).
+    #: Used for defaulting searches, pricing, and the specialist listing country.
+    home_country_code: Mapped[str | None] = mapped_column(
+        String(2),
+        ForeignKey("countries.code", ondelete="SET NULL"),
+        nullable=True,
+    )
+
     #: A Platform Operator's one Division and their tier inside it (PRD §2,
     #: ``CONTEXT.md`` "Operator"). Both null for every non-operator, and the
     #: console reads them fresh per request so granting or revoking a Division

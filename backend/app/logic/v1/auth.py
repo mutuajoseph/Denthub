@@ -5,15 +5,23 @@ Handles password hashing, token generation/verification, and signup/login flows.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal, cast
 
 import bcrypt
 import jwt
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.exceptions import ConflictError, ForbiddenException, UnauthorizedException
+from app.exceptions import (
+    ConflictError,
+    ForbiddenException,
+    InvalidRequestError,
+    UnauthorizedException,
+)
+from app.repositories.country import Country, CountryRepository, SubdivisionRepository
+from app.repositories.listing import BranchRepository, FacilityRepository
 from app.repositories.profile import (
     PROFILE_FOR_ACCOUNT_TYPE,
     FacilityPermission,
@@ -31,7 +39,7 @@ AccountType = Literal[
     "dentist",
     "specialist",
     "intern",
-    "facility_owner",
+    "facility",
     "supplier",
     "training_provider",
 ]
@@ -43,7 +51,7 @@ AccountStatus = Literal["active", "pending"]
 #: Account types whose signup is held for staff review. Patient accounts are
 #: active immediately: nothing about a patient profile is gated behind review.
 PROFESSIONAL_ACCOUNT_TYPES: frozenset[str] = frozenset(
-    {"dentist", "specialist", "intern", "facility_owner", "supplier", "training_provider"}
+    {"dentist", "specialist", "intern", "facility", "supplier", "training_provider"}
 )
 
 #: Roles a human granted, as opposed to roles a signup could ever ask for.
@@ -142,6 +150,30 @@ class UserSignup(BaseModel):
     password: str
     account_type: AccountType = "patient"
     phone: str | None = None
+    #: Facility signup creates the Facility and its first Branch, so it needs
+    #: the marketplace fields those rows require. Ignored for every other
+    #: account type. "facility" is the account type per PRD §2 (not "facility_owner").
+    facility_name: str | None = None
+    country_code: str | None = None
+    subdivision_code: str | None = None
+    address: str | None = None
+
+    @model_validator(mode="after")
+    def _facility_details_are_required(self) -> UserSignup:
+        """A Facility account cannot be created without where it practises."""
+        if self.account_type != "facility":
+            return self
+
+        required = {
+            "facility_name": self.facility_name,
+            "country_code": self.country_code,
+            "subdivision_code": self.subdivision_code,
+            "address": self.address,
+        }
+        missing = [field for field, value in required.items() if value is None or not value.strip()]
+        if missing:
+            raise ValueError("A Facility signup requires " + ", ".join(missing) + ".")
+        return self
 
 
 class UserLogin(BaseModel):
@@ -221,6 +253,85 @@ def decode_access_token(
     )
 
 
+@dataclass(frozen=True)
+class _FacilitySignup:
+    country: Country
+    name: str
+    subdivision_code: str
+    address: str
+
+
+def _required(value: str | None, field: str) -> str:
+    if value is None or not value.strip():
+        raise InvalidRequestError(message=f"{field} is required for a Facility signup.")
+    return value.strip()
+
+
+async def _resolve_facility_signup(
+    session: AsyncSession,
+    data: UserSignup,
+) -> _FacilitySignup:
+    country = await CountryRepository.get(
+        session,
+        _required(data.country_code, "country_code").upper(),
+    )
+    if country is None or not country.is_active:
+        raise InvalidRequestError(message="Choose a supported country for the Facility.")
+
+    subdivision_code = _required(data.subdivision_code, "subdivision_code").upper()
+    subdivision = await SubdivisionRepository.get(
+        session,
+        country_code=country.code,
+        code=subdivision_code,
+    )
+    if subdivision is None:
+        raise InvalidRequestError(message="Choose a subdivision in the Facility's country.")
+
+    return _FacilitySignup(
+        country=country,
+        name=_required(data.facility_name, "facility_name"),
+        subdivision_code=subdivision.code,
+        address=_required(data.address, "address"),
+    )
+
+
+async def _create_facility_for_signup(
+    session: AsyncSession,
+    *,
+    user: User,
+    data: UserSignup,
+    details: _FacilitySignup,
+) -> None:
+    facility = await FacilityRepository.create(
+        session,
+        name=details.name,
+        country_code=details.country.code,
+        subdivision_code=details.subdivision_code,
+        address=details.address,
+        phone=data.phone,
+        email=data.email,
+        currency=details.country.currency,
+    )
+    await BranchRepository.create(
+        session,
+        facility_id=facility.id,
+        subdivision_code=details.subdivision_code,
+        address=details.address,
+        phone=data.phone,
+        email=data.email,
+    )
+    await ProfileRepository.add_facility_membership(
+        session,
+        user_id=user.id,
+        facility_id=facility.id,
+        owner=True,
+    )
+    # Existing facility-scoped routes still read this column until ADR-0006's
+    # contract step removes it.
+    user.facility_id = facility.id
+    await session.flush()
+
+
 async def signup_user(
     state: AppState,
     data: UserSignup,
@@ -237,17 +348,27 @@ async def signup_user(
         if existing:
             raise ConflictError(message="A user with this email already exists")
 
+        facility_signup = (
+            await _resolve_facility_signup(session, data)
+            if data.account_type == "facility"
+            else None
+        )
+
         # Hash password and save user. Professional accounts start life pending
         # (staff review); patient accounts are active immediately.
         account_status = "pending" if data.account_type in PROFESSIONAL_ACCOUNT_TYPES else "active"
         password_hash = hash_password(data.password)
+
+        # Per ADR-0006: users.role narrows to nullable platform_role for Platform Staff only.
+        # Non-staff users get their role via Profiles and Memberships, so role is null here.
+        user_role: str | None = None
 
         user = await UserRepository.create(
             session,
             full_name=data.full_name,
             email=data.email,
             password_hash=password_hash,
-            role=data.account_type,
+            role=user_role,
             phone=data.phone,
             account_status=account_status,
         )
@@ -257,6 +378,14 @@ async def signup_user(
         kind = PROFILE_FOR_ACCOUNT_TYPE.get(data.account_type)
         if kind is not None:
             await ProfileRepository.add(session, user_id=user.id, kind=kind)
+
+        if facility_signup is not None:
+            await _create_facility_for_signup(
+                session,
+                user=user,
+                data=data,
+                details=facility_signup,
+            )
 
         await session.commit()
 
@@ -419,10 +548,40 @@ async def user_response(session: AsyncSession, user: User) -> UserResponse:
     """The public shape of a User, as ``/auth/me`` and the sign-in routes return it."""
     kinds = await ProfileRepository.kinds_for_user(session, user.id)
     memberships = await ProfileRepository.memberships_for_user(session, user.id)
+
+    # Per ADR-0006: users.role is null for non-staff users; derive a role for
+    # backward compatibility until the frontend migrates off it.
+    # Platform Staff keep their role; non-staff get a derived role from profiles/memberships.
+    if is_staff_role(user.role):
+        derived_role = user.role
+    elif kinds:
+        # Map first profile kind to legacy role name
+        profile_to_role = {
+            "patient": "patient",
+            "specialist": "specialist",
+            "supplier": "supplier",
+            "training_provider": "training_provider",
+        }
+        derived_role = profile_to_role.get(kinds[0], "patient")
+    elif memberships:
+        # Facility membership: owner -> facility_owner, clinical -> facility_dentist,
+        # front_office -> front_office
+        perms = memberships[0].permissions
+        if "owner" in perms:
+            derived_role = "facility_owner"
+        elif "clinical" in perms:
+            derived_role = "facility_dentist"
+        elif "front_office" in perms:
+            derived_role = "front_office"
+        else:
+            derived_role = "facility_owner"
+    else:
+        derived_role = "patient"
+
     return UserResponse(
         id=user.id,
         email=user.email,
-        role=user.role,
+        role=derived_role,
         full_name=user.full_name,
         is_staff=is_staff_role(user.role),
         account_status=cast(AccountStatus, user.account_status),

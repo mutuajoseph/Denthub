@@ -9,7 +9,14 @@ from __future__ import annotations
 
 from typing import Any
 
+import pytest
 from httpx import AsyncClient
+from sqlalchemy import select
+
+from app.repositories.listing import Branch, Facility
+from app.repositories.profile import FacilityMembership
+from app.repositories.user import User
+from app.utils.state import AppState
 
 
 def signup_payload(**overrides: Any) -> dict[str, Any]:
@@ -19,6 +26,20 @@ def signup_payload(**overrides: Any) -> dict[str, Any]:
         "password": "correct horse battery staple",
         "account_type": "patient",
     }
+    payload.update(overrides)
+    return payload
+
+
+def facility_signup_payload(**overrides: Any) -> dict[str, Any]:
+    payload: dict[str, Any] = signup_payload(
+        full_name="Clinic Owner",
+        email="clinic@example.com",
+        account_type="facility",
+        facility_name="Westlands Dental",
+        country_code="KE",
+        subdivision_code="NAIROBI",
+        address="Kileleshwa Road, Nairobi",
+    )
     payload.update(overrides)
     return payload
 
@@ -79,7 +100,8 @@ async def test_professional_signup_starts_pending(client: AsyncClient) -> None:
 
     assert response.status_code == 200
     body = response.json()
-    assert body["user"]["role"] == "dentist"
+    # Per PRD §2 and ADR-0006: Dentist/Specialist/Intern all map to "specialist" role
+    assert body["user"]["role"] == "specialist"
     assert body["user"]["account_status"] == "pending"
 
 
@@ -130,16 +152,111 @@ async def test_me_reports_a_granted_role_as_not_staff(client: AsyncClient) -> No
     assert response.json()["is_staff"] is False
 
 
-async def test_me_carries_the_account_status(client: AsyncClient) -> None:
-    signup = await client.post(
-        "/api/v1/auth/register",
-        json=signup_payload(email="facility@example.com", account_type="facility_owner"),
+async def test_facility_signup_creates_the_facility_branch_and_owner_membership(
+    client: AsyncClient,
+    state: AppState,
+) -> None:
+    signup = await client.post("/api/v1/auth/register", json=facility_signup_payload())
+
+    assert signup.status_code == 200
+    body = signup.json()
+    # Per ADR-0006: users.role is null for non-staff users; user_response derives a role from profiles/memberships
+    assert body["user"]["role"] == "facility_owner"
+    assert body["user"]["account_status"] == "pending"
+    assert body["user"]["profiles"] == []
+    assert len(body["user"]["memberships"]) == 1
+    membership = body["user"]["memberships"][0]
+    assert membership["facility_name"] == "Westlands Dental"
+    assert membership["permissions"] == ["owner"]
+
+    me = await client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {body['access_token']}"},
     )
-    token = signup.json()["access_token"]
+
+    assert me.status_code == 200
+    assert me.json()["memberships"] == [membership]
+
+    async with state.db_session_maker() as session:
+        facility = (
+            await session.execute(select(Facility).where(Facility.id == membership["facility_id"]))
+        ).scalar_one()
+        assert facility.name == "Westlands Dental"
+        assert facility.country_code == "KE"
+        assert facility.subdivision_code == "NAIROBI"
+        assert facility.address == "Kileleshwa Road, Nairobi"
+        assert facility.currency == "KES"
+        assert facility.email == "clinic@example.com"
+
+        branches = (
+            (await session.execute(select(Branch).where(Branch.facility_id == facility.id)))
+            .scalars()
+            .all()
+        )
+        assert len(branches) == 1
+        assert branches[0].name is None
+        assert branches[0].subdivision_code == "NAIROBI"
+        assert branches[0].address == "Kileleshwa Road, Nairobi"
+
+        user = await session.get(User, body["user"]["id"])
+        assert user is not None
+        assert user.facility_id == facility.id
+
+        stored_membership = (
+            await session.execute(
+                select(FacilityMembership).where(
+                    FacilityMembership.user_id == user.id,
+                    FacilityMembership.facility_id == facility.id,
+                )
+            )
+        ).scalar_one()
+        assert stored_membership.owner is True
+        assert stored_membership.front_office is False
+        assert stored_membership.clinical is False
+
+
+@pytest.mark.parametrize(
+    "missing_field",
+    ["facility_name", "country_code", "subdivision_code", "address"],
+)
+async def test_facility_signup_requires_its_location_fields(
+    client: AsyncClient,
+    missing_field: str,
+) -> None:
+    payload = facility_signup_payload()
+    del payload[missing_field]
+
+    response = await client.post("/api/v1/auth/register", json=payload)
+
+    assert response.status_code == 422
+
+
+async def test_facility_signup_rejects_an_unknown_market(client: AsyncClient) -> None:
+    response = await client.post(
+        "/api/v1/auth/register",
+        json=facility_signup_payload(country_code="ZZ"),
+    )
+
+    assert response.status_code == 400
+
+
+async def test_facility_signup_rejects_a_subdivision_outside_its_market(
+    client: AsyncClient,
+) -> None:
+    response = await client.post(
+        "/api/v1/auth/register",
+        json=facility_signup_payload(subdivision_code="LAGOS"),
+    )
+
+    assert response.status_code == 400
+
+
+async def test_me_carries_the_account_status(client: AsyncClient) -> None:
+    signup = await client.post("/api/v1/auth/register", json=facility_signup_payload())
 
     response = await client.get(
         "/api/v1/auth/me",
-        headers={"Authorization": f"Bearer {token}"},
+        headers={"Authorization": f"Bearer {signup.json()['access_token']}"},
     )
 
     assert response.status_code == 200

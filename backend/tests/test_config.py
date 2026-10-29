@@ -51,6 +51,8 @@ def test_production_with_real_secret_starts(monkeypatch: pytest.MonkeyPatch) -> 
     monkeypatch.setenv("JWT_SECRET_KEY", "a-real-secret-from-the-dashboard")
 
     assert Settings.from_env().jwt_secret_key == "a-real-secret-from-the-dashboard"
+
+
 def test_production_without_cors_refuses_to_start(monkeypatch: pytest.MonkeyPatch) -> None:
     """Production must have an explicit CORS_ORIGINS value."""
     _clear_secrets(monkeypatch)

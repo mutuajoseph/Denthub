@@ -55,6 +55,11 @@ export interface RegisterRequest {
   phone?: string;
   password: string;
   account_type: Role;
+  /** Facility signup only: creates the Facility and its first Branch. */
+  facility_name?: string;
+  country_code?: string;
+  subdivision_code?: string;
+  address?: string;
 }
 
 export const AUTH_STORAGE_KEY = "denthub_auth";
@@ -200,6 +205,10 @@ export async function register(data: RegisterRequest): Promise<AuthResponse> {
     password: data.password,
     account_type: accountType,
     ...(data.phone === undefined ? {} : { phone: data.phone }),
+    ...(data.facility_name === undefined ? {} : { facility_name: data.facility_name }),
+    ...(data.country_code === undefined ? {} : { country_code: data.country_code }),
+    ...(data.subdivision_code === undefined ? {} : { subdivision_code: data.subdivision_code }),
+    ...(data.address === undefined ? {} : { address: data.address }),
   });
 }
 

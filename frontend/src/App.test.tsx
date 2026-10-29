@@ -359,7 +359,7 @@ describe("App routes", () => {
   });
 
   it("renders the clinic dashboard for a signed-in facility owner", async () => {
-    seedAuth(ROLE.FACILITY_OWNER);
+    seedAuth(ROLE.FACILITY);
 
     renderApp("/dashboard/facility");
 

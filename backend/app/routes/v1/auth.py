@@ -18,6 +18,15 @@ from app.logic.v1.auth import (
     login_user,
     signup_user,
 )
+from app.logic.v1.users import (
+    AddProfileRequest,
+    AddProfileResponse,
+    UpdateMeRequest,
+    UserMeResponse,
+    add_profile,
+    get_me,
+    update_me,
+)
 from app.repositories.user import User
 from app.utils.openapi_helpers import standard_error_responses
 from app.utils.state import AppState
@@ -43,13 +52,37 @@ async def login(
     return await login_user(state, data)
 
 
-@router.get("/me", response_model=UserResponse, responses=standard_error_responses(401, 403))
+@router.get("/me", response_model=UserMeResponse, responses=standard_error_responses(401, 403))
 async def me(
     actor: User = Depends(current_user),
     state: AppState = Depends(get_app_state),
-) -> UserResponse:
-    """The signed-in User, with the Profiles and Facility Memberships they hold."""
-    return await describe_user(state, actor)
+) -> UserMeResponse:
+    """The signed-in User with detailed profile and membership info."""
+    return await get_me(state, user=actor)
+
+
+@router.patch("/me", response_model=UserMeResponse, responses=standard_error_responses(401, 403))
+async def patch_me(
+    data: UpdateMeRequest,
+    actor: User = Depends(current_user),
+    state: AppState = Depends(get_app_state),
+) -> UserMeResponse:
+    """Update the signed-in User's details (name, phone, home country)."""
+    return await update_me(state, user=actor, data=data)
+
+
+@router.post(
+    "/me/profiles",
+    response_model=AddProfileResponse,
+    responses=standard_error_responses(401, 403),
+)
+async def add_profile_endpoint(
+    data: AddProfileRequest,
+    actor: User = Depends(current_user),
+    state: AppState = Depends(get_app_state),
+) -> AddProfileResponse:
+    """Add a new Profile kind to the signed-in User."""
+    return await add_profile(state, user=actor, data=data)
 
 
 @router.post(

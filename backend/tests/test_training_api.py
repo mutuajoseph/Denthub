@@ -88,9 +88,7 @@ async def test_course_list_reports_the_card_contract(client: AsyncClient) -> Non
 
 async def test_course_price_is_nullable_for_free_cpd(client: AsyncClient) -> None:
     body = await _list_courses(client)
-    free = next(
-        item for item in body["items"] if item["title"] == "Hands-on Suturing Refresher"
-    )
+    free = next(item for item in body["items"] if item["title"] == "Hands-on Suturing Refresher")
 
     assert free["price"] is None
     assert free["currency"] is None

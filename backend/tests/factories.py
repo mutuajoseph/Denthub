@@ -7,7 +7,7 @@ min_qty, category, in_stock)`.
 
 from __future__ import annotations
 
-from datetime import datetime, time, timedelta, UTC
+from datetime import UTC, datetime, time, timedelta
 from decimal import Decimal
 
 from app.logic.v1.auth import hash_password
@@ -23,8 +23,8 @@ from app.repositories.health_record import HealthRecordEntry, PatientHealthRecor
 from app.repositories.job import JobPosting, JobSalaryRange
 from app.repositories.listing import Branch, Facility, OpeningHour, Specialist
 from app.repositories.magazine import MagazineArticle, MagazineArticleTag
-from app.repositories.profile import Profile
 from app.repositories.product import Product, Supplier
+from app.repositories.profile import Profile
 from app.repositories.training import (
     TrainingCourse,
     TrainingProvider,
@@ -587,9 +587,7 @@ MAGAZINE_ARTICLES: list[tuple[str, str, str, str, str, str, str, bool, str, str,
 #: (country_code, slug, title, standfirst, body, author, category, is_featured,
 #:  status, published_at, tags, video_url). Videos carry a YouTube link and no
 #: real Markdown body. Dated oldest so the article ordering tests are stable.
-MAGAZINE_VIDEOS: list[
-    tuple[str, str, str, str, str, str, str, bool, str, str, list[str], str]
-] = [
+MAGAZINE_VIDEOS: list[tuple[str, str, str, str, str, str, str, bool, str, str, list[str], str]] = [
     (
         "KE",
         "caring-for-clear-aligners-video",

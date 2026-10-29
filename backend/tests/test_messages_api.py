@@ -30,15 +30,22 @@ async def _register(
     full_name: str,
 ) -> dict[str, Any]:
     """Register an account and return its id plus an Authorization header."""
-    response = await client.post(
-        "/api/v1/auth/register",
-        json={
-            "full_name": full_name,
-            "email": f"{uuid.uuid4().hex[:12]}@example.com",
-            "password": PASSWORD,
-            "account_type": account_type,
-        },
-    )
+    payload: dict[str, Any] = {
+        "full_name": full_name,
+        "email": f"{uuid.uuid4().hex[:12]}@example.com",
+        "password": PASSWORD,
+        "account_type": account_type,
+    }
+    if account_type == "facility":
+        payload.update(
+            {
+                "facility_name": full_name,
+                "country_code": "KE",
+                "subdivision_code": "NAIROBI",
+                "address": "Kileleshwa Road, Nairobi",
+            }
+        )
+    response = await client.post("/api/v1/auth/register", json=payload)
     assert response.status_code == 200, response.text
     body = response.json()
     return {
@@ -82,7 +89,7 @@ async def test_a_patient_and_a_facility_open_a_thread_and_read_it_back(
     client: AsyncClient,
 ) -> None:
     patient = await _register(client, account_type="patient", full_name="Amina Wanjiku")
-    facility = await _register(client, account_type="facility_owner", full_name="Westlands Dental")
+    facility = await _register(client, account_type="facility", full_name="Westlands Dental")
 
     opened = await _start(client, patient, facility["id"], "Do you have a Saturday slot?")
     assert opened.status_code == 200, opened.text
@@ -109,11 +116,11 @@ async def test_a_patient_and_a_facility_open_a_thread_and_read_it_back(
 @pytest.mark.parametrize(
     ("role_a", "role_b", "kind"),
     [
-        ("patient", "facility_owner", "patient_facility"),
+        ("patient", "facility", "patient_facility"),
         ("patient", "dentist", "patient_dentist"),
         ("dentist", "supplier", "dentist_supplier"),
         ("patient", "supplier", "patient_shop"),
-        ("facility_owner", "supplier", "clinic_shop_bulk"),
+        ("facility", "supplier", "clinic_shop_bulk"),
         ("dentist", "training_provider", "dentist_training"),
     ],
 )
@@ -134,7 +141,7 @@ async def test_every_documented_pairing_derives_its_kind(
 async def test_roles_without_a_pairing_cannot_open_a_thread(client: AsyncClient) -> None:
     patient = await _register(client, account_type="patient", full_name="Patient One")
     other_patient = await _register(client, account_type="patient", full_name="Patient Two")
-    facility = await _register(client, account_type="facility_owner", full_name="A Clinic")
+    facility = await _register(client, account_type="facility", full_name="A Clinic")
     trainer = await _register(client, account_type="training_provider", full_name="A Trainer")
 
     same_role = await _start(client, patient, other_patient["id"], "Hello")
@@ -148,7 +155,7 @@ async def test_roles_without_a_pairing_cannot_open_a_thread(client: AsyncClient)
 
 async def test_the_inbox_only_serves_the_callers_conversations(client: AsyncClient) -> None:
     sender = await _register(client, account_type="patient", full_name="Sender One")
-    recipient = await _register(client, account_type="facility_owner", full_name="A Clinic")
+    recipient = await _register(client, account_type="facility", full_name="A Clinic")
     stranger = await _register(client, account_type="patient", full_name="Stranger Here")
 
     opened = await _start(client, sender, recipient["id"], "Hello")
@@ -187,7 +194,7 @@ async def test_unread_counts_accumulate_for_the_recipient_and_clear_on_read(
     client: AsyncClient,
 ) -> None:
     patient = await _register(client, account_type="patient", full_name="Amina Wanjiku")
-    facility = await _register(client, account_type="facility_owner", full_name="A Clinic")
+    facility = await _register(client, account_type="facility", full_name="A Clinic")
 
     first = await _start(client, patient, facility["id"], "One")
     conversation_id = first.json()["id"]
@@ -234,9 +241,9 @@ async def test_the_inbox_lists_newest_activity_first(
     session_maker: async_sessionmaker[Any],
 ) -> None:
     patient = await _register(client, account_type="patient", full_name="Amina Wanjiku")
-    first_clinic = await _register(client, account_type="facility_owner", full_name="First Clinic")
+    first_clinic = await _register(client, account_type="facility", full_name="First Clinic")
     second_clinic = await _register(
-        client, account_type="facility_owner", full_name="Second Clinic"
+        client, account_type="facility", full_name="Second Clinic"
     )
 
     started_first = await _start(client, patient, first_clinic["id"], "Hello first")
@@ -332,7 +339,7 @@ async def test_a_recipient_that_does_not_exist_is_404(client: AsyncClient) -> No
 
 async def test_a_message_body_over_the_cap_is_422(client: AsyncClient) -> None:
     patient = await _register(client, account_type="patient", full_name="Amina Wanjiku")
-    facility = await _register(client, account_type="facility_owner", full_name="A Clinic")
+    facility = await _register(client, account_type="facility", full_name="A Clinic")
 
     response = await _start(client, patient, facility["id"], "x" * 4001)
     assert response.status_code == 422
@@ -340,7 +347,7 @@ async def test_a_message_body_over_the_cap_is_422(client: AsyncClient) -> None:
 
 async def test_the_message_body_cap_boundary_is_accepted(client: AsyncClient) -> None:
     patient = await _register(client, account_type="patient", full_name="Amina Wanjiku")
-    facility = await _register(client, account_type="facility_owner", full_name="A Clinic")
+    facility = await _register(client, account_type="facility", full_name="A Clinic")
 
     response = await _start(client, patient, facility["id"], "x" * 4000)
     assert response.status_code == 200, response.text

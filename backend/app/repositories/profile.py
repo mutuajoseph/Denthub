@@ -140,6 +140,28 @@ class ProfileRepository:
         await session.flush()
 
     @staticmethod
+    async def add_facility_membership(
+        session: AsyncSession,
+        *,
+        user_id: str,
+        facility_id: str,
+        owner: bool = False,
+        front_office: bool = False,
+        clinical: bool = False,
+    ) -> None:
+        """Link a User to a Facility with the given permission set."""
+        session.add(
+            FacilityMembership(
+                user_id=user_id,
+                facility_id=facility_id,
+                owner=owner,
+                front_office=front_office,
+                clinical=clinical,
+            )
+        )
+        await session.flush()
+
+    @staticmethod
     async def kinds_for_user(session: AsyncSession, user_id: str) -> list[ProfileKind]:
         stmt = select(Profile.kind).where(Profile.user_id == user_id).order_by(Profile.kind)
         return list((await session.execute(stmt)).scalars().all())
