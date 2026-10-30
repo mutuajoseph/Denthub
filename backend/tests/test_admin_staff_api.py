@@ -367,6 +367,66 @@ async def test_deactivating_takes_effect_on_the_next_request(
     assert login.status_code == 403
 
 
+async def test_the_last_active_super_admin_cannot_demote_themselves(
+    client: AsyncClient,
+    state: AppState,
+) -> None:
+    super_admin = await _make_user(state, role="super_admin")
+
+    response = await client.patch(
+        f"/api/v1/admin/staff/{super_admin.id}",
+        headers=_staff_headers(state, super_admin),
+        json={"role": "admin"},
+    )
+
+    assert response.status_code == 400
+    assert "last active Super Admin" in response.json()["message"]
+
+
+async def test_the_last_active_super_admin_cannot_deactivate_themselves(
+    client: AsyncClient,
+    state: AppState,
+) -> None:
+    super_admin = await _make_user(state, role="super_admin")
+
+    response = await client.patch(
+        f"/api/v1/admin/staff/{super_admin.id}",
+        headers=_staff_headers(state, super_admin),
+        json={"is_active": False},
+    )
+
+    assert response.status_code == 400
+    assert "last active Super Admin" in response.json()["message"]
+
+
+async def test_a_super_admin_can_step_down_when_another_remains(
+    client: AsyncClient,
+    state: AppState,
+) -> None:
+    super_admin = await _make_user(state, role="super_admin")
+    other_super_admin = await _make_user(state, role="super_admin")
+
+    response = await client.patch(
+        f"/api/v1/admin/staff/{super_admin.id}",
+        headers=_staff_headers(state, super_admin),
+        json={"is_active": False},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["is_active"] is False
+
+    now_refused = await client.get(
+        "/api/v1/admin/staff",
+        headers=_staff_headers(state, super_admin),
+    )
+    still_allowed = await client.get(
+        "/api/v1/admin/staff",
+        headers=_staff_headers(state, other_super_admin),
+    )
+    assert now_refused.status_code == 403
+    assert still_allowed.status_code == 200
+
+
 async def test_a_no_op_update_writes_no_audit_row(
     client: AsyncClient,
     state: AppState,

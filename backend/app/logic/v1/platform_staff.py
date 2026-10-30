@@ -8,7 +8,8 @@ before and after state so the console can answer who granted what.
 
 A staff member's role and Operator scope are read fresh on every request, so a
 demotion or a deactivation takes effect on their next call, not when their
-token expires.
+token expires. The last active Super Admin cannot be demoted or deactivated:
+the console must never be left with nobody able to manage Platform Staff.
 """
 
 from __future__ import annotations
@@ -217,12 +218,30 @@ async def update_platform_staff(
         except ValueError as exc:
             raise InvalidRequestError(message=str(exc)) from exc
 
+        is_active = (
+            request.is_active
+            if "is_active" in fields and request.is_active is not None
+            else user.is_active
+        )
+        removes_active_super_admin = user.role == "super_admin" and (
+            role != "super_admin" or not is_active
+        )
+        if user.is_active and removes_active_super_admin:
+            other_super_admins = await UserRepository.count_active_with_role(
+                session,
+                role="super_admin",
+                exclude_id=user.id,
+            )
+            if other_super_admins == 0:
+                raise InvalidRequestError(
+                    message="The last active Super Admin cannot be demoted or deactivated"
+                )
+
         before = _audit_state(user)
         user.role = role
         user.operator_division = division
         user.operator_tier = tier
-        if "is_active" in fields and request.is_active is not None:
-            user.is_active = request.is_active
+        user.is_active = is_active
         after = _audit_state(user)
 
         await audit(

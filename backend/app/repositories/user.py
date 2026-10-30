@@ -147,6 +147,24 @@ class UserRepository:
         return list(result.scalars().all())
 
     @staticmethod
+    async def count_active_with_role(
+        session: AsyncSession,
+        *,
+        role: str,
+        exclude_id: str | None = None,
+    ) -> int:
+        """How many active accounts hold ``role``, optionally excluding one (#122)."""
+        stmt = (
+            select(func.count())
+            .select_from(User)
+            .where(User.role == role, User.is_active.is_(True))
+        )
+        if exclude_id is not None:
+            stmt = stmt.where(User.id != exclude_id)
+        result = await session.execute(stmt)
+        return int(result.scalar_one())
+
+    @staticmethod
     async def list_for_facility(session: AsyncSession, *, facility_id: str) -> list[User]:
         """The active users linked to a Facility — its staff, by name (#81)."""
         stmt = (
