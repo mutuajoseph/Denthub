@@ -10,10 +10,17 @@ from typing import Any, Literal, cast
 
 import bcrypt
 import jwt
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.exceptions import ConflictError, ForbiddenException, UnauthorizedException
+from app.exceptions import (
+    ConflictError,
+    ForbiddenException,
+    UnauthorizedException,
+    UnprocessableError,
+)
+from app.repositories.country import CountryRepository, SubdivisionRepository
+from app.repositories.listing import BranchRepository, Facility, FacilityRepository
 from app.repositories.profile import (
     PROFILE_FOR_ACCOUNT_TYPE,
     FacilityPermission,
@@ -129,12 +136,23 @@ class AuthResponseModel(BaseModel):
     user: UserResponse
 
 
+class FacilitySignup(BaseModel):
+    """The Facility a Facility signup creates, and its first Branch's place."""
+
+    name: str = Field(min_length=1, max_length=150)
+    subdivision_code: str = Field(min_length=1, max_length=30)
+    address: str = Field(min_length=1, max_length=255)
+
+
 class UserSignup(BaseModel):
     """Input parameters for signing up.
 
     The account type is the only thing a caller may choose; a `role` field in
     the body is ignored rather than trusted, because a role is granted, never
     requested (root AGENTS.md, "Auth and security").
+
+    ``facility`` is required for a Facility signup and refused for every other
+    Account Type (#118).
     """
 
     full_name: str
@@ -142,6 +160,13 @@ class UserSignup(BaseModel):
     password: str
     account_type: AccountType = "patient"
     phone: str | None = None
+    facility: FacilitySignup | None = None
+
+    @model_validator(mode="after")
+    def _facility_matches_the_account_type(self) -> UserSignup:
+        if (self.account_type == "facility_owner") != (self.facility is not None):
+            raise ValueError("facility is required for, and only for, a Facility signup")
+        return self
 
 
 class UserLogin(BaseModel):
@@ -221,9 +246,50 @@ def decode_access_token(
     )
 
 
+async def _create_facility(
+    session: AsyncSession, *, owner: User, details: FacilitySignup, country_code: str
+) -> Facility:
+    """The Facility, its first Branch, and the owner's membership (#118).
+
+    The country is the request's ``Accept-Country`` and the currency is that
+    Country's. The Facility starts unlisted: approving the owner lists it.
+    """
+    country = await CountryRepository.get(session, country_code)
+    if country is None or not country.is_active:
+        raise UnprocessableError(message="DentHub does not operate in this country yet")
+
+    subdivisions = await SubdivisionRepository.list_all(session, country_code=country.code)
+    if details.subdivision_code not in {row.code for row in subdivisions}:
+        raise UnprocessableError(message=f"Unknown {country.subdivision_label.lower()}")
+
+    facility = await FacilityRepository.create(
+        session,
+        name=details.name,
+        country_code=country.code,
+        subdivision_code=details.subdivision_code,
+        address=details.address,
+        phone=owner.phone,
+        email=owner.email,
+        currency=country.currency,
+        listed=False,
+    )
+    await BranchRepository.create(
+        session,
+        facility_id=facility.id,
+        subdivision_code=details.subdivision_code,
+        address=details.address,
+        phone=owner.phone,
+        email=owner.email,
+    )
+    await ProfileRepository.add_owner(session, user_id=owner.id, facility_id=facility.id)
+    return facility
+
+
 async def signup_user(
     state: AppState,
     data: UserSignup,
+    *,
+    country_code: str,
 ) -> AuthResponseModel:
     """Create a new user, persist to database, and return auth token."""
 
@@ -257,6 +323,13 @@ async def signup_user(
         kind = PROFILE_FOR_ACCOUNT_TYPE.get(data.account_type)
         if kind is not None:
             await ProfileRepository.add(session, user_id=user.id, kind=kind)
+
+        if data.facility is not None:
+            facility = await _create_facility(
+                session, owner=user, details=data.facility, country_code=country_code
+            )
+            # The Facility dashboard still reads users.facility_id (expand step).
+            user.facility_id = facility.id
 
         await session.commit()
 

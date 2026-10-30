@@ -192,7 +192,9 @@ _Avoid_: Estimate, quotation, invoice
 **Listing**:
 A Facility or Specialist as the directory presents it — a search result and
 its profile page — graded by its Verification tier and carrying its Opening
-Hours and price. A Job posting is never a Listing.
+Hours and price. A Job posting is never a Listing. A Facility created at
+signup is not yet a Listing: it reaches the directory when staff approve its
+owner.
 _Avoid_: vacancy, job post
 
 ### Shop

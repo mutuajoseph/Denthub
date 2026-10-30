@@ -133,7 +133,7 @@ async def test_me_reports_a_granted_role_as_not_staff(client: AsyncClient) -> No
 async def test_me_carries_the_account_status(client: AsyncClient) -> None:
     signup = await client.post(
         "/api/v1/auth/register",
-        json=signup_payload(email="facility@example.com", account_type="facility_owner"),
+        json=signup_payload(email="specialist@example.com", account_type="specialist"),
     )
     token = signup.json()["access_token"]
 

@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from app.exceptions import NotFoundException
 from app.logic.v1.auth import UserResponse, is_staff_role
 from app.repositories.admin import AdminAuditRepository
+from app.repositories.listing import FacilityRepository
+from app.repositories.profile import ProfileRepository
 from app.repositories.user import User, UserRepository
 from app.utils.state import AppState
 
@@ -22,6 +26,10 @@ async def approve_user(
     The pending state is informational today — a pending professional can still browse
     public modules — but an approval is what future gated routes will check
     first, so the flip itself carries the authorisation check.
+
+    Approving a Facility owner also lists the Facilities they own that signup
+    left unlisted (#118), so the clinic reaches the directory only once staff
+    have looked at its owner.
     """
     async with state.db_session_maker() as session:
         user = await UserRepository.get_by_id(
@@ -34,6 +42,14 @@ async def approve_user(
 
         before = user.account_status
         user.account_status = "active"
+        owned = await ProfileRepository.owned_facility_ids(session, user.id)
+        unlisted = await FacilityRepository.list_unlisted(session, owned)
+        for facility in unlisted:
+            facility.listed = True
+
+        after: dict[str, Any] = {"account_status": "active"}
+        if unlisted:
+            after["listed_facility_ids"] = [facility.id for facility in unlisted]
         await AdminAuditRepository.record(
             session,
             actor_id=actor.id,
@@ -43,7 +59,7 @@ async def approve_user(
             entity_type="user",
             entity_id=user.id,
             before={"account_status": before},
-            after={"account_status": "active"},
+            after=after,
         )
         await session.commit()
 
