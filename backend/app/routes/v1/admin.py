@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query
 
-from app.dependencies import current_admin, get_app_state
+from app.dependencies import current_admin, current_super_admin, get_app_state
 from app.logic.v1.admin import (
     ADMIN_LIST_LIMIT,
     AdminAuditList,
@@ -39,6 +39,15 @@ from app.logic.v1.admin import (
     set_specialist_verification,
     update_country,
     update_country_feature,
+)
+from app.logic.v1.platform_staff import (
+    CreatePlatformStaffRequest,
+    PlatformStaffList,
+    PlatformStaffMember,
+    UpdatePlatformStaffRequest,
+    create_platform_staff,
+    list_platform_staff,
+    update_platform_staff,
 )
 from app.repositories.user import User
 from app.utils.openapi_helpers import standard_error_responses
@@ -228,4 +237,51 @@ async def read_audit(
         state,
         actor=actor,
         limit=limit,
+    )
+
+
+@router.get(
+    "/staff",
+    response_model=PlatformStaffList,
+    responses=standard_error_responses(401, 403),
+)
+async def read_platform_staff(
+    actor: User = Depends(current_super_admin),
+    state: AppState = Depends(get_app_state),
+) -> PlatformStaffList:
+    """Every Platform Staff account. Super Admin only."""
+    return await list_platform_staff(state, actor=actor)
+
+
+@router.post(
+    "/staff",
+    response_model=PlatformStaffMember,
+    responses=standard_error_responses(401, 403),
+)
+async def post_platform_staff(
+    request: CreatePlatformStaffRequest,
+    actor: User = Depends(current_super_admin),
+    state: AppState = Depends(get_app_state),
+) -> PlatformStaffMember:
+    """Create a staff Account with a granted role. Super Admin only."""
+    return await create_platform_staff(state, actor=actor, request=request)
+
+
+@router.patch(
+    "/staff/{staff_id}",
+    response_model=PlatformStaffMember,
+    responses=standard_error_responses(401, 403),
+)
+async def patch_platform_staff(
+    staff_id: str,
+    request: UpdatePlatformStaffRequest,
+    actor: User = Depends(current_super_admin),
+    state: AppState = Depends(get_app_state),
+) -> PlatformStaffMember:
+    """Change a staff member's role, Operator scope, or active flag."""
+    return await update_platform_staff(
+        state,
+        actor=actor,
+        staff_id=staff_id,
+        request=request,
     )

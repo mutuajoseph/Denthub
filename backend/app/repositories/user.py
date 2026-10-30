@@ -6,6 +6,7 @@ Handles low-level persistence operations for users.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Collection
 from datetime import datetime
 from typing import Any, Literal, get_args
 
@@ -129,6 +130,21 @@ class UserRepository:
         stmt = select(User.id, User.full_name).where(User.id.in_(user_ids))
         rows = await session.execute(stmt)
         return {row.id: row.full_name for row in rows.all()}
+
+    @staticmethod
+    async def list_platform_staff(session: AsyncSession, *, roles: Collection[str]) -> list[User]:
+        """The Platform Staff accounts, by name (#122).
+
+        ``roles`` is the caller's set of staff-surface roles; the query keeps
+        the rule out of the repository and the ordering deterministic.
+        """
+        stmt = (
+            select(User)
+            .where(User.role.in_(roles))
+            .order_by(User.full_name.asc(), User.email.asc())
+        )
+        result = await session.execute(stmt)
+        return list(result.scalars().all())
 
     @staticmethod
     async def list_for_facility(session: AsyncSession, *, facility_id: str) -> list[User]:
