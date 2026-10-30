@@ -184,7 +184,7 @@ async def test_a_county_outside_the_country_is_refused_and_creates_nothing(
 ) -> None:
     response = await _sign_up_facility(client, subdivision_code="LAGOS")
 
-    assert response.status_code == 400
+    assert response.status_code == 422
     assert await _facility_named(state, "Smile Line Dental") is None
     async with state.db_session_maker() as session:
         assert await UserRepository.get_by_email(session, "owner@example.com") is None
@@ -193,7 +193,7 @@ async def test_a_county_outside_the_country_is_refused_and_creates_nothing(
 async def test_an_unknown_country_is_refused(client: AsyncClient) -> None:
     response = await _sign_up_facility(client, country="ZZ")
 
-    assert response.status_code == 400
+    assert response.status_code == 422
 
 
 async def test_a_new_facility_stays_out_of_the_directory_until_its_owner_is_approved(

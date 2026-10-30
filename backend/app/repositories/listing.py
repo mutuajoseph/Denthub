@@ -276,6 +276,11 @@ class SpecialistSpecialty(Base):
     )
 
 
+def _listed() -> ColumnElement[bool]:
+    """The one place "the directory shows this Facility" is written (#118)."""
+    return Facility.listed.is_(True)
+
+
 class FacilityFilters:
     """Filter set shared by :meth:`FacilityRepository.search` and ``count``."""
 
@@ -293,7 +298,7 @@ class FacilityFilters:
     def conditions(self) -> list[ColumnElement[bool]]:
         clauses: list[ColumnElement[bool]] = [
             Facility.country_code == self.country_code,
-            Facility.listed.is_(True),
+            _listed(),
         ]
 
         if self.subdivision_code:
@@ -373,7 +378,7 @@ class FacilityRepository:
             .select_from(Facility)
             .where(
                 Facility.country_code == country_code,
-                Facility.listed.is_(True),
+                _listed(),
                 Facility.verification_tier != "unverified",
             )
         )
@@ -386,7 +391,7 @@ class FacilityRepository:
         stmt = (
             select(func.count(func.distinct(Facility.subdivision_code)))
             .select_from(Facility)
-            .where(Facility.country_code == country_code, Facility.listed.is_(True))
+            .where(Facility.country_code == country_code, _listed())
         )
         result = await session.execute(stmt)
         return int(result.scalar_one())
@@ -431,6 +436,17 @@ class FacilityRepository:
             select(Facility)
             .options(selectinload(Facility.branches).selectinload(Branch.opening_hours))
             .where(Facility.id == facility_id)
+        )
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def get_listed(session: AsyncSession, facility_id: str) -> Facility | None:
+        """One Facility as the public sees it: ``None`` while it is unlisted."""
+        stmt = (
+            select(Facility)
+            .options(selectinload(Facility.branches).selectinload(Branch.opening_hours))
+            .where(Facility.id == facility_id, _listed())
         )
         result = await session.execute(stmt)
         return result.scalar_one_or_none()

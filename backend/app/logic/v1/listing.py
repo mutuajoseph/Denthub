@@ -379,9 +379,9 @@ async def list_facilities(
 async def get_facility(state: AppState, *, facility_id: str) -> FacilityDetail:
     """One clinic profile, with every Branch and its hours."""
     async with state.db_session_maker() as session:
-        facility = await FacilityRepository.get(session, facility_id)
+        facility = await FacilityRepository.get_listed(session, facility_id)
 
-        if facility is None or not facility.listed:
+        if facility is None:
             raise NotFoundException(message="Facility not found")
 
         country = await _resolve_country(session, facility.country_code)

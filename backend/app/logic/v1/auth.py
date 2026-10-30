@@ -16,8 +16,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.exceptions import (
     ConflictError,
     ForbiddenException,
-    InvalidRequestError,
     UnauthorizedException,
+    UnprocessableError,
 )
 from app.repositories.country import CountryRepository, SubdivisionRepository
 from app.repositories.listing import BranchRepository, Facility, FacilityRepository
@@ -256,11 +256,11 @@ async def _create_facility(
     """
     country = await CountryRepository.get(session, country_code)
     if country is None or not country.is_active:
-        raise InvalidRequestError(message="DentHub does not operate in this country yet")
+        raise UnprocessableError(message="DentHub does not operate in this country yet")
 
     subdivisions = await SubdivisionRepository.list_all(session, country_code=country.code)
     if details.subdivision_code not in {row.code for row in subdivisions}:
-        raise InvalidRequestError(message=f"Unknown {country.subdivision_label.lower()}")
+        raise UnprocessableError(message=f"Unknown {country.subdivision_label.lower()}")
 
     facility = await FacilityRepository.create(
         session,

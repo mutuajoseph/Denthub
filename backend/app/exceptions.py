@@ -48,6 +48,13 @@ class InvalidRequestError(BaseApiException):
     message = "Invalid request"
 
 
+class UnprocessableError(BaseApiException):
+    """A well-formed request whose values fail a check only the database can make."""
+
+    code = 422
+    message = "Validation error"
+
+
 class ConflictError(BaseApiException):
     code = 409
     message = "Conflict"
