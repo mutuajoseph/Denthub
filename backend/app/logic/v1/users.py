@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from app.exceptions import NotFoundException
+from app.logic.v1.audit import audit
 from app.logic.v1.auth import UserResponse, is_staff_role
-from app.repositories.admin import AdminAuditRepository
 from app.repositories.user import User, UserRepository
 from app.utils.state import AppState
 
@@ -32,18 +32,16 @@ async def approve_user(
         if not user:
             raise NotFoundException(message="User not found")
 
-        before = user.account_status
+        before: dict[str, object] = {"account_status": user.account_status}
         user.account_status = "active"
-        await AdminAuditRepository.record(
+        await audit(
             session,
-            actor_id=actor.id,
-            actor_email=actor.email,
-            actor_role=actor.role,
+            actor,
             action="user.approve",
             entity_type="user",
             entity_id=user.id,
-            before={"account_status": before},
-            after={"account_status": "active"},
+            before=before,
+            after={"account_status": user.account_status},
         )
         await session.commit()
 
