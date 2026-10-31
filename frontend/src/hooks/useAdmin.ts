@@ -4,13 +4,18 @@ import {
   type AdminAuditListWire,
   type AdminCountryFeatureWire,
   type AdminCountryWire,
+  type CreatePlatformStaffRequest,
   type ModerationItemWire,
   type ModerationStatus,
+  type PlatformStaffMemberWire,
+  type UpdatePlatformStaffRequest,
   type VerificationItemWire,
   type VerificationTier,
+  createPlatformStaff,
   fetchAdminAudit,
   fetchAdminCountries,
   fetchAdminModeration,
+  fetchAdminStaff,
   fetchAdminVerifications,
   moderateJob,
   moderateMagazine,
@@ -18,6 +23,7 @@ import {
   setSpecialistVerificationTier,
   updateCountry,
   updateCountryFeature,
+  updatePlatformStaff,
 } from "../lib/adminApi";
 import { useCountryConfigStore } from "../store/countryConfigStore";
 
@@ -167,5 +173,43 @@ export function useAdminAudit(userId: string | null) {
     queryFn: async ({ signal }) => (await fetchAdminAudit({ signal })).items,
     enabled: userId !== null,
     staleTime: 15_000,
+  });
+}
+
+export function useAdminStaff(userId: string | null) {
+  return useQuery<PlatformStaffMemberWire[]>({
+    queryKey: adminQueryKey("staff", userId),
+    queryFn: async ({ signal }) => (await fetchAdminStaff({ signal })).items,
+    enabled: userId !== null,
+    staleTime: 15_000,
+  });
+}
+
+function invalidateStaff(queryClient: ReturnType<typeof useQueryClient>) {
+  void queryClient.invalidateQueries({ queryKey: ["admin", "staff"] });
+  void queryClient.invalidateQueries({ queryKey: ["admin", "audit"] });
+}
+
+export function useCreatePlatformStaff() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (request: CreatePlatformStaffRequest) => createPlatformStaff(request),
+    onSuccess: () => invalidateStaff(queryClient),
+  });
+}
+
+export function useUpdatePlatformStaff() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      staffId,
+      request,
+    }: {
+      staffId: string;
+      request: UpdatePlatformStaffRequest;
+    }) => updatePlatformStaff(staffId, request),
+    onSuccess: () => invalidateStaff(queryClient),
   });
 }
