@@ -364,6 +364,11 @@ function StaffSection({ userId }: { userId: string | null }) {
   const [division, setDivision] = useState<OperatorDivision>("jobs");
   const [tier, setTier] = useState<OperatorTier>("lead");
   const isOperator = role === "platform_operator";
+  const [promotion, setPromotion] = useState<{
+    id: string;
+    division: OperatorDivision | "";
+    tier: OperatorTier | "";
+  } | null>(null);
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -396,7 +401,7 @@ function StaffSection({ userId }: { userId: string | null }) {
         Platform Staff
       </h2>
       <p className="mt-1 text-sm text-charcoal">
-        Grant an Account a staff role. An Operator carries one Division and a tier; every other role
+        Give a User a staff role. An Operator carries one Division and a tier; every other role
         carries neither. Changes apply on the member&apos;s next request.
       </p>
 
@@ -405,7 +410,7 @@ function StaffSection({ userId }: { userId: string | null }) {
       ) : query.error || !members ? (
         <SectionError error={query.error} onRetry={() => void query.refetch()} />
       ) : members.length === 0 ? (
-        <p className="mt-3 text-sm text-charcoal">No Platform Staff accounts yet.</p>
+        <p className="mt-3 text-sm text-charcoal">No Platform Staff yet.</p>
       ) : (
         <ul className="mt-4 space-y-2">
           {members.map((member) => (
@@ -432,18 +437,21 @@ function StaffSection({ userId }: { userId: string | null }) {
                     disabled={updateStaff.isPending}
                     onChange={(event) => {
                       const nextRole = event.target.value as PlatformStaffRole;
+                      if (
+                        nextRole === "platform_operator" &&
+                        (member.operator_division === null || member.operator_tier === null)
+                      ) {
+                        setPromotion({ id: member.id, division: "", tier: "" });
+                        return;
+                      }
                       updateStaff.mutate({
                         staffId: member.id,
                         request: {
                           role: nextRole,
                           operator_division:
-                            nextRole === "platform_operator"
-                              ? (member.operator_division ?? "jobs")
-                              : null,
+                            nextRole === "platform_operator" ? member.operator_division : null,
                           operator_tier:
-                            nextRole === "platform_operator"
-                              ? (member.operator_tier ?? "lead")
-                              : null,
+                            nextRole === "platform_operator" ? member.operator_tier : null,
                         },
                       });
                     }}
@@ -456,6 +464,91 @@ function StaffSection({ userId }: { userId: string | null }) {
                     ))}
                   </select>
                 </div>
+
+                {promotion?.id === member.id && (
+                  <>
+                    <div className="flex flex-col gap-1 text-xs font-medium text-charcoal">
+                      <span>Division</span>
+                      <select
+                        aria-label={`Division for ${member.full_name}`}
+                        value={promotion.division}
+                        disabled={updateStaff.isPending}
+                        onChange={(event) =>
+                          setPromotion({
+                            ...promotion,
+                            division: event.target.value as OperatorDivision | "",
+                          })
+                        }
+                        className="min-h-9 rounded-button border border-steel bg-paper px-2 text-sm text-ink"
+                      >
+                        <option value="">Select Division</option>
+                        {OPERATOR_DIVISIONS.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col gap-1 text-xs font-medium text-charcoal">
+                      <span>Tier</span>
+                      <select
+                        aria-label={`Tier for ${member.full_name}`}
+                        value={promotion.tier}
+                        disabled={updateStaff.isPending}
+                        onChange={(event) =>
+                          setPromotion({
+                            ...promotion,
+                            tier: event.target.value as OperatorTier | "",
+                          })
+                        }
+                        className="min-h-9 rounded-button border border-steel bg-paper px-2 text-sm text-ink"
+                      >
+                        <option value="">Select tier</option>
+                        {OPERATOR_TIERS.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="graphite"
+                      size="sm"
+                      aria-label={`Save ${member.full_name}`}
+                      disabled={
+                        updateStaff.isPending || promotion.division === "" || promotion.tier === ""
+                      }
+                      onClick={() => {
+                        if (promotion.division === "" || promotion.tier === "") return;
+                        updateStaff.mutate(
+                          {
+                            staffId: member.id,
+                            request: {
+                              role: "platform_operator",
+                              operator_division: promotion.division,
+                              operator_tier: promotion.tier,
+                            },
+                          },
+                          { onSuccess: () => setPromotion(null) },
+                        );
+                      }}
+                    >
+                      Save
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      aria-label={`Cancel ${member.full_name}`}
+                      onClick={() => setPromotion(null)}
+                    >
+                      Cancel
+                    </Button>
+                  </>
+                )}
 
                 {member.role === "platform_operator" && (
                   <>
@@ -533,7 +626,7 @@ function StaffSection({ userId }: { userId: string | null }) {
 
       <form className="mt-6 grid gap-3 border-t border-steel pt-4 sm:grid-cols-2" onSubmit={submit}>
         <h3 className="font-display text-base font-semibold text-ink sm:col-span-2">
-          Add a staff account
+          Add a staff member
         </h3>
 
         <label className="flex flex-col gap-1 text-xs font-medium text-charcoal">
@@ -623,19 +716,19 @@ function StaffSection({ userId }: { userId: string | null }) {
 
         <div className="sm:col-span-2">
           <Button type="submit" variant="graphite" size="sm" disabled={createStaff.isPending}>
-            Create staff account
+            Create staff member
           </Button>
         </div>
       </form>
 
       {createStaff.error && (
         <p role="alert" className="mt-3 text-sm text-red-700">
-          {describeError(createStaff.error, "The staff account could not be created.")}
+          {describeError(createStaff.error, "The staff member could not be created.")}
         </p>
       )}
       {updateStaff.error && (
         <p role="alert" className="mt-3 text-sm text-red-700">
-          {describeError(updateStaff.error, "The staff account could not be updated.")}
+          {describeError(updateStaff.error, "The staff member could not be updated.")}
         </p>
       )}
     </Card>

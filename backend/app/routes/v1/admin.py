@@ -249,8 +249,8 @@ async def read_platform_staff(
     actor: User = Depends(current_super_admin),
     state: AppState = Depends(get_app_state),
 ) -> PlatformStaffList:
-    """Every Platform Staff account. Super Admin only."""
-    return await list_platform_staff(state, actor=actor)
+    """Every Platform Staff member. Super Admin only."""
+    return await list_platform_staff(state)
 
 
 @router.post(
@@ -263,7 +263,7 @@ async def post_platform_staff(
     actor: User = Depends(current_super_admin),
     state: AppState = Depends(get_app_state),
 ) -> PlatformStaffMember:
-    """Create a staff Account with a granted role. Super Admin only."""
+    """Create a staff member with a granted role. Super Admin only."""
     return await create_platform_staff(state, actor=actor, request=request)
 
 

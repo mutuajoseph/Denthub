@@ -2,8 +2,8 @@
 
 DentHub's own people — Admins, Super Admins, and Operators — are granted a role
 by staff, never given one at signup (``CONTEXT.md`` "Platform Staff"). Only a
-Super Admin may list, create, or change them. An Account created here signs in
-through the staff surface like any other, and every write is audited with the
+Super Admin may list, create, or change them. A staff member created here signs
+in through the staff surface like any other, and every write is audited with the
 before and after state so the console can answer who granted what.
 
 A staff member's role and Operator scope are read fresh on every request, so a
@@ -35,7 +35,7 @@ MAX_PASSWORD_BYTES = 72
 
 
 class PlatformStaffMember(BaseModel):
-    """One Platform Staff account as the console lists and edits it."""
+    """One Platform Staff member as the console lists and edits it."""
 
     id: str
     full_name: str
@@ -51,7 +51,7 @@ class PlatformStaffList(BaseModel):
 
 
 class CreatePlatformStaffRequest(BaseModel):
-    """Grant a new Account a staff role.
+    """Grant a new User a staff role.
 
     An Operator carries exactly one Division and one tier. Any other role
     carries neither, because the scope only means something inside a Division.
@@ -99,9 +99,9 @@ class UpdatePlatformStaffRequest(BaseModel):
 
 def _validate_operator_scope(
     *,
-    role: str,
-    division: str | None,
-    tier: str | None,
+    role: PlatformStaffRole,
+    division: OperatorDivision | None,
+    tier: OperatorTier | None,
 ) -> None:
     """An Operator needs both halves of the scope; every other role needs neither."""
     if role == "platform_operator":
@@ -126,7 +126,7 @@ def _serialize(user: User) -> PlatformStaffMember:
 
 
 def _audit_state(user: User) -> dict[str, object]:
-    """What a change to a staff account records: permission, not identity."""
+    """What a change to a staff member records: permission, not identity."""
     return {
         "role": user.role,
         "operator_division": user.operator_division,
@@ -135,8 +135,8 @@ def _audit_state(user: User) -> dict[str, object]:
     }
 
 
-async def list_platform_staff(state: AppState, *, actor: User) -> PlatformStaffList:
-    """Every Platform Staff account, by name."""
+async def list_platform_staff(state: AppState) -> PlatformStaffList:
+    """Every Platform Staff member, by name."""
     async with state.db_session_maker() as session:
         users = await UserRepository.list_platform_staff(session, roles=STAFF_SURFACE_ROLES)
 
@@ -149,10 +149,10 @@ async def create_platform_staff(
     actor: User,
     request: CreatePlatformStaffRequest,
 ) -> PlatformStaffMember:
-    """Create an Account and grant it a staff role in the same write."""
+    """Create a User and grant them a staff role in the same write."""
     async with state.db_session_maker() as session:
         if await UserRepository.get_by_email(session, request.email) is not None:
-            raise ConflictError(message="An account with that email already exists")
+            raise ConflictError(message="A User with that email already exists")
 
         is_operator = request.role == "platform_operator"
         user = await UserRepository.create(
@@ -200,7 +200,12 @@ async def update_platform_staff(
             raise NotFoundException(message="Platform Staff member not found")
 
         fields = request.model_fields_set
-        role = request.role if "role" in fields and request.role is not None else user.role
+        role = (
+            request.role
+            if "role" in fields and request.role is not None
+            else cast(PlatformStaffRole, user.role)
+        )
+        touches_scope = bool(fields & {"role", "operator_division", "operator_tier"})
 
         if role == "platform_operator":
             division = (
@@ -209,14 +214,18 @@ async def update_platform_staff(
                 else user.operator_division
             )
             tier = request.operator_tier if "operator_tier" in fields else user.operator_tier
+            if touches_scope:
+                try:
+                    _validate_operator_scope(role=role, division=division, tier=tier)
+                except ValueError as exc:
+                    raise InvalidRequestError(message=str(exc)) from exc
         else:
+            supplied_division = request.operator_division if "operator_division" in fields else None
+            supplied_tier = request.operator_tier if "operator_tier" in fields else None
+            if supplied_division is not None or supplied_tier is not None:
+                raise InvalidRequestError(message="Only an Operator has a Division and a tier")
             division = None
             tier = None
-
-        try:
-            _validate_operator_scope(role=role, division=division, tier=tier)
-        except ValueError as exc:
-            raise InvalidRequestError(message=str(exc)) from exc
 
         is_active = (
             request.is_active
@@ -227,12 +236,11 @@ async def update_platform_staff(
             role != "super_admin" or not is_active
         )
         if user.is_active and removes_active_super_admin:
-            other_super_admins = await UserRepository.count_active_with_role(
+            active_ids = await UserRepository.lock_active_with_role(
                 session,
                 role="super_admin",
-                exclude_id=user.id,
             )
-            if other_super_admins == 0:
+            if not any(active_id != user.id for active_id in active_ids):
                 raise InvalidRequestError(
                     message="The last active Super Admin cannot be demoted or deactivated"
                 )

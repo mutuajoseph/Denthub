@@ -147,22 +147,21 @@ class UserRepository:
         return list(result.scalars().all())
 
     @staticmethod
-    async def count_active_with_role(
-        session: AsyncSession,
-        *,
-        role: str,
-        exclude_id: str | None = None,
-    ) -> int:
-        """How many active accounts hold ``role``, optionally excluding one (#122)."""
+    async def lock_active_with_role(session: AsyncSession, *, role: str) -> list[str]:
+        """Lock and return the ids of active accounts holding ``role`` (#122).
+
+        ``FOR UPDATE`` serialises two people leaving the role at once on
+        Postgres; SQLite, used by the tests, ignores the lock. Counting under
+        the lock keeps the last-active-Super-Admin rule true when changes race.
+        """
         stmt = (
-            select(func.count())
-            .select_from(User)
+            select(User.id)
             .where(User.role == role, User.is_active.is_(True))
+            .order_by(User.id)
+            .with_for_update()
         )
-        if exclude_id is not None:
-            stmt = stmt.where(User.id != exclude_id)
         result = await session.execute(stmt)
-        return int(result.scalar_one())
+        return list(result.scalars().all())
 
     @staticmethod
     async def list_for_facility(session: AsyncSession, *, facility_id: str) -> list[User]:

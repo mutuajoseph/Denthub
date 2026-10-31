@@ -253,14 +253,14 @@ describe("AdminDashboard", () => {
     expect(screen.getByLabelText("Division for Nia Operator")).toHaveValue("jobs");
   });
 
-  it("creates a staff account", async () => {
+  it("creates a staff member", async () => {
     renderAdmin(superAdmin);
 
     await screen.findByRole("heading", { name: "Platform Staff" });
     await userEvent.type(screen.getByLabelText("Full name"), "New Admin");
     await userEvent.type(screen.getByLabelText("Email"), "new@example.com");
     await userEvent.type(screen.getByLabelText("Password"), "correct horse battery staple");
-    await userEvent.click(screen.getByRole("button", { name: "Create staff account" }));
+    await userEvent.click(screen.getByRole("button", { name: "Create staff member" }));
 
     await waitFor(() =>
       expect(createPlatformStaffMock).toHaveBeenCalledWith({
@@ -284,7 +284,7 @@ describe("AdminDashboard", () => {
     await userEvent.selectOptions(screen.getByLabelText("Role"), "platform_operator");
     await userEvent.selectOptions(screen.getByLabelText("Division"), "shop");
     await userEvent.selectOptions(screen.getByLabelText("Operator tier"), "assistant");
-    await userEvent.click(screen.getByRole("button", { name: "Create staff account" }));
+    await userEvent.click(screen.getByRole("button", { name: "Create staff member" }));
 
     await waitFor(() =>
       expect(createPlatformStaffMock).toHaveBeenCalledWith({
@@ -298,7 +298,7 @@ describe("AdminDashboard", () => {
     );
   });
 
-  it("changes a staff member's role", async () => {
+  it("asks for a Division and a tier before promoting to Operator", async () => {
     renderAdmin(superAdmin);
 
     await userEvent.selectOptions(
@@ -306,11 +306,39 @@ describe("AdminDashboard", () => {
       "platform_operator",
     );
 
+    expect(updatePlatformStaffMock).not.toHaveBeenCalled();
+    await userEvent.selectOptions(await screen.findByLabelText("Division for Asha Admin"), "shop");
+    await userEvent.selectOptions(screen.getByLabelText("Tier for Asha Admin"), "assistant");
+    await userEvent.click(await screen.findByRole("button", { name: "Save Asha Admin" }));
+
     await waitFor(() =>
       expect(updatePlatformStaffMock).toHaveBeenCalledWith("staff-1", {
         role: "platform_operator",
-        operator_division: "jobs",
-        operator_tier: "lead",
+        operator_division: "shop",
+        operator_tier: "assistant",
+      }),
+    );
+  });
+
+  it("demoting an Operator clears the Division and tier", async () => {
+    fetchAdminStaffMock.mockResolvedValue({
+      items: [
+        staffMember({
+          role: "platform_operator",
+          operator_division: "jobs",
+          operator_tier: "lead",
+        }),
+      ],
+    });
+    renderAdmin(superAdmin);
+
+    await userEvent.selectOptions(await screen.findByLabelText("Role for Asha Admin"), "admin");
+
+    await waitFor(() =>
+      expect(updatePlatformStaffMock).toHaveBeenCalledWith("staff-1", {
+        role: "admin",
+        operator_division: null,
+        operator_tier: null,
       }),
     );
   });

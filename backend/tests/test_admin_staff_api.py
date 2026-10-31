@@ -32,7 +32,7 @@ async def _make_user(
 ) -> User:
     async with state.db_session_maker() as session:
         user = User(
-            full_name=f"Account {role}",
+            full_name=f"Staff {role}",
             email=email or f"{role}-{uuid.uuid4().hex[:8]}@example.com",
             role=role,
             password_hash=PASSWORD_HASH,
@@ -173,6 +173,24 @@ async def test_an_operator_cannot_manage_platform_staff(
     )
 
     assert response.status_code == 403
+
+
+async def test_an_anonymous_caller_cannot_manage_platform_staff(
+    client: AsyncClient,
+    state: AppState,
+) -> None:
+    target = await _make_user(state, role="admin")
+
+    read = await client.get("/api/v1/admin/staff")
+    create = await client.post("/api/v1/admin/staff", json=_staff_payload())
+    update = await client.patch(
+        f"/api/v1/admin/staff/{target.id}",
+        json={"is_active": False},
+    )
+
+    assert read.status_code == 401
+    assert create.status_code == 401
+    assert update.status_code == 401
 
 
 async def test_an_operator_needs_a_division_and_a_tier(
@@ -365,6 +383,24 @@ async def test_deactivating_takes_effect_on_the_next_request(
         json={"email": created["email"], "password": PASSWORD},
     )
     assert login.status_code == 403
+
+
+async def test_a_legacy_operator_without_scope_can_still_be_deactivated(
+    client: AsyncClient,
+    state: AppState,
+) -> None:
+    """A row written before the scope rule existed can still be switched off."""
+    super_admin = await _make_user(state, role="super_admin")
+    legacy_operator = await _make_user(state, role="platform_operator")
+
+    response = await client.patch(
+        f"/api/v1/admin/staff/{legacy_operator.id}",
+        headers=_staff_headers(state, super_admin),
+        json={"is_active": False},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["is_active"] is False
 
 
 async def test_the_last_active_super_admin_cannot_demote_themselves(
