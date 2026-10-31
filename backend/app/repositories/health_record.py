@@ -26,7 +26,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Literal, get_args
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, func, select
+from sqlalchemy import DateTime, ForeignKey, String, Text, delete, func, select
 from sqlalchemy import (
     Enum as SAEnum,
 )
@@ -37,7 +37,7 @@ from app.repositories.database import Base
 
 #: Maternal status (PRD §8.3, the whiteboard-only field #84 adds). "none" is the
 #: explicit default, so an unset record still answers a truthful value.
-MaternalStatus = Literal["none", "pregnant", "lactating"]
+MaternalStatus = Literal["none", "pregnant", "lactating", "deleted"]
 MATERNAL_STATUSES = get_args(MaternalStatus)
 
 #: What an entry holds. Prescriptions are free text for now (#84): structured
@@ -213,6 +213,25 @@ class HealthRecordRepository:
         session.add(entry)
         await session.flush()
         return entry
+
+    @staticmethod
+    async def delete_entries_by_author_kind(
+        session: AsyncSession,
+        *,
+        record_id: str,
+        author_kind: HealthRecordAuthorKind,
+    ) -> None:
+        """Delete the entries of one author kind on a record (#128).
+
+        Account deletion removes the Patient's own entries but keeps the
+        clinician-authored ones the retention window protects.
+        """
+        await session.execute(
+            delete(HealthRecordEntry).where(
+                HealthRecordEntry.record_id == record_id,
+                HealthRecordEntry.author_kind == author_kind,
+            )
+        )
 
     @staticmethod
     async def list_entries(

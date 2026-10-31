@@ -64,6 +64,9 @@ const OperationsDashboard = lazy(() =>
   })),
 );
 const OralCareShopPage = lazy(() => import("./pages/OralCareShopPage"));
+const Settings = lazy(() =>
+  import("./pages/Settings").then((module) => ({ default: module.Settings })),
+);
 const SignInPage = lazy(() =>
   import("./pages/SignInPage").then((module) => ({ default: module.SignInPage })),
 );
@@ -184,6 +187,14 @@ const App = () => {
               element={
                 <RouteGuard user={user} allowedRoles={PUBLIC_ROLES} unauthorizedPath="/">
                   <Messages user={user} />
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <RouteGuard user={user} allowedRoles={PUBLIC_ROLES} unauthorizedPath="/">
+                  <Settings user={user} onAccountDeleted={handleLogout} />
                 </RouteGuard>
               }
             />

@@ -108,11 +108,48 @@ class UserRepository:
         return result.scalar_one_or_none()
 
     @staticmethod
+    async def get_by_id_for_update(session: AsyncSession, user_id: str) -> User | None:
+        """Retrieve a User and lock the row for the rest of the transaction.
+
+        Account erasure takes this lock first so two concurrent DELETE requests
+        for the same User serialise: the second finds the completed Deletion
+        Request rather than racing the unique constraint. SQLite ignores the
+        lock clause; Postgres is where it matters.
+        """
+        stmt = select(User).where(User.id == user_id).with_for_update()
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    @staticmethod
     async def create(session: AsyncSession, **kwargs: Any) -> User:
         """Create and persist a new user."""
         user = User(**kwargs)
         session.add(user)
         # Flush to generate IDs/timestamps before returning
+        await session.flush()
+        return user
+
+    @staticmethod
+    async def anonymize(
+        session: AsyncSession,
+        user: User,
+        *,
+        email: str,
+        full_name: str,
+        password_hash: str,
+    ) -> User:
+        """Scrub the identity fields while keeping the row for its foreign keys.
+
+        A User row is referenced by appointments and retained clinical entries
+        with RESTRICT foreign keys (#128), so erasure anonymises rather than
+        deleting it. ``is_active`` blocks both login and token authentication.
+        """
+        user.full_name = full_name
+        user.email = email
+        user.phone = None
+        user.password_hash = password_hash
+        user.is_active = False
+        user.facility_id = None
         await session.flush()
         return user
 

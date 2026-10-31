@@ -98,6 +98,12 @@ re-running the failed run from the Actions UI.
    key invalidates every existing session.
 5. Service → **Settings → Deploy Hook** → copy the URL.
 6. Confirm the health check is `/api/v1/health`.
+7. Optionally set `CLINICAL_RETENTION_DAYS` = how many days clinician-authored
+   Health Record entries are kept after an account is deleted (#128). It is not
+   a secret; when unset the app uses **2555** (seven years). **The default is
+   provisional and needs legal confirmation** before real patient data is
+   served; change it here when counsel settles the period. The value must be a
+   positive integer or the backend refuses to start.
 
 > The blueprint's `startCommand` prefixes uvicorn with
 > `uv run python -m app.scripts.seed_all`, which runs `alembic upgrade head` once and

@@ -27,6 +27,11 @@ A login identity (email and password). One User can hold several Profiles and
 Facility Memberships at once; a User is never itself a Patient or Specialist.
 _Avoid_: Account (for the login), member
 
+**Deletion Request**:
+A User's request to have their account identity erased. It records when the
+request completed and how long clinician-authored Clinical Entries are retained.
+_Avoid_: Erasure request, account closure
+
 **Profile**:
 One account type a User holds: Patient, Specialist, Supplier, or Training
 Provider, at most one of each. Owning or working at a Facility is a Facility

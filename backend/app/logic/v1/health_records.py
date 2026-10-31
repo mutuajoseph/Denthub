@@ -20,6 +20,7 @@ this change and tracked separately (root ``AGENTS.md``, "Auth and security").
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -59,10 +60,15 @@ class HealthRecordEntryRequest(BaseModel):
     body: str = Field(min_length=1, max_length=ENTRY_BODY_MAX_LENGTH)
 
 
+#: The statuses a Patient may choose. ``deleted`` is written only by account
+#: erasure (#128) and is never selectable through the API.
+EditableMaternalStatus = Literal["none", "pregnant", "lactating"]
+
+
 class HealthRecordUpdateRequest(BaseModel):
     """Input for updating the record-level facts the Patient owns."""
 
-    maternal_status: MaternalStatus
+    maternal_status: EditableMaternalStatus
 
 
 class HealthRecordEntryResponse(BaseModel):
