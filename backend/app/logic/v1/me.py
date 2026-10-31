@@ -2,16 +2,18 @@
 
 ``GET /me/export`` builds the signed-in User's copy in the request: the User,
 their Profiles and Facility Memberships, their Health Record and entries, their
-Appointments, and the Messages they sent. Nothing belonging to another User is
-included.
+Appointments, and every Message in their conversations. The export is scoped to
+the caller: no other User's Profile, record, or appointment is included, and a
+Message carries its ``sender_id`` so both sides of a thread are distinguishable.
 
 ``DELETE /me`` erases the caller immediately. The User row itself stays because
 appointments and retained clinician entries reference it with RESTRICT foreign
 keys; instead every identity field is scrubbed and ``is_active`` is cleared,
 which stops both login and existing tokens. The caller's Profiles, Memberships,
-and own Health Record entries are deleted, and clinician-authored entries are
-kept for the configured retention window. Business listings they owned keep
-their public data but lose the identity link.
+own Health Record entries, Message text, and Appointment notes are erased, and
+clinician-authored entries are kept for the configured retention window.
+Business listings they owned keep their public data but lose the identity link;
+a Specialist listing, being an individual, also loses its name and slug.
 """
 
 from __future__ import annotations
@@ -21,7 +23,7 @@ from typing import Literal, cast
 
 from pydantic import BaseModel, Field
 
-from app.exceptions import UnauthorizedException
+from app.exceptions import InvalidRequestError, UnauthorizedException
 from app.logic.v1.auth import (
     AccountStatus,
     MembershipSummary,
@@ -53,6 +55,13 @@ from app.utils.state import AppState
 UNUSABLE_PASSWORD_HASH = "!"
 DELETED_USER_NAME = "Deleted user"
 DELETED_EMAIL_DOMAIN = "deleted.invalid"
+#: What a deleted User's Message body becomes. The row and its timestamp stay
+#: so the other participant's thread keeps its shape without the text.
+DELETED_MESSAGE_BODY = "[deleted]"
+#: A Specialist listing is an individual, so its display name and name-derived
+#: slug are erased with the owner; the id keeps the slug unique.
+DELETED_SPECIALIST_NAME = "Deleted specialist"
+DELETED_SPECIALIST_SLUG_PREFIX = "deleted-specialist-"
 
 
 class ExportedUser(BaseModel):
@@ -107,10 +116,11 @@ class ExportedAppointment(BaseModel):
 
 
 class ExportedMessage(BaseModel):
-    """One Message the caller sent. The other participant's Messages are not theirs."""
+    """One Message in the caller's thread, with the sender so both sides read clearly."""
 
     id: str
     conversation_id: str
+    sender_id: str
     body: str
     created_at: datetime
 
@@ -151,7 +161,8 @@ def _exported_appointment(
         listing_id = appointment.facility_id
         listing_name = facility_names.get(listing_id)
     else:
-        assert appointment.specialist_id is not None
+        if appointment.specialist_id is None:
+            raise InvalidRequestError(message="Appointment is missing its listing")
         listing_type = "specialist"
         listing_id = appointment.specialist_id
         listing_name = specialist_names.get(listing_id)
@@ -211,7 +222,7 @@ async def export_account(state: AppState, *, actor: User) -> AccountExportRespon
             facility_ids=[a.facility_id for a in appointments if a.facility_id is not None],
             specialist_ids=[a.specialist_id for a in appointments if a.specialist_id is not None],
         )
-        messages = await MessageRepository.list_sent_by_user(session, sender_id=actor.id)
+        messages = await MessageRepository.list_for_user(session, user_id=actor.id)
 
         return AccountExportResponse(
             exported_at=datetime.now(UTC),
@@ -234,6 +245,7 @@ async def export_account(state: AppState, *, actor: User) -> AccountExportRespon
                 ExportedMessage(
                     id=message.id,
                     conversation_id=message.conversation_id,
+                    sender_id=message.sender_id,
                     body=message.body,
                     created_at=message.created_at,
                 )
@@ -246,9 +258,13 @@ async def delete_account(state: AppState, *, actor: User) -> None:
     """Erase the caller's identity now, retaining only protected clinical rows."""
 
     async with state.db_session_maker() as session:
-        stored = await UserRepository.get_by_id(session, actor.id)
+        stored = await UserRepository.get_by_id_for_update(session, actor.id)
         if stored is None:
             raise UnauthorizedException(message="User not found")
+
+        if await DeletionRepository.get_by_user(session, stored.id) is not None:
+            # A concurrent or repeated DELETE already erased this account.
+            return
 
         now = datetime.now(UTC).replace(tzinfo=None)
         await DeletionRepository.create(
@@ -269,9 +285,21 @@ async def delete_account(state: AppState, *, actor: User) -> None:
                 record_id=record.id,
                 author_kind="patient",
             )
-            await HealthRecordRepository.update(session, record, maternal_status="none")
+            await HealthRecordRepository.update(session, record, maternal_status="deleted")
 
-        await SpecialistRepository.detach_user(session, user_id=stored.id)
+        await MessageRepository.scrub_sender(
+            session,
+            sender_id=stored.id,
+            replacement_body=DELETED_MESSAGE_BODY,
+        )
+        await AppointmentRepository.clear_notes_for_patient(session, patient_id=stored.id)
+
+        await SpecialistRepository.detach_user(
+            session,
+            user_id=stored.id,
+            replacement_name=DELETED_SPECIALIST_NAME,
+            replacement_slug_prefix=DELETED_SPECIALIST_SLUG_PREFIX,
+        )
         await SupplierRepository.detach_owner(session, owner_user_id=stored.id)
         await TrainingRepository.detach_owner(session, owner_user_id=stored.id)
 

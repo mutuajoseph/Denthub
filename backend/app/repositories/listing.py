@@ -32,7 +32,6 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
     select,
-    update,
 )
 from sqlalchemy import (
     Enum as SAEnum,
@@ -538,15 +537,30 @@ class SpecialistRepository:
         return list(result.scalars().all())
 
     @staticmethod
-    async def detach_user(session: AsyncSession, *, user_id: str) -> None:
-        """Remove the User link from any Specialist listing they own (#128).
+    async def detach_user(
+        session: AsyncSession,
+        *,
+        user_id: str,
+        replacement_name: str,
+        replacement_slug_prefix: str,
+    ) -> None:
+        """Remove the User link and personal identity from their Specialist listing (#128).
 
-        The public listing is marketplace data; deleting the account must not
-        delete it. Only the identity link is cleared.
+        The listing row stays because Appointments reference it, but a
+        Specialist listing *is* an individual, so the display name and the
+        name-derived slug are personal data. They are replaced with neutral
+        values; the slug stays unique by embedding the listing id.
         """
-        await session.execute(
-            update(Specialist).where(Specialist.user_id == user_id).values(user_id=None)
+        listings = (
+            (await session.execute(select(Specialist).where(Specialist.user_id == user_id)))
+            .scalars()
+            .all()
         )
+        for listing in listings:
+            listing.user_id = None
+            listing.name = replacement_name
+            listing.slug = f"{replacement_slug_prefix}{listing.id}"
+        await session.flush()
 
     @staticmethod
     async def find_by_slug(session: AsyncSession, slug: str) -> Specialist | None:

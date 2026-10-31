@@ -1,12 +1,14 @@
 """HTTP-level tests for the caller's own data export and account deletion (#128).
 
 The export is the caller's own User, Profiles, Facility Memberships, Health
-Record, Appointments, and sent Messages, and nothing belonging to anyone else.
-Deletion anonymises the account at once: the User row stays so the clinic rows
-that reference it (appointments, clinician entries) keep their foreign keys, but
-every identity field is scrubbed, the caller's own Profiles and Memberships are
-removed, and their own Health Record entries are deleted. Clinician-authored
-entries are retained, attached only to the anonymised account.
+Record, Appointments, and both sides of their Message threads, and nothing
+belonging to anyone else. Deletion anonymises the account at once: the User row
+stays so the clinic rows that reference it (appointments, clinician entries)
+keep their foreign keys, but every identity field is scrubbed, the caller's own
+Profiles and Memberships are removed, their own Health Record entries are
+deleted, their Message bodies and Appointment notes are erased, and their
+Specialist listing loses its name and slug. Clinician-authored entries are
+retained, attached only to the anonymised account.
 """
 
 from __future__ import annotations
@@ -18,12 +20,15 @@ from httpx import AsyncClient
 from sqlalchemy import select
 
 from app.logic.v1.auth import STAFF_SCOPE, create_access_token, hash_password
+from app.logic.v1.me import delete_account
 from app.repositories.appointment import Appointment
 from app.repositories.deletion import DeletionRequest
 from app.repositories.health_record import HealthRecordEntry, PatientHealthRecord
 from app.repositories.listing import Facility, Specialist
 from app.repositories.message import Conversation, Message
+from app.repositories.product import Supplier
 from app.repositories.profile import FacilityMembership, Profile
+from app.repositories.training import TrainingProvider
 from app.repositories.user import User
 from app.utils.state import AppState
 from tests.factories import SEEDED_PASSWORD
@@ -165,6 +170,26 @@ async def test_export_requires_authentication(client: AsyncClient) -> None:
     assert response.status_code == 401
 
 
+async def test_export_refuses_a_staff_token(
+    client: AsyncClient,
+    state: AppState,
+) -> None:
+    staff = await _make_user(
+        state,
+        email="staff.export@example.com",
+        full_name="Staff Export",
+        role="admin",
+    )
+    staff_token = create_access_token(state, staff.id, staff.role, scope=STAFF_SCOPE)
+
+    response = await client.get(
+        "/api/v1/me/export",
+        headers={"Authorization": f"Bearer {staff_token}"},
+    )
+
+    assert response.status_code == 403
+
+
 async def test_export_contains_only_the_callers_own_data(
     client: AsyncClient,
     state: AppState,
@@ -254,15 +279,21 @@ async def test_export_contains_only_the_callers_own_data(
     assert appointment["listing_name"] == "Smile Point Dental"
     assert appointment["note"] == "Morning slot"
 
-    assert len(body["messages"]) == 1
-    assert body["messages"][0]["body"] == "Amina's message"
-    assert body["messages"][0]["conversation_id"] == conversation_id
+    assert [message["body"] for message in body["messages"]] == [
+        "Amina's message",
+        "Chidi's message",
+    ]
+    assert [message["conversation_id"] for message in body["messages"]] == [
+        conversation_id,
+        conversation_id,
+    ]
+    assert body["messages"][0]["sender_id"] == amina.id
+    assert body["messages"][1]["sender_id"] == chidi.id
 
     text = response.text
     assert "chidi.export@example.com" not in text
     assert "Chidi Export" not in text
     assert "Chidi private allergy" not in text
-    assert "Chidi's message" not in text
 
 
 async def test_export_returns_a_null_health_record_when_none_exists(
@@ -360,7 +391,7 @@ async def test_delete_anonymises_identity_and_keeps_clinical_entries(
                 select(PatientHealthRecord).where(PatientHealthRecord.patient_id == patient.id)
             )
         ).scalar_one()
-        assert record.maternal_status == "none"
+        assert record.maternal_status == "deleted"
         entries = list(
             (
                 await session.execute(
@@ -377,6 +408,7 @@ async def test_delete_anonymises_identity_and_keeps_clinical_entries(
             await session.execute(select(Appointment).where(Appointment.patient_id == patient.id))
         ).scalar_one()
         assert appointment.status == "PENDING"
+        assert appointment.note is None
 
         deletion = (
             await session.execute(
@@ -432,6 +464,122 @@ async def test_delete_detaches_an_owned_listing(
         stored = await session.get(Specialist, specialist_id)
         assert stored is not None
         assert stored.user_id is None
+        assert stored.name == "Deleted specialist"
+        assert stored.slug == f"deleted-specialist-{specialist_id}"
+
+
+async def test_delete_erases_the_users_message_text(
+    client: AsyncClient,
+    state: AppState,
+) -> None:
+    patient = await _make_user(
+        state,
+        email="messages.delete@example.com",
+        full_name="Messages Delete",
+    )
+    counterpart = await _make_user(
+        state,
+        email="messages.keep@example.com",
+        full_name="Messages Keep",
+    )
+    conversation_id = await _add_thread(
+        state,
+        first=patient,
+        second=counterpart,
+        first_body="Patient's private message",
+        second_body="Counterpart's message",
+    )
+    async with state.db_session_maker() as session:
+        conversation = await session.get(Conversation, conversation_id)
+        assert conversation is not None
+        conversation.last_message_preview = "Patient's private message"
+        conversation.last_message_sender_id = patient.id
+        await session.commit()
+
+    response = await client.delete("/api/v1/me", headers=_headers(state, patient))
+
+    assert response.status_code == 204
+
+    async with state.db_session_maker() as session:
+        messages = list(
+            (await session.execute(select(Message))).scalars().all()
+        )
+        by_sender = {message.sender_id: message for message in messages}
+        assert by_sender[patient.id].body == "[deleted]"
+        assert by_sender[counterpart.id].body == "Counterpart's message"
+
+        conversation = await session.get(Conversation, conversation_id)
+        assert conversation is not None
+        assert conversation.last_message_preview is None
+        assert conversation.last_message_sender_id is None
+
+
+async def test_delete_detaches_supplier_and_training_listings(
+    client: AsyncClient,
+    state: AppState,
+) -> None:
+    supplier_owner = await _make_user(
+        state,
+        email="supplier.owner@example.com",
+        full_name="Supplier Owner",
+        role="supplier",
+    )
+    provider_owner = await _make_user(
+        state,
+        email="provider.owner@example.com",
+        full_name="Provider Owner",
+        role="training_provider",
+    )
+    async with state.db_session_maker() as session:
+        supplier = Supplier(
+            name="Owner Dental Supplies",
+            slug=f"owner-supplies-{uuid.uuid4().hex[:8]}",
+            country_code="KE",
+            scope="local",
+            owner_user_id=supplier_owner.id,
+        )
+        provider = TrainingProvider(
+            name="Owner Dental Academy",
+            country_code="KE",
+            owner_user_id=provider_owner.id,
+        )
+        session.add_all([supplier, provider])
+        await session.commit()
+        supplier_id = supplier.id
+        provider_id = provider.id
+
+    supplier_response = await client.delete(
+        "/api/v1/me",
+        headers=_headers(state, supplier_owner),
+    )
+    provider_response = await client.delete(
+        "/api/v1/me",
+        headers=_headers(state, provider_owner),
+    )
+
+    assert supplier_response.status_code == 204
+    assert provider_response.status_code == 204
+
+    async with state.db_session_maker() as session:
+        stored_supplier = await session.get(Supplier, supplier_id)
+        stored_provider = await session.get(TrainingProvider, provider_id)
+        assert stored_supplier is not None
+        assert stored_provider is not None
+        assert stored_supplier.owner_user_id is None
+        assert stored_provider.owner_user_id is None
+
+
+async def test_delete_account_is_idempotent(state: AppState) -> None:
+    user = await _make_user(state, email="twice.delete@example.com")
+
+    await delete_account(state, actor=user)
+    await delete_account(state, actor=user)
+
+    async with state.db_session_maker() as session:
+        deletion = (
+            await session.execute(select(DeletionRequest).where(DeletionRequest.user_id == user.id))
+        ).scalar_one()
+        assert deletion.status == "completed"
 
 
 async def test_deletion_request_uses_the_configured_retention(

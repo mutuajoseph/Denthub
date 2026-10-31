@@ -64,6 +64,7 @@ export interface ExportedAppointmentWire {
 export interface ExportedMessageWire {
   id: string;
   conversation_id: string;
+  sender_id: string;
   body: string;
   created_at: string;
 }
@@ -77,7 +78,7 @@ export interface AccountExportWire {
   /** `null` when the caller has no Health Record. */
   health_record: ExportedHealthRecordWire | null;
   appointments: ExportedAppointmentWire[];
-  /** Only the Messages the caller sent; the other participant's are not theirs. */
+  /** Every Message in the caller's threads, both directions; `sender_id` says which. */
   messages: ExportedMessageWire[];
 }
 

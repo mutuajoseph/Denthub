@@ -12,7 +12,7 @@
 import { getJson, patchJson, postJson } from "./apiClient";
 
 /** Record-level facts the Patient owns (`none` is the explicit default). */
-export type MaternalStatus = "none" | "pregnant" | "lactating";
+export type MaternalStatus = "none" | "pregnant" | "lactating" | "deleted";
 
 /** What an entry holds. */
 export type HealthRecordEntryCategory =
@@ -81,9 +81,13 @@ export const MATERNAL_STATUS_LABELS: Record<MaternalStatus, string> = {
   none: "Not recorded",
   pregnant: "Pregnant",
   lactating: "Lactating",
+  deleted: "Deleted",
 };
 
-/** The statuses in the order the control offers them. */
+/**
+ * The statuses the control offers. `deleted` is written by account erasure
+ * only, so it is never an option the Patient can choose.
+ */
 export const MATERNAL_STATUSES: readonly MaternalStatus[] = ["none", "pregnant", "lactating"];
 
 /** Human labels for the entry categories. */

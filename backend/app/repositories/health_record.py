@@ -37,7 +37,7 @@ from app.repositories.database import Base
 
 #: Maternal status (PRD §8.3, the whiteboard-only field #84 adds). "none" is the
 #: explicit default, so an unset record still answers a truthful value.
-MaternalStatus = Literal["none", "pregnant", "lactating"]
+MaternalStatus = Literal["none", "pregnant", "lactating", "deleted"]
 MATERNAL_STATUSES = get_args(MaternalStatus)
 
 #: What an entry holds. Prescriptions are free text for now (#84): structured

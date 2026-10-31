@@ -13,7 +13,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Literal, get_args
 
-from sqlalchemy import DateTime, ForeignKey, String, func
+from sqlalchemy import DateTime, ForeignKey, String, func, select
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
@@ -66,6 +66,13 @@ class DeletionRequest(Base):
 
 class DeletionRepository:
     """Persistence for Deletion Requests."""
+
+    @staticmethod
+    async def get_by_user(session: AsyncSession, user_id: str) -> DeletionRequest | None:
+        """The account's one Deletion Request, or ``None`` before erasure."""
+        stmt = select(DeletionRequest).where(DeletionRequest.user_id == user_id)
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()
 
     @staticmethod
     async def create(session: AsyncSession, **kwargs: Any) -> DeletionRequest:
