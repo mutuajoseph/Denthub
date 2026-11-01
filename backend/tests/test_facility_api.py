@@ -10,6 +10,7 @@ the documented workflow are allowed.
 
 from __future__ import annotations
 
+import uuid
 from datetime import UTC, date, datetime, time
 from zoneinfo import ZoneInfo
 
@@ -17,6 +18,7 @@ from httpx import AsyncClient
 
 from app.logic.v1.auth import create_access_token, hash_password
 from app.repositories.appointment import Appointment
+from app.repositories.listing import Specialist
 from app.repositories.user import User
 from app.utils.state import AppState
 
@@ -76,6 +78,47 @@ async def _make_appointment(
         appointment = Appointment(
             patient_id=patient.id,
             facility_id=facility_id,
+            country_code="KE",
+            scheduled_at=scheduled_at,
+            status=status,
+            note=None,
+        )
+        session.add(appointment)
+        await session.commit()
+        await session.refresh(appointment)
+        return appointment.id
+
+
+async def _make_specialist(state: AppState, *, owner: User, name: str) -> str:
+    """Insert a Specialist listing owned by ``owner`` and return its id."""
+    async with state.db_session_maker() as session:
+        specialist = Specialist(
+            name=name,
+            slug=f"{name.lower().replace(' ', '-')}-{uuid.uuid4().hex[:8]}",
+            user_id=owner.id,
+            country_code="KE",
+            subdivision_code="NAIROBI",
+            currency="KES",
+        )
+        session.add(specialist)
+        await session.commit()
+        await session.refresh(specialist)
+        return specialist.id
+
+
+async def _make_specialist_appointment(
+    state: AppState,
+    *,
+    patient: User,
+    specialist_id: str,
+    status: str,
+    scheduled_at: datetime,
+) -> str:
+    """Insert a Specialist-listing Appointment, which carries no ``facility_id``."""
+    async with state.db_session_maker() as session:
+        appointment = Appointment(
+            patient_id=patient.id,
+            specialist_id=specialist_id,
             country_code="KE",
             scheduled_at=scheduled_at,
             status=status,
@@ -303,6 +346,79 @@ async def test_a_facility_cannot_touch_another_clinics_appointment(
     response = await client.patch(
         f"/api/v1/facility/appointments/{appointment_id}",
         headers=_headers(state, owner),
+        json={"status": "CONFIRMED"},
+    )
+
+    assert response.status_code == 404, response.text
+
+
+async def test_the_linked_specialist_advances_their_appointment(
+    client: AsyncClient, state: AppState
+) -> None:
+    owner = await _make_user(state, email="specialist.owner@example.com", role="specialist")
+    specialist_id = await _make_specialist(state, owner=owner, name="Dr. Booking Owner")
+    patient = await _patient(state, "specialist-flow-patient@example.com")
+    appointment_id = await _make_specialist_appointment(
+        state,
+        patient=patient,
+        specialist_id=specialist_id,
+        status="PENDING",
+        scheduled_at=datetime(2030, 6, 1, 10, 0),
+    )
+    headers = _headers(state, owner)
+
+    for step in ("CONFIRMED", "IN_PROGRESS", "COMPLETED"):
+        response = await client.patch(
+            f"/api/v1/facility/appointments/{appointment_id}",
+            headers=headers,
+            json={"status": step},
+        )
+        assert response.status_code == 200, (step, response.text)
+        assert response.json()["status"] == step
+
+
+async def test_another_specialist_cannot_advance_the_appointment(
+    client: AsyncClient, state: AppState
+) -> None:
+    owner = await _make_user(state, email="specialist.owner@example.com", role="specialist")
+    other = await _make_user(state, email="specialist.other@example.com", role="specialist")
+    specialist_id = await _make_specialist(state, owner=owner, name="Dr. Booking Owner")
+    await _make_specialist(state, owner=other, name="Dr. Someone Else")
+    patient = await _patient(state, "specialist-cross-patient@example.com")
+    appointment_id = await _make_specialist_appointment(
+        state,
+        patient=patient,
+        specialist_id=specialist_id,
+        status="PENDING",
+        scheduled_at=datetime(2030, 7, 1, 10, 0),
+    )
+
+    response = await client.patch(
+        f"/api/v1/facility/appointments/{appointment_id}",
+        headers=_headers(state, other),
+        json={"status": "CONFIRMED"},
+    )
+
+    assert response.status_code == 404, response.text
+
+
+async def test_a_patient_cannot_advance_a_specialist_appointment(
+    client: AsyncClient, state: AppState
+) -> None:
+    owner = await _make_user(state, email="specialist.owner@example.com", role="specialist")
+    specialist_id = await _make_specialist(state, owner=owner, name="Dr. Booking Owner")
+    patient = await _patient(state, "specialist-patient@example.com")
+    appointment_id = await _make_specialist_appointment(
+        state,
+        patient=patient,
+        specialist_id=specialist_id,
+        status="PENDING",
+        scheduled_at=datetime(2030, 8, 1, 10, 0),
+    )
+
+    response = await client.patch(
+        f"/api/v1/facility/appointments/{appointment_id}",
+        headers=_headers(state, patient),
         json={"status": "CONFIRMED"},
     )
 
