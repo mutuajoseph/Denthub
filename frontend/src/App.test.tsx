@@ -328,6 +328,15 @@ describe("App routes", () => {
     expect(screen.getByText("user@example.com")).toBeInTheDocument();
   });
 
+  it("renders account settings for a signed-in patient", async () => {
+    seedAuth(ROLE.PATIENT);
+
+    renderApp("/account/settings");
+
+    expect(await screen.findByRole("heading", { name: /account settings/i })).toBeInTheDocument();
+    expect(screen.getByLabelText("Current password")).toBeInTheDocument();
+  });
+
   it("keeps a signed-in staff user off /dashboard without a 404", async () => {
     seedAuth(ROLE.STAFF);
 

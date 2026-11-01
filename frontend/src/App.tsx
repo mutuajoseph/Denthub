@@ -26,6 +26,9 @@ import type { AuthResponse } from "./lib/auth";
  * already default exports.
  */
 const About = lazy(() => import("./pages/About").then((module) => ({ default: module.About })));
+const AccountSettings = lazy(() =>
+  import("./pages/AccountSettings").then((module) => ({ default: module.AccountSettings })),
+);
 const AdminDashboard = lazy(() =>
   import("./pages/AdminDashboard").then((module) => ({ default: module.AdminDashboard })),
 );
@@ -107,6 +110,10 @@ const App = () => {
     setAuthOpen(false);
   };
 
+  const handleAuthChanged = (authResponse: AuthResponse) => {
+    setAuth(authResponse);
+  };
+
   const handleLogout = () => {
     clearStoredAuth();
     setAuth(null);
@@ -144,6 +151,14 @@ const App = () => {
               element={
                 <RouteGuard user={user} allowedRoles={PUBLIC_ROLES} unauthorizedPath="/">
                   <Dashboard user={user} />
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="/account/settings"
+              element={
+                <RouteGuard user={user} allowedRoles={PUBLIC_ROLES} unauthorizedPath="/">
+                  <AccountSettings user={user} onAuthChanged={handleAuthChanged} />
                 </RouteGuard>
               }
             />

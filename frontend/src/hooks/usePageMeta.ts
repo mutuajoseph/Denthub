@@ -62,6 +62,10 @@ const routeMeta: Record<string, MetaFactory> = {
     title: `Dashboard — ${brandName}`,
     description: `Manage your dental care account on ${brandName}.`,
   }),
+  "/account/settings": (brandName) => ({
+    title: `Account Settings — ${brandName}`,
+    description: `Change your password and verify your email on ${brandName}.`,
+  }),
   "/dashboard/facility": (brandName) => ({
     title: `Facility Dashboard — ${brandName}`,
     description: `Manage your dental facility and clinical team on ${brandName}.`,

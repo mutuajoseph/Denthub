@@ -139,10 +139,20 @@ describe("Navbar account menu", () => {
     expect(screen.getByRole("menuitem", { name: "Messages" })).toHaveAttribute("href", "/messages");
   });
 
+  it("gives a public account its account settings", async () => {
+    await openAccountMenu(makeUser(ROLE.PATIENT));
+
+    expect(screen.getByRole("menuitem", { name: "Account settings" })).toHaveAttribute(
+      "href",
+      "/account/settings",
+    );
+  });
+
   it("gives a staff account no account destinations", async () => {
     await openAccountMenu(makeUser(ROLE.ADMIN));
 
     expect(screen.queryByRole("menuitem", { name: "Messages" })).toBeNull();
     expect(screen.queryByRole("menuitem", { name: "Dashboard" })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: "Account settings" })).toBeNull();
   });
 });
