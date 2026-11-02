@@ -27,6 +27,7 @@ def _settings(environment: str) -> Settings:
         database_url="sqlite+aiosqlite:///:memory:",
         jwt_secret_key="test-secret",
         jwt_algorithm="HS256",
+        refresh_token_secret="test-refresh-secret",
     )
 
 

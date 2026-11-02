@@ -16,6 +16,11 @@ API_V1_PREFIX = "/api/v1"
 # real JWT_SECRET_KEY; this literal must never sign a production token.
 DEV_JWT_SECRET_KEY = "denthub-super-secret-dev-key-change-in-prod"
 
+# The refresh cookie is signed with its own secret (ADR-0003 follow-up, #121),
+# so an access-token secret leak cannot also mint refresh tokens. Same rule:
+# a development default only, refused in production.
+DEV_REFRESH_TOKEN_SECRET = "denthub-super-secret-dev-refresh-key-change-in-prod"
+
 
 @dataclass(frozen=True)
 class Settings:
@@ -29,6 +34,8 @@ class Settings:
     database_url: str
     jwt_secret_key: str
     jwt_algorithm: str
+    #: Signs the refresh cookie's JWT; distinct from ``jwt_secret_key``.
+    refresh_token_secret: str
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -73,6 +80,15 @@ class Settings:
                 "Render dashboard (render.yaml marks it sync: false)."
             )
 
+        refresh_token_secret = os.getenv("REFRESH_TOKEN_SECRET", DEV_REFRESH_TOKEN_SECRET)
+
+        if environment == "production" and refresh_token_secret == DEV_REFRESH_TOKEN_SECRET:
+            raise RuntimeError(
+                "REFRESH_TOKEN_SECRET must be set to a real secret in production; "
+                "refusing to start with the development default. Set it in the "
+                "Render dashboard (render.yaml marks it sync: false)."
+            )
+
         return cls(
             app_name=APP_NAME,
             environment=environment,
@@ -82,4 +98,5 @@ class Settings:
             database_url=database_url,
             jwt_secret_key=jwt_secret_key,
             jwt_algorithm=os.getenv("JWT_ALGORITHM", "HS256"),
+            refresh_token_secret=refresh_token_secret,
         )
