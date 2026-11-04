@@ -1,7 +1,7 @@
 """add deletion requests
 
 Revision ID: e894c55b6cd9
-Revises: a03c4a379430
+Revises: e85d22bf80a9
 Create Date: 2026-10-29 10:41:43.865056
 
 The audit row for account erasure (#128). A completed request is written in the
@@ -18,7 +18,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "e894c55b6cd9"
-down_revision: str | Sequence[str] | None = "a03c4a379430"
+down_revision: str | Sequence[str] | None = "e85d22bf80a9"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
