@@ -47,3 +47,11 @@ async def current_admin(actor: User = Depends(current_staff)) -> User:
         raise ForbiddenException(message="Only admins may use the admin console")
 
     return actor
+
+
+async def current_super_admin(actor: User = Depends(current_staff)) -> User:
+    """A staff caller with the ``super_admin`` role; every other role is a 403."""
+    if actor.role != "super_admin":
+        raise ForbiddenException(message="Only a Super Admin may manage Platform Staff")
+
+    return actor
