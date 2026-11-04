@@ -49,6 +49,40 @@ from app.logic.v1.platform_staff import (
     list_platform_staff,
     update_platform_staff,
 )
+from app.logic.v1.reference import (
+    AdminInsuranceProvider,
+    AdminInsuranceProviderList,
+    AdminSpecialty,
+    AdminSpecialtyList,
+    AdminSubdivision,
+    AdminSubdivisionList,
+    AdminTreatment,
+    AdminTreatmentList,
+    CreateInsuranceProviderRequest,
+    CreateSpecialtyRequest,
+    CreateSubdivisionRequest,
+    CreateTreatmentRequest,
+    UpdateInsuranceProviderRequest,
+    UpdateSpecialtyRequest,
+    UpdateSubdivisionRequest,
+    UpdateTreatmentRequest,
+    create_insurance_provider,
+    create_specialty,
+    create_subdivision,
+    create_treatment,
+    delete_insurance_provider,
+    delete_specialty,
+    delete_subdivision,
+    delete_treatment,
+    list_insurance_providers,
+    list_specialties,
+    list_subdivisions,
+    list_treatments,
+    update_insurance_provider,
+    update_specialty,
+    update_subdivision,
+    update_treatment,
+)
 from app.repositories.user import User
 from app.utils.openapi_helpers import standard_error_responses
 from app.utils.state import AppState
@@ -237,6 +271,299 @@ async def read_audit(
         state,
         actor=actor,
         limit=limit,
+    )
+
+
+# --- Reference data ---------------------------------------------------------
+
+
+@router.get(
+    "/specialties",
+    response_model=AdminSpecialtyList,
+    responses=standard_error_responses(401, 403),
+)
+async def read_specialties(
+    actor: User = Depends(current_admin),
+    state: AppState = Depends(get_app_state),
+) -> AdminSpecialtyList:
+    """Every Specialty, retired ones included."""
+    return await list_specialties(state, actor=actor)
+
+
+@router.post(
+    "/specialties",
+    response_model=AdminSpecialty,
+    status_code=201,
+    responses=standard_error_responses(401, 403),
+)
+async def post_specialty(
+    request: CreateSpecialtyRequest,
+    actor: User = Depends(current_admin),
+    state: AppState = Depends(get_app_state),
+) -> AdminSpecialty:
+    """Add a Specialty to the reference list."""
+    return await create_specialty(state, actor=actor, request=request)
+
+
+@router.patch(
+    "/specialties/{specialty_id}",
+    response_model=AdminSpecialty,
+    responses=standard_error_responses(401, 403),
+)
+async def patch_specialty(
+    specialty_id: str,
+    request: UpdateSpecialtyRequest,
+    actor: User = Depends(current_admin),
+    state: AppState = Depends(get_app_state),
+) -> AdminSpecialty:
+    """Change a Specialty, or restore a retired one."""
+    return await update_specialty(
+        state,
+        actor=actor,
+        specialty_id=specialty_id,
+        request=request,
+    )
+
+
+@router.delete(
+    "/specialties/{specialty_id}",
+    status_code=204,
+    response_model=None,
+    responses=standard_error_responses(401, 403),
+)
+async def remove_specialty(
+    specialty_id: str,
+    actor: User = Depends(current_admin),
+    state: AppState = Depends(get_app_state),
+) -> None:
+    """Retire a Specialty."""
+    await delete_specialty(state, actor=actor, specialty_id=specialty_id)
+
+
+@router.get(
+    "/treatments",
+    response_model=AdminTreatmentList,
+    responses=standard_error_responses(401, 403),
+)
+async def read_treatments(
+    actor: User = Depends(current_admin),
+    state: AppState = Depends(get_app_state),
+) -> AdminTreatmentList:
+    """Every Treatment, retired ones included."""
+    return await list_treatments(state, actor=actor)
+
+
+@router.post(
+    "/treatments",
+    response_model=AdminTreatment,
+    status_code=201,
+    responses=standard_error_responses(401, 403),
+)
+async def post_treatment(
+    request: CreateTreatmentRequest,
+    actor: User = Depends(current_admin),
+    state: AppState = Depends(get_app_state),
+) -> AdminTreatment:
+    """Add a Treatment to the platform-wide list."""
+    return await create_treatment(state, actor=actor, request=request)
+
+
+@router.patch(
+    "/treatments/{treatment_id}",
+    response_model=AdminTreatment,
+    responses=standard_error_responses(401, 403),
+)
+async def patch_treatment(
+    treatment_id: str,
+    request: UpdateTreatmentRequest,
+    actor: User = Depends(current_admin),
+    state: AppState = Depends(get_app_state),
+) -> AdminTreatment:
+    """Change a Treatment, or restore a retired one."""
+    return await update_treatment(
+        state,
+        actor=actor,
+        treatment_id=treatment_id,
+        request=request,
+    )
+
+
+@router.delete(
+    "/treatments/{treatment_id}",
+    status_code=204,
+    response_model=None,
+    responses=standard_error_responses(401, 403),
+)
+async def remove_treatment(
+    treatment_id: str,
+    actor: User = Depends(current_admin),
+    state: AppState = Depends(get_app_state),
+) -> None:
+    """Retire a Treatment."""
+    await delete_treatment(state, actor=actor, treatment_id=treatment_id)
+
+
+@router.get(
+    "/countries/{country_code}/insurance-providers",
+    response_model=AdminInsuranceProviderList,
+    responses=standard_error_responses(401, 403),
+)
+async def read_insurance_providers(
+    country_code: str,
+    actor: User = Depends(current_admin),
+    state: AppState = Depends(get_app_state),
+) -> AdminInsuranceProviderList:
+    """Every insurer in a Country, retired ones included."""
+    return await list_insurance_providers(
+        state,
+        actor=actor,
+        country_code=country_code,
+    )
+
+
+@router.post(
+    "/countries/{country_code}/insurance-providers",
+    response_model=AdminInsuranceProvider,
+    status_code=201,
+    responses=standard_error_responses(401, 403),
+)
+async def post_insurance_provider(
+    country_code: str,
+    request: CreateInsuranceProviderRequest,
+    actor: User = Depends(current_admin),
+    state: AppState = Depends(get_app_state),
+) -> AdminInsuranceProvider:
+    """Add an insurer to one Country."""
+    return await create_insurance_provider(
+        state,
+        actor=actor,
+        country_code=country_code,
+        request=request,
+    )
+
+
+@router.patch(
+    "/countries/{country_code}/insurance-providers/{provider_id}",
+    response_model=AdminInsuranceProvider,
+    responses=standard_error_responses(401, 403),
+)
+async def patch_insurance_provider(
+    country_code: str,
+    provider_id: str,
+    request: UpdateInsuranceProviderRequest,
+    actor: User = Depends(current_admin),
+    state: AppState = Depends(get_app_state),
+) -> AdminInsuranceProvider:
+    """Change an insurer, or restore a retired one."""
+    return await update_insurance_provider(
+        state,
+        actor=actor,
+        country_code=country_code,
+        provider_id=provider_id,
+        request=request,
+    )
+
+
+@router.delete(
+    "/countries/{country_code}/insurance-providers/{provider_id}",
+    status_code=204,
+    response_model=None,
+    responses=standard_error_responses(401, 403),
+)
+async def remove_insurance_provider(
+    country_code: str,
+    provider_id: str,
+    actor: User = Depends(current_admin),
+    state: AppState = Depends(get_app_state),
+) -> None:
+    """Retire an insurer."""
+    await delete_insurance_provider(
+        state,
+        actor=actor,
+        country_code=country_code,
+        provider_id=provider_id,
+    )
+
+
+@router.get(
+    "/countries/{country_code}/subdivisions",
+    response_model=AdminSubdivisionList,
+    responses=standard_error_responses(401, 403),
+)
+async def read_subdivisions(
+    country_code: str,
+    actor: User = Depends(current_admin),
+    state: AppState = Depends(get_app_state),
+) -> AdminSubdivisionList:
+    """Every Subdivision in a Country, retired ones included."""
+    return await list_subdivisions(
+        state,
+        actor=actor,
+        country_code=country_code,
+    )
+
+
+@router.post(
+    "/countries/{country_code}/subdivisions",
+    response_model=AdminSubdivision,
+    status_code=201,
+    responses=standard_error_responses(401, 403),
+)
+async def post_subdivision(
+    country_code: str,
+    request: CreateSubdivisionRequest,
+    actor: User = Depends(current_admin),
+    state: AppState = Depends(get_app_state),
+) -> AdminSubdivision:
+    """Add a Subdivision to one Country."""
+    return await create_subdivision(
+        state,
+        actor=actor,
+        country_code=country_code,
+        request=request,
+    )
+
+
+@router.patch(
+    "/countries/{country_code}/subdivisions/{subdivision_id}",
+    response_model=AdminSubdivision,
+    responses=standard_error_responses(401, 403),
+)
+async def patch_subdivision(
+    country_code: str,
+    subdivision_id: str,
+    request: UpdateSubdivisionRequest,
+    actor: User = Depends(current_admin),
+    state: AppState = Depends(get_app_state),
+) -> AdminSubdivision:
+    """Rename a Subdivision, or restore a retired one."""
+    return await update_subdivision(
+        state,
+        actor=actor,
+        country_code=country_code,
+        subdivision_id=subdivision_id,
+        request=request,
+    )
+
+
+@router.delete(
+    "/countries/{country_code}/subdivisions/{subdivision_id}",
+    status_code=204,
+    response_model=None,
+    responses=standard_error_responses(401, 403),
+)
+async def remove_subdivision(
+    country_code: str,
+    subdivision_id: str,
+    actor: User = Depends(current_admin),
+    state: AppState = Depends(get_app_state),
+) -> None:
+    """Retire a Subdivision."""
+    await delete_subdivision(
+        state,
+        actor=actor,
+        country_code=country_code,
+        subdivision_id=subdivision_id,
     )
 
 
