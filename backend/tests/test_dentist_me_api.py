@@ -221,6 +221,22 @@ async def test_patch_changes_bio_specialties_and_workplaces_on_the_public_profil
     assert body["branches"] == []
 
 
+async def test_moving_a_listing_country_keeps_workplaces_in_that_country(
+    client: AsyncClient, state: AppState
+) -> None:
+    user = await _make_user(state, kind="specialist")
+    await _create_listing(client, state, user)
+
+    response = await client.patch(
+        "/api/v1/dentists/me",
+        headers=_headers(state, user),
+        json={"country_code": "NG", "subdivision_code": "LAGOS"},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["message"] == "Every Workplace must be in the listing's Country"
+
+
 async def test_another_users_listing_is_not_reachable_through_my_own_route(
     client: AsyncClient, state: AppState
 ) -> None:

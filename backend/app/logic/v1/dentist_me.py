@@ -285,6 +285,8 @@ async def update_my_specialist(
         if specialist is None:
             raise NotFoundException(message="Specialist listing not found")
 
+        previous_country_code = specialist.country_code
+
         if "name" in fields:
             name = (fields["name"] or "").strip()
             if not name:
@@ -346,6 +348,12 @@ async def update_my_specialist(
                     session, branch_ids, country_code=country.code
                 ),
             )
+        elif (
+            "country_code" in fields
+            and previous_country_code != country.code
+            and any(branch.facility.country_code != country.code for branch in specialist.branches)
+        ):
+            raise InvalidRequestError(message="Every Workplace must be in the listing's Country")
 
         await session.commit()
         session.expunge_all()
