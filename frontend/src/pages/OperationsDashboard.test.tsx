@@ -31,6 +31,8 @@ const operator: AuthUser = {
   id: "user-ops",
   email: "operator@example.com",
   full_name: "Nia Operator",
+  phone: null,
+  home_country_code: null,
   role: "platform_operator",
   is_staff: true,
   account_status: "active",

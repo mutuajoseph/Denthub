@@ -15,8 +15,8 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AppShell } from "./components/layout/AppShell";
 import LoadingSpinner from "./components/ui/LoadingSpinner";
 import { usePageMeta } from "./hooks/usePageMeta";
-import { clearStoredAuth, getStoredAuth } from "./lib/auth";
-import type { AuthResponse } from "./lib/auth";
+import { clearStoredAuth, getStoredAuth, saveStoredAuth } from "./lib/auth";
+import type { AuthResponse, AuthUser } from "./lib/auth";
 
 /*
  * Route screens are code-split (issue #66) so the entry chunk ships only the
@@ -106,6 +106,16 @@ const App = () => {
     setAuth(null);
   };
 
+  const handleUserUpdated = (nextUser: AuthUser) => {
+    setAuth((current) => {
+      if (!current) return current;
+
+      const next = { ...current, user: nextUser };
+      saveStoredAuth(next);
+      return next;
+    });
+  };
+
   return (
     <ErrorBoundary>
       <AppShell onSignIn={() => setAuthOpen(true)} user={user} onLogout={handleLogout}>
@@ -135,7 +145,7 @@ const App = () => {
               path="/dashboard"
               element={
                 <RouteGuard user={user} allowedRoles={PUBLIC_ROLES} unauthorizedPath="/">
-                  <Dashboard user={user} />
+                  <Dashboard user={user} onUserUpdated={handleUserUpdated} />
                 </RouteGuard>
               }
             />

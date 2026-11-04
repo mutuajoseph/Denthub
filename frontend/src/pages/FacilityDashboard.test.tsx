@@ -22,6 +22,8 @@ const owner: AuthUser = {
   id: "user-1",
   email: "owner@example.com",
   full_name: "Sam Otieno",
+  phone: null,
+  home_country_code: null,
   role: "facility_owner",
   is_staff: false,
   account_status: "active",

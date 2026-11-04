@@ -51,6 +51,8 @@ const admin: AuthUser = {
   id: "user-admin",
   email: "admin@example.com",
   full_name: "Asha Admin",
+  phone: null,
+  home_country_code: null,
   role: "admin",
   is_staff: true,
   account_status: "active",

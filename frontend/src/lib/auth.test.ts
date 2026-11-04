@@ -73,4 +73,26 @@ describe("stored auth: Profiles and Facility Memberships (#117)", () => {
 
     expect(getStoredAuth()?.user.memberships).toEqual([]);
   });
+
+  it("reads the account phone and home Country", () => {
+    store({
+      ...baseUser,
+      phone: "+254700000000",
+      home_country_code: "KE",
+    });
+
+    const user = getStoredAuth()?.user;
+
+    expect(user?.phone).toBe("+254700000000");
+    expect(user?.home_country_code).toBe("KE");
+  });
+
+  it("treats a session stored before #119 as having no phone or home Country", () => {
+    store(baseUser);
+
+    const user = getStoredAuth()?.user;
+
+    expect(user?.phone).toBeNull();
+    expect(user?.home_country_code).toBeNull();
+  });
 });

@@ -108,6 +108,8 @@ const specialistListing: DentistListing = {
 const specialistDetail: SpecialistDetail = {
   listing: specialistListing,
   slug: "dr-wanjiku-kamau",
+  bio: "Preventive dentistry and clear aligners.",
+  avatar_key: null,
   specialties: [
     {
       id: "sp1",
@@ -149,6 +151,8 @@ const patient: AuthUser = {
   id: "p1",
   email: "amina@example.com",
   full_name: "Amina Otieno",
+  phone: null,
+  home_country_code: null,
   role: "patient",
   is_staff: false,
   account_status: "active",
@@ -247,6 +251,8 @@ describe("DentistProfile", () => {
     expect(fetchSpecialistDetailMock).toHaveBeenCalledWith("sp-1", expect.anything());
     expect(fetchFacilityDetailMock).not.toHaveBeenCalled();
 
+    expect(screen.getByRole("heading", { name: "About" })).toBeInTheDocument();
+    expect(screen.getByText("Preventive dentistry and clear aligners.")).toBeInTheDocument();
     expect(screen.getByText("General Dentistry")).toBeInTheDocument();
     expect(screen.getByText("SmileCare Dental Centre: 12 Peponi Road")).toBeInTheDocument();
     expect(screen.getByText("Westlands Medical Centre: 4 Hospital Road")).toBeInTheDocument();

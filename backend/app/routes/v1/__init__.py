@@ -20,6 +20,7 @@ from app.routes.v1 import (
     jobs,
     listing,
     magazine,
+    me,
     messages,
     operations,
     products,
@@ -34,6 +35,7 @@ v1_router.include_router(health.router)
 v1_router.include_router(admin.router)
 v1_router.include_router(operations.router)
 v1_router.include_router(auth.router, prefix="/auth")
+v1_router.include_router(me.router)
 v1_router.include_router(config.router)
 v1_router.include_router(products.router)
 v1_router.include_router(suppliers.router)

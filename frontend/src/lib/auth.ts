@@ -31,6 +31,8 @@ export interface AuthUser {
   email: string;
   role: Role;
   full_name: string;
+  phone: string | null;
+  home_country_code: string | null;
   is_staff: boolean;
   account_status: AccountStatus;
   /** What the User acts as. The app still routes on `role` until it migrates (ADR-0006). */
@@ -94,6 +96,38 @@ function parseMemberships(value: unknown): MembershipSummary[] {
   });
 }
 
+export function parseAuthUser(value: unknown): AuthUser {
+  if (!isRecord(value)) {
+    throw new Error("Invalid authentication response");
+  }
+
+  const role = normalizeRole(value.role);
+
+  if (
+    typeof value.id !== "string" ||
+    typeof value.email !== "string" ||
+    typeof value.full_name !== "string" ||
+    (value.account_status !== "active" && value.account_status !== "pending") ||
+    !role
+  ) {
+    throw new Error("Invalid authentication response");
+  }
+
+  return {
+    id: value.id,
+    email: value.email,
+    full_name: value.full_name,
+    phone: typeof value.phone === "string" ? value.phone : null,
+    home_country_code: typeof value.home_country_code === "string" ? value.home_country_code : null,
+    role,
+    is_staff: value.is_staff === true,
+    account_status: value.account_status,
+    // A session stored before #117 has neither field; it reads as none held.
+    profiles: parseProfiles(value.profiles),
+    memberships: parseMemberships(value.memberships),
+  };
+}
+
 function parseAuthResponse(value: unknown): AuthResponse {
   if (
     !isRecord(value) ||
@@ -104,33 +138,10 @@ function parseAuthResponse(value: unknown): AuthResponse {
     throw new Error("Invalid authentication response");
   }
 
-  const user = value.user;
-  const role = normalizeRole(user.role);
-
-  if (
-    typeof user.id !== "string" ||
-    typeof user.email !== "string" ||
-    typeof user.full_name !== "string" ||
-    (user.account_status !== "active" && user.account_status !== "pending") ||
-    !role
-  ) {
-    throw new Error("Invalid authentication response");
-  }
-
   return {
     access_token: value.access_token,
     token_type: value.token_type,
-    user: {
-      id: user.id,
-      email: user.email,
-      full_name: user.full_name,
-      role,
-      is_staff: user.is_staff === true,
-      account_status: user.account_status,
-      // A session stored before #117 has neither field; it reads as none held.
-      profiles: parseProfiles(user.profiles),
-      memberships: parseMemberships(user.memberships),
-    },
+    user: parseAuthUser(value.user),
   };
 }
 
@@ -146,7 +157,7 @@ function getStorage(): Storage | null {
   }
 }
 
-function saveStoredAuth(auth: AuthResponse): void {
+export function saveStoredAuth(auth: AuthResponse): void {
   const storage = getStorage();
 
   if (!storage) {

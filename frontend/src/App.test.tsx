@@ -8,7 +8,7 @@ import { ROLE, type Role } from "./auth/roles";
 import { NAV_LINKS } from "./components/Navbar";
 import { getPageMeta } from "./hooks/usePageMeta";
 import { ApiError } from "./lib/apiClient";
-import { AUTH_STORAGE_KEY, type AuthResponse } from "./lib/auth";
+import { AUTH_STORAGE_KEY, type AuthResponse, getStoredAuth } from "./lib/auth";
 import {
   type CountryConfig,
   fetchCountries,
@@ -23,6 +23,7 @@ import {
   fetchListingSearch,
   fetchSpecialistDetail,
 } from "./lib/listingApi";
+import { fetchMe } from "./lib/meApi";
 import { fetchMyStore } from "./lib/supplierApi";
 import { fetchMyProviderDashboard } from "./lib/trainingProviderApi";
 
@@ -42,6 +43,11 @@ vi.mock("./lib/countryConfigApi", () => ({
   fetchCountryConfig: vi.fn(),
   fetchSpecialties: vi.fn(),
 }));
+
+vi.mock("./lib/meApi", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./lib/meApi")>();
+  return { ...actual, fetchMe: vi.fn() };
+});
 
 vi.mock("./lib/facilityApi", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./lib/facilityApi")>();
@@ -79,6 +85,7 @@ const fetchSpecialtiesMock = vi.mocked(fetchSpecialties);
 const fetchFacilityDashboardMock = vi.mocked(fetchFacilityDashboard);
 const fetchMyStoreMock = vi.mocked(fetchMyStore);
 const fetchMyProviderDashboardMock = vi.mocked(fetchMyProviderDashboard);
+const fetchMeMock = vi.mocked(fetchMe);
 
 const facilityDetail: FacilityDetail = {
   listing: {
@@ -122,6 +129,8 @@ const specialistDetail: SpecialistDetail = {
     clinic_name: "SmileCare Dental Centre",
   },
   slug: "dr-wanjiku-kamau",
+  bio: "Preventive dentistry and clear aligners.",
+  avatar_key: null,
   specialties: [],
   branches: [],
 };
@@ -173,6 +182,8 @@ function seedAuth(role: Role): void {
       id: "user-1",
       email: "user@example.com",
       full_name: "Test User",
+      phone: null,
+      home_country_code: null,
       role,
       is_staff: role === ROLE.STAFF,
       account_status: "active",
@@ -197,6 +208,11 @@ describe("App routes", () => {
     fetchFacilityDashboardMock.mockResolvedValue(facilityDashboard);
     fetchMyStoreMock.mockResolvedValue(null);
     fetchMyProviderDashboardMock.mockResolvedValue(null);
+    fetchMeMock.mockImplementation(async () => {
+      const stored = getStoredAuth()?.user;
+      if (!stored) throw new Error("No signed-in user");
+      return stored;
+    });
   });
 
   // Route screens are lazily imported (issue #66), so the first render commits

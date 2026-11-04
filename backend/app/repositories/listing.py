@@ -28,8 +28,10 @@ from sqlalchemy import (
     Integer,
     Numeric,
     String,
+    Text,
     Time,
     UniqueConstraint,
+    delete,
     func,
     select,
 )
@@ -128,6 +130,11 @@ class Specialist(Base):
         ForeignKey("users.id", ondelete="SET NULL", name="fk_specialists_user_id"),
         nullable=True,
     )
+    #: The professional's own introduction, edited from ``/dentists/me`` (#119).
+    bio: Mapped[str | None] = mapped_column(Text, nullable=True)
+    #: The object-storage key for the profile photo. The upload flow is #123;
+    #: this column is its stable reference point in the meantime.
+    avatar_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
     country_code: Mapped[str] = mapped_column(String(2), default="KE", index=True, nullable=False)
     subdivision_code: Mapped[str] = mapped_column(String(30), index=True, nullable=False)
 
@@ -544,6 +551,21 @@ class SpecialistRepository:
         return result.scalar_one_or_none()
 
     @staticmethod
+    async def get_by_user(session: AsyncSession, user_id: str) -> Specialist | None:
+        """The listing a User runs, with its children eager-loaded (#119)."""
+        stmt = (
+            select(Specialist)
+            .options(
+                selectinload(Specialist.specialties),
+                selectinload(Specialist.branches).selectinload(Branch.opening_hours),
+                selectinload(Specialist.branches).selectinload(Branch.facility),
+            )
+            .where(Specialist.user_id == user_id)
+        )
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    @staticmethod
     async def create(session: AsyncSession, **kwargs: Any) -> Specialist:
         """Create and persist a Specialist."""
         specialist = Specialist(**kwargs)
@@ -599,9 +621,54 @@ class SpecialistRepository:
             session.add(SpecialistSpecialty(specialist_id=specialist.id, specialty_id=specialty.id))
             await session.flush()
 
+    @staticmethod
+    async def replace_specialties(
+        session: AsyncSession, *, specialist_id: str, specialty_ids: list[str]
+    ) -> None:
+        """Set the Specialist's Specialties to exactly ``specialty_ids`` (#119)."""
+        await session.execute(
+            delete(SpecialistSpecialty).where(SpecialistSpecialty.specialist_id == specialist_id)
+        )
+        session.add_all(
+            SpecialistSpecialty(specialist_id=specialist_id, specialty_id=specialty_id)
+            for specialty_id in dict.fromkeys(specialty_ids)
+        )
+        await session.flush()
+
+    @staticmethod
+    async def replace_branches(
+        session: AsyncSession, *, specialist_id: str, branch_ids: list[str]
+    ) -> None:
+        """Set the Specialist's Workplaces to exactly ``branch_ids`` (#119)."""
+        await session.execute(
+            delete(DentistBranch).where(DentistBranch.specialist_id == specialist_id)
+        )
+        session.add_all(
+            DentistBranch(specialist_id=specialist_id, branch_id=branch_id)
+            for branch_id in dict.fromkeys(branch_ids)
+        )
+        await session.flush()
+
 
 class BranchRepository:
     """Reads and writes for Branches and their Opening Hours."""
+
+    @staticmethod
+    async def get_many(session: AsyncSession, branch_ids: list[str]) -> list[Branch]:
+        """Branches by id, with the Facility and hours a response needs."""
+        if not branch_ids:
+            return []
+
+        stmt = (
+            select(Branch)
+            .options(
+                selectinload(Branch.opening_hours),
+                selectinload(Branch.facility),
+            )
+            .where(Branch.id.in_(branch_ids))
+        )
+        result = await session.execute(stmt)
+        return list(result.scalars().all())
 
     @staticmethod
     async def find(

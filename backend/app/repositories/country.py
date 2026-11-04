@@ -271,6 +271,16 @@ class CountryFeatureRepository:
 
 class SubdivisionRepository:
     @staticmethod
+    async def get(session: AsyncSession, *, country_code: str, code: str) -> Subdivision | None:
+        """One Subdivision by its Country-scoped code."""
+        stmt = select(Subdivision).where(
+            Subdivision.country_code == country_code.upper(),
+            Subdivision.code == code,
+        )
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    @staticmethod
     async def list_all(session: AsyncSession, *, country_code: str) -> list[Subdivision]:
         """Every Subdivision in a Country, alphabetical by name."""
         stmt = (
@@ -291,6 +301,17 @@ class SubdivisionRepository:
 
 
 class SpecialtyRepository:
+    @staticmethod
+    async def get_by_codes(session: AsyncSession, codes: list[str]) -> list[Specialty]:
+        """Specialties matching ``codes``, in the order the codes were given."""
+        if not codes:
+            return []
+
+        stmt = select(Specialty).where(Specialty.code.in_(codes))
+        rows = list((await session.execute(stmt)).scalars().all())
+        by_code = {row.code: row for row in rows}
+        return [by_code[code] for code in dict.fromkeys(codes) if code in by_code]
+
     @staticmethod
     async def list_all(session: AsyncSession) -> list[Specialty]:
         """Every Specialty in display order, then alphabetically."""
