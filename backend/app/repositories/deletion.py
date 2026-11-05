@@ -80,3 +80,18 @@ class DeletionRepository:
         session.add(deletion)
         await session.flush()
         return deletion
+
+    @staticmethod
+    async def list_expired(session: AsyncSession, *, now: datetime) -> list[DeletionRequest]:
+        """Completed requests whose retention window has ended."""
+        stmt = select(DeletionRequest).where(
+            DeletionRequest.status == "completed",
+            DeletionRequest.retention_until <= now,
+        )
+        result = await session.execute(stmt)
+        return list(result.scalars().all())
+
+    @staticmethod
+    async def delete(session: AsyncSession, request: DeletionRequest) -> None:
+        """Remove a completed Deletion Request."""
+        await session.delete(request)

@@ -204,3 +204,18 @@ both are **branch**-based. So the **GitHub Action is the deployer**: it builds/d
 the tagged commit via the Vercel CLI and a Render deploy hook, and each platform's own
 production auto-deploy is turned **off**. That's what makes "tag = production release"
 work with these two providers.
+
+
+## Purging retained clinical data (#150)
+
+Completed account deletions retain clinician-authored clinical data until
+`deletion_requests.retention_until`. To purge what has expired:
+
+```bash
+uv run python -m app.scripts.purge_retained
+```
+
+The job is idempotent: records past their deadline are removed, records still
+inside the window are untouched, and a second run is a no-op. Run it from a
+scheduler or a one-off command; no new table is required (the Deletion Request
+is the queue). See `app/scripts/purge_retained.py`.

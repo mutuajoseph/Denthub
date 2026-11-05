@@ -534,6 +534,11 @@ class SpecialistRepository:
         return result.scalar_one_or_none()
 
     @staticmethod
+    async def delete(session: AsyncSession, specialist: Specialist) -> None:
+        """Delete a Specialist listing."""
+        await session.delete(specialist)
+
+    @staticmethod
     async def get(session: AsyncSession, specialist_id: str) -> Specialist | None:
         """One Specialist with specialisms and Branches eagerly loaded."""
         stmt = (

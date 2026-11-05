@@ -234,6 +234,18 @@ class HealthRecordRepository:
         )
 
     @staticmethod
+    async def delete_all_entries(session: AsyncSession, *, record_id: str) -> None:
+        """Delete every entry on a record (used when purging)."""
+        await session.execute(
+            delete(HealthRecordEntry).where(HealthRecordEntry.record_id == record_id)
+        )
+
+    @staticmethod
+    async def delete_record(session: AsyncSession, record: PatientHealthRecord) -> None:
+        """Delete a now-empty Patient Health Record."""
+        await session.delete(record)
+
+    @staticmethod
     async def list_entries(
         session: AsyncSession,
         *,

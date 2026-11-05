@@ -35,6 +35,7 @@ from sqlalchemy import (
     ForeignKey,
     String,
     Text,
+    delete,
     func,
     select,
     update,
@@ -209,6 +210,11 @@ class AppointmentRepository:
         await session.execute(
             update(Appointment).where(Appointment.patient_id == patient_id).values(note=None)
         )
+
+    @staticmethod
+    async def delete_for_patient(session: AsyncSession, *, patient_id: str) -> None:
+        """Delete every Appointment belonging to a Patient."""
+        await session.execute(delete(Appointment).where(Appointment.patient_id == patient_id))
 
     @staticmethod
     async def count_for_patient(session: AsyncSession, *, patient_id: str) -> int:
