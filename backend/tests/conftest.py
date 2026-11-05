@@ -27,10 +27,11 @@ from tests.factories import (
     build_jobs,
     build_listings,
     build_magazine_articles,
-    build_profiles,
     build_products,
+    build_profiles,
     build_specialties,
     build_training,
+    build_treatments,
     build_users,
 )
 
@@ -56,6 +57,10 @@ async def session_maker() -> AsyncIterator[async_sessionmaker[AsyncSession]]:
             specialties = build_specialties()
             for specialty in specialties:
                 session.add(specialty)
+            await session.flush()
+
+            for treatment in build_treatments():
+                session.add(treatment)
             await session.flush()
 
             facilities, specialists = build_listings(specialties)

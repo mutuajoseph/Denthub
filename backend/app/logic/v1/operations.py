@@ -27,7 +27,7 @@ from typing import Literal
 from pydantic import BaseModel
 
 from app.exceptions import ForbiddenException, NotFoundException
-from app.repositories.admin import AdminAuditRepository
+from app.logic.v1.audit import audit
 from app.repositories.job import JobPosting, JobsRepository
 from app.repositories.user import (
     OperatorDivision,
@@ -186,11 +186,9 @@ async def set_job_status(
 
         # The same trail as an Admin's moderation: the snapshot keeps the
         # operator's role, and the write and its audit row commit together.
-        await AdminAuditRepository.record(
+        await audit(
             session,
-            actor_id=context.user.id,
-            actor_email=context.user.email,
-            actor_role=context.user.role,
+            context.user,
             action="moderation.status",
             entity_type="job",
             entity_id=posting.id,

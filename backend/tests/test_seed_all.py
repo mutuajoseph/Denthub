@@ -22,6 +22,7 @@ from app.repositories.database import Base
 from app.repositories.job import JobPosting
 from app.repositories.product import Product
 from app.repositories.training import TrainingProvider
+from app.repositories.treatment import Treatment
 from app.scripts import seed_all
 from app.utils.logger import configure_logging
 from app.utils.state import AppState
@@ -115,8 +116,9 @@ async def test_seed_all_populates_the_catalogue_and_re_runs_cleanly() -> None:
             products = await session.scalar(select(func.count()).select_from(Product))
             jobs = await session.scalar(select(func.count()).select_from(JobPosting))
             providers = await session.scalar(select(func.count()).select_from(TrainingProvider))
+            treatments = await session.scalar(select(func.count()).select_from(Treatment))
 
-        assert countries and products and jobs and providers
+        assert countries and products and jobs and providers and treatments
 
         # Idempotent: a second run (every deploy re-seeds) must not raise or duplicate.
         await seed_all.seed_all(state)
