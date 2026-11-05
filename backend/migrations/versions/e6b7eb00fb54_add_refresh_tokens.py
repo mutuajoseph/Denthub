@@ -1,7 +1,7 @@
 """add refresh tokens
 
 Revision ID: e6b7eb00fb54
-Revises: a03c4a379430
+Revises: e85d22bf80a9
 Create Date: 2026-11-01 17:48:26.558479
 
 ADR-0003 follow-up (#121): one row per issued refresh token, keyed by the
@@ -19,7 +19,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = 'e6b7eb00fb54'
-down_revision: Union[str, Sequence[str], None] = 'a03c4a379430'
+down_revision: Union[str, Sequence[str], None] = 'e85d22bf80a9'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
