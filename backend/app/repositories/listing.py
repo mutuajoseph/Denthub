@@ -515,6 +515,18 @@ class SpecialistRepository:
         return int(result.scalar_one())
 
     @staticmethod
+    async def get_by_user_id(session: AsyncSession, user_id: str) -> Specialist | None:
+        """The Specialist listing a User runs, or ``None`` (#113).
+
+        ADR-0006 gives a User at most one Specialist listing, enforced by
+        ``uq_specialists_user_id``, so this is the ownership check for the
+        Specialist side of an Appointment.
+        """
+        stmt = select(Specialist).where(Specialist.user_id == user_id)
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    @staticmethod
     async def get(session: AsyncSession, specialist_id: str) -> Specialist | None:
         """One Specialist with specialisms and Branches eagerly loaded."""
         stmt = (
