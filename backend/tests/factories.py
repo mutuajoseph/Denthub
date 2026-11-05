@@ -7,7 +7,7 @@ min_qty, category, in_stock)`.
 
 from __future__ import annotations
 
-from datetime import datetime, time, timedelta, UTC
+from datetime import UTC, datetime, time, timedelta
 from decimal import Decimal
 
 from app.logic.v1.auth import hash_password
@@ -23,13 +23,14 @@ from app.repositories.health_record import HealthRecordEntry, PatientHealthRecor
 from app.repositories.job import JobPosting, JobSalaryRange
 from app.repositories.listing import Branch, Facility, OpeningHour, Specialist
 from app.repositories.magazine import MagazineArticle, MagazineArticleTag
-from app.repositories.profile import Profile
 from app.repositories.product import Product, Supplier
+from app.repositories.profile import Profile
 from app.repositories.training import (
     TrainingCourse,
     TrainingProvider,
     TrainingWebinar,
 )
+from app.repositories.treatment import Treatment
 from app.repositories.user import User
 
 LOCAL_SUPPLIER = {
@@ -170,6 +171,14 @@ SPECIALTIES: list[tuple[str, str, str, int]] = [
 ]
 
 
+#: (code, name, description, display_order)
+TREATMENTS: list[tuple[str, str, str, int]] = [
+    ("consultation", "Consultation", "An examination and treatment plan.", 10),
+    ("scale-and-polish", "Scale and Polish", "A professional clean.", 20),
+    ("dental-crown", "Dental Crown", "A cap that restores a damaged tooth.", 30),
+]
+
+
 def build_countries() -> list[Country]:
     """Return the seeded Countries with their subdivisions, flags, and providers."""
     countries = [Country(**KENYA), Country(**NIGERIA)]
@@ -208,6 +217,14 @@ def build_specialties() -> list[Specialty]:
     return [
         Specialty(code=code, name=name, description=description, display_order=display_order)
         for code, name, description, display_order in SPECIALTIES
+    ]
+
+
+def build_treatments() -> list[Treatment]:
+    """Return the seeded platform-wide treatments in picker order."""
+    return [
+        Treatment(code=code, name=name, description=description, display_order=display_order)
+        for code, name, description, display_order in TREATMENTS
     ]
 
 
@@ -943,5 +960,6 @@ __all__ = [
     "build_products",
     "build_specialties",
     "build_training",
+    "build_treatments",
     "build_users",
 ]

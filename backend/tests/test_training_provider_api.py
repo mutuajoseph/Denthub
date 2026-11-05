@@ -8,6 +8,7 @@ The role gate and every error the routes document are covered here.
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from httpx import AsyncClient
@@ -306,8 +307,10 @@ async def test_stats_count_own_courses_and_split_webinars(
     await _create_provider(client, headers)
     await _add_course(client, headers, cpd_points=6)
     await _add_course(client, headers, price=None, cpd_points=2)
-    # One upcoming (2026-11-01) and one already past.
-    await _add_webinar(client, headers, scheduled_start="2026-11-01T10:00:00", cpd_points=2)
+    # One upcoming and one already past. The upcoming start is relative to now,
+    # so the count cannot go stale as the calendar moves (#154).
+    upcoming = datetime.now(UTC).replace(tzinfo=None) + timedelta(days=1)
+    await _add_webinar(client, headers, scheduled_start=upcoming.isoformat(), cpd_points=2)
     await _add_webinar(client, headers, scheduled_start="2020-01-01T10:00:00", cpd_points=1)
 
     response = await client.get(_BASE, headers=headers)

@@ -20,12 +20,16 @@ from app.logic.v1.country import (
     DEFAULT_COUNTRY_CODE,
     CountryConfig,
     CountryList,
+    InsuranceProviderList,
     SpecialtyList,
     SubdivisionList,
+    TreatmentList,
     get_country_config,
     list_countries,
+    list_insurance_providers,
     list_specialties,
     list_subdivisions,
+    list_treatments,
 )
 from app.utils.openapi_helpers import standard_error_responses
 from app.utils.state import AppState
@@ -80,3 +84,27 @@ async def read_country_regions(
 async def read_specialties(state: AppState = Depends(get_app_state)) -> SpecialtyList:
     """List the canonical dental specialties, in filter-menu order."""
     return await list_specialties(state)
+
+
+@router.get(
+    "/treatments",
+    response_model=TreatmentList,
+    responses=standard_error_responses(),
+)
+async def read_treatments(state: AppState = Depends(get_app_state)) -> TreatmentList:
+    """List the platform-wide treatments a Branch draws its Services from."""
+    return await list_treatments(state)
+
+
+@router.get(
+    "/country/insurance-providers",
+    response_model=InsuranceProviderList,
+    responses=standard_error_responses(),
+)
+async def read_country_insurance_providers(
+    country: str | None = Query(default=None, description="Overrides Accept-Country"),
+    accept_country: str = Header(default=DEFAULT_COUNTRY_CODE, alias="Accept-Country"),
+    state: AppState = Depends(get_app_state),
+) -> InsuranceProviderList:
+    """List one Country's active insurers. An unknown country yields an empty list."""
+    return await list_insurance_providers(state, country_code=country or accept_country)

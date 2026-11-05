@@ -70,3 +70,10 @@ and read them from the row on each `/operations` request:
 - Add Division/tier assignment to the admin users screen when it is scheduled.
 - Revisit if an Operator ever spans more than one Division; that changes the
   columns to a join table.
+
+## Update (#122)
+The admin-console follow-up is done: `GET/POST /admin/staff` and
+`PATCH /admin/staff/{id}` set a staff account's role and, for Operators, the
+Division and tier. The last active Super Admin cannot be demoted or
+deactivated, so the platform always keeps an administrator who can grant
+staff access.
