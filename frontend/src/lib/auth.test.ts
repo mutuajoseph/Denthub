@@ -1,6 +1,9 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { AUTH_STORAGE_KEY, getStoredAuth } from "./auth";
+import { postJson } from "./apiClient";
+import { AUTH_STORAGE_KEY, changePassword, getStoredAuth, resendVerificationEmail } from "./auth";
+
+vi.mock("./apiClient", () => ({ postJson: vi.fn() }));
 
 const baseUser = {
   id: "u-1",
@@ -72,5 +75,46 @@ describe("stored auth: Profiles and Facility Memberships (#117)", () => {
     });
 
     expect(getStoredAuth()?.user.memberships).toEqual([]);
+  });
+});
+
+describe("signed-in account calls (#141)", () => {
+  const postJsonMock = vi.mocked(postJson);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.localStorage.clear();
+  });
+
+  afterEach(() => {
+    window.localStorage.clear();
+  });
+
+  it("changes the password with the session and stores the returned one", async () => {
+    postJsonMock.mockResolvedValue({
+      access_token: "fresh-token",
+      token_type: "bearer",
+      user: { ...baseUser, email_verified: true },
+    });
+
+    await changePassword("old-pass", "new-passphrase");
+
+    expect(postJsonMock).toHaveBeenCalledWith(
+      "/auth/password/change",
+      { current_password: "old-pass", new_password: "new-passphrase" },
+      { auth: true },
+    );
+    expect(getStoredAuth()?.access_token).toBe("fresh-token");
+    expect(getStoredAuth()?.user.email).toBe(baseUser.email);
+  });
+
+  it("asks for a new verification link with the session", async () => {
+    postJsonMock.mockResolvedValue(null);
+
+    await resendVerificationEmail();
+
+    expect(postJsonMock).toHaveBeenCalledWith("/auth/verify-email/resend", undefined, {
+      auth: true,
+    });
   });
 });

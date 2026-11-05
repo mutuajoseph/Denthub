@@ -88,6 +88,8 @@ function accountLinksFor(user: AuthUser): AccountLink[] {
     links.push({ label: "Training", href: "/dashboard/training" });
   }
 
+  links.push({ label: "Account settings", href: "/account/settings" });
+
   return links;
 }
 

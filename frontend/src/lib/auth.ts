@@ -1,5 +1,5 @@
 import { type Role, isPublicRole, normalizeRole } from "../auth/roles";
-import { postJson } from "./apiClient";
+import { type ApiRequestOptions, postJson } from "./apiClient";
 
 export type AccountStatus = "active" | "pending";
 
@@ -163,8 +163,12 @@ function saveStoredAuth(auth: AuthResponse): void {
   }
 }
 
-async function postAuth(path: string, body: UnknownRecord): Promise<AuthResponse> {
-  const data = await postJson<unknown>(path, body);
+async function postAuth(
+  path: string,
+  body: UnknownRecord,
+  options: ApiRequestOptions = {},
+): Promise<AuthResponse> {
+  const data = await postJson<unknown>(path, body, options);
 
   const authResponse = parseAuthResponse(data);
   saveStoredAuth(authResponse);
@@ -249,9 +253,10 @@ export function clearStoredAuth(): void {
   }
 }
 
-/* Email verification and the password lifecycle (#120). Emailed links carry a
- * single-use token; the token is the credential, so these calls need no
- * session. */
+/* Email verification and the password lifecycle (#120). The emailed-link calls
+ * carry a single-use token, which is the credential, so they need no session.
+ * Changing a password and resending verification act on the signed-in User, so
+ * they attach the bearer token. */
 
 export interface ForgotPasswordResponse {
   message: string;
@@ -267,4 +272,21 @@ export async function requestPasswordReset(email: string): Promise<ForgotPasswor
 
 export async function resetPassword(token: string, newPassword: string): Promise<void> {
   await postJson<null>("/auth/password/reset", { token, new_password: newPassword });
+}
+
+/** Change the signed-in User's password; the returned session replaces the stored one. */
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<AuthResponse> {
+  return postAuth(
+    "/auth/password/change",
+    { current_password: currentPassword, new_password: newPassword },
+    { auth: true },
+  );
+}
+
+/** Email the signed-in User a fresh verification link; 409 when already verified. */
+export async function resendVerificationEmail(): Promise<void> {
+  await postJson<null>("/auth/verify-email/resend", undefined, { auth: true });
 }
