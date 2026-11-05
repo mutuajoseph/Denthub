@@ -96,14 +96,24 @@ re-running the failed run from the Actions UI.
    production if it is missing or left at the public dev default**, so a release
    without it fails at startup rather than serving forgeable tokens. Rotating the
    key invalidates every existing session.
-5. Service → **Settings → Deploy Hook** → copy the URL.
-6. Confirm the health check is `/api/v1/health`.
-7. Optionally set `CLINICAL_RETENTION_DAYS` = how many days clinician-authored
-   Health Record entries are kept after an account is deleted (#128). It is not
-   a secret; when unset the app uses **2555** (seven years). **The default is
-   provisional and needs legal confirmation** before real patient data is
-   served; change it here when counsel settles the period. The value must be a
-   positive integer or the backend refuses to start.
+5. Service → **Environment** → add the mail settings (#120), all `sync: false`.
+   **The app refuses to start in production if any is missing**, because signup
+   and password reset would otherwise email nobody.
+   - `RESEND_API_KEY`: an API key from Resend (resend.com → API Keys, "Sending
+     access"). Verify the sending domain in Resend first (it gives you DNS records
+     to add) or every send is rejected.
+   - `MAIL_FROM`: the From header, on that verified domain, e.g.
+     `DentHub <no-reply@yourdomain>`.
+   - `FRONTEND_URL`: the client's origin, e.g. `https://denthub.vercel.app`.
+     Emailed links point here (`/verify-email`, `/reset-password`).
+6. Service → **Environment** → optionally set `CLINICAL_RETENTION_DAYS` = how many
+   days clinician-authored Health Record entries are kept after an account is
+   deleted (#128). It is not a secret; when unset the app uses **2555** (seven
+   years). **The default is provisional and needs legal confirmation** before
+   real patient data is served; change it here when counsel settles the period.
+   The value must be a positive integer or the backend refuses to start.
+7. Service → **Settings → Deploy Hook** → copy the URL.
+8. Confirm the health check is `/api/v1/health`.
 
 > The blueprint's `startCommand` prefixes uvicorn with
 > `uv run python -m app.scripts.seed_all`, which runs `alembic upgrade head` once and
