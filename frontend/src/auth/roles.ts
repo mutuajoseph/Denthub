@@ -44,6 +44,7 @@ export const FACILITY_ROLES = [
   ROLE.FRONT_OFFICE,
   ROLE.FACILITY_DENTIST,
 ] as const satisfies readonly Role[];
+export const SPECIALIST_ROLES = [ROLE.SPECIALIST] as const satisfies readonly Role[];
 
 export const SUPPLIER_ROLES = [ROLE.SUPPLIER] as const satisfies readonly Role[];
 
@@ -216,7 +217,7 @@ export const DASHBOARD_PATHS = {
   patient: "/dashboard",
   international_patient: "/dashboard",
   dentist: "/dashboard",
-  specialist: "/dashboard",
+  specialist: "/dashboard/specialist",
   intern: "/dashboard",
   facility_owner: "/dashboard/facility",
   front_office: "/dashboard/facility",

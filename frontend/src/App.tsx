@@ -8,6 +8,7 @@ import {
   FACILITY_ROLES,
   OPERATIONS_ROLES,
   PUBLIC_ROLES,
+  SPECIALIST_ROLES,
   SUPPLIER_ROLES,
   TRAINING_PROVIDER_ROLES,
 } from "./auth/roles";
@@ -40,6 +41,9 @@ const Emergency = lazy(() =>
 );
 const FacilityDashboard = lazy(() =>
   import("./pages/FacilityDashboard").then((module) => ({ default: module.FacilityDashboard })),
+);
+const SpecialistDashboard = lazy(() =>
+  import("./pages/SpecialistDashboard").then((module) => ({ default: module.SpecialistDashboard })),
 );
 const FindDentist = lazy(() =>
   import("./pages/FindDentist").then((module) => ({ default: module.FindDentist })),
@@ -175,6 +179,14 @@ const App = () => {
               element={
                 <RouteGuard user={user} allowedRoles={FACILITY_ROLES} unauthorizedPath="/">
                   <FacilityDashboard user={user} />
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="/dashboard/specialist"
+              element={
+                <RouteGuard user={user} allowedRoles={SPECIALIST_ROLES} unauthorizedPath="/">
+                  <SpecialistDashboard user={user} />
                 </RouteGuard>
               }
             />
