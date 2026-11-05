@@ -7,7 +7,7 @@
 import { useCountryConfigStore } from "../store/countryConfigStore";
 import { useRegionStore } from "../store/regionStore";
 import { API_BASE } from "./api";
-import { getStoredToken } from "./auth";
+import { getStoredToken, refreshSession } from "./auth";
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 
@@ -41,8 +41,13 @@ export interface ApiRequestOptions extends Omit<RequestInit, "body"> {
   json?: unknown;
   countryCode?: string;
   currency?: string;
-  /** Attaches the stored bearer token when one is signed in. */
+  /** Attaches the in-memory bearer token when one is signed in. */
   auth?: boolean;
+  /**
+   * On a 401, refresh the session once and retry.
+   * Defaults to true when `auth` is set; the refresh call itself turns it off.
+   */
+  retryOnUnauthorized?: boolean;
   timeoutMs?: number;
 }
 
@@ -117,7 +122,7 @@ async function readBody(res: Response): Promise<unknown> {
   }
 }
 
-export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+async function executeRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
   const {
     query,
     json,
@@ -166,7 +171,15 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   let res: Response;
 
   try {
-    res = await fetch(url, { ...init, headers, body, signal: controller.signal });
+    // The refresh cookie is same-origin (Vite proxy in dev, the Vercel
+    // rewrite in production), so `include` keeps it on every API call.
+    res = await fetch(url, {
+      ...init,
+      headers,
+      body,
+      credentials: "include",
+      signal: controller.signal,
+    });
   } catch (error) {
     if (controller.signal.aborted) {
       throw new ApiError("The request timed out. The server may be slow or unreachable.", {
@@ -196,6 +209,33 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   }
 
   return payload as T;
+}
+
+/**
+ * The one transport every `/api/v1` call goes through. A 401 on an
+ * authenticated request refreshes the session once and retries, so an expired
+ * access token is invisible to the caller (ADR-0003 follow-up, #121).
+ */
+export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+  const { retryOnUnauthorized, ...request } = options;
+  const shouldRetry = retryOnUnauthorized ?? options.auth === true;
+
+  try {
+    return await executeRequest<T>(path, request);
+  } catch (error) {
+    if (!shouldRetry || !(error instanceof ApiError) || error.status !== 401) {
+      throw error;
+    }
+
+    const session = await refreshSession();
+
+    if (!session) {
+      throw error;
+    }
+
+    // A single retry: this call bypasses `apiRequest`, so it cannot loop.
+    return executeRequest<T>(path, request);
+  }
 }
 
 export function getJson<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {

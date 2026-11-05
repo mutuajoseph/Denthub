@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { getStoredAuth, register } from "../lib/auth";
+import { getStoredAuth, getStoredToken, getStoredUser, register } from "../lib/auth";
 import {
   CANONICAL_ROLES,
   DASHBOARD_PATHS,
@@ -129,7 +129,10 @@ describe("auth contract", () => {
     });
     expect(response.user.role).toBe(ROLE.FACILITY_OWNER);
     expect(response.user.is_staff).toBe(false);
-    expect(getStoredAuth()).toEqual(response);
+    // The profile is persisted; the access token stays in memory (#121).
+    expect(getStoredUser()).toEqual(response.user);
+    expect(getStoredToken()).toBe("token");
+    expect(getStoredAuth()?.user).toEqual(response.user);
   });
 
   it("does not accept an unknown role from the authentication response", async () => {

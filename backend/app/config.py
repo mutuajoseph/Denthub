@@ -16,6 +16,11 @@ API_V1_PREFIX = "/api/v1"
 # real JWT_SECRET_KEY; this literal must never sign a production token.
 DEV_JWT_SECRET_KEY = "denthub-super-secret-dev-key-change-in-prod"
 
+# The refresh cookie is signed with its own secret (ADR-0003 follow-up, #121),
+# so an access-token secret leak cannot also mint refresh tokens. Same rule:
+# a development default only, refused in production.
+DEV_REFRESH_TOKEN_SECRET = "denthub-super-secret-dev-refresh-key-change-in-prod"
+
 #: Provisional clinical retention window (about seven years) for
 #: clinician-authored Health Record entries after an account is deleted (#128).
 #: Confirm against the applicable jurisdiction before relying on it.
@@ -34,6 +39,8 @@ class Settings:
     database_url: str
     jwt_secret_key: str
     jwt_algorithm: str
+    #: Signs the refresh cookie's JWT; distinct from ``jwt_secret_key``.
+    refresh_token_secret: str
     #: How long clinician-authored Health Record entries are kept after an
     #: account is deleted (#128). Provisional default; see ``docs/RELEASE.md``.
     clinical_retention_days: int = DEFAULT_CLINICAL_RETENTION_DAYS
@@ -87,6 +94,15 @@ class Settings:
                 "Render dashboard (render.yaml marks it sync: false)."
             )
 
+        refresh_token_secret = os.getenv("REFRESH_TOKEN_SECRET", DEV_REFRESH_TOKEN_SECRET)
+
+        if environment == "production" and refresh_token_secret == DEV_REFRESH_TOKEN_SECRET:
+            raise RuntimeError(
+                "REFRESH_TOKEN_SECRET must be set to a real secret in production; "
+                "refusing to start with the development default. Set it in the "
+                "Render dashboard (render.yaml marks it sync: false)."
+            )
+
         retention_raw = os.getenv("CLINICAL_RETENTION_DAYS", str(DEFAULT_CLINICAL_RETENTION_DAYS))
         try:
             clinical_retention_days = int(retention_raw)
@@ -129,6 +145,7 @@ class Settings:
             database_url=database_url,
             jwt_secret_key=jwt_secret_key,
             jwt_algorithm=os.getenv("JWT_ALGORITHM", "HS256"),
+            refresh_token_secret=refresh_token_secret,
             clinical_retention_days=clinical_retention_days,
             frontend_url=(frontend_url or "http://localhost:5173").rstrip("/"),
             mail_from=mail_from or "DentHub <no-reply@localhost>",

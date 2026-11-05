@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -8,7 +8,7 @@ import { ROLE, type Role } from "./auth/roles";
 import { NAV_LINKS } from "./components/Navbar";
 import { getPageMeta } from "./hooks/usePageMeta";
 import { ApiError } from "./lib/apiClient";
-import { AUTH_STORAGE_KEY, type AuthResponse } from "./lib/auth";
+import { AUTH_STORAGE_KEY, type AuthResponse, clearStoredAuth } from "./lib/auth";
 import {
   type CountryConfig,
   fetchCountries,
@@ -437,5 +437,22 @@ describe("App routes", () => {
     expect(
       await screen.findByRole("heading", { name: /create your provider profile/i }),
     ).toBeInTheDocument();
+  });
+
+  it("drops a signed-in user when a failed refresh clears the session", async () => {
+    seedAuth(ROLE.PATIENT);
+
+    renderApp("/");
+
+    expect(screen.getByRole("button", { name: /account menu for test user/i })).toBeInTheDocument();
+
+    act(() => {
+      clearStoredAuth();
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: /account menu for test user/i })).toBeNull();
+    });
+    expect(screen.getAllByText("Sign in").length).toBeGreaterThan(0);
   });
 });

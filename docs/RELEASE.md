@@ -96,7 +96,13 @@ re-running the failed run from the Actions UI.
    production if it is missing or left at the public dev default**, so a release
    without it fails at startup rather than serving forgeable tokens. Rotating the
    key invalidates every existing session.
-5. Service → **Environment** → add the mail settings (#120), all `sync: false`.
+5. Service → **Environment** → add `REFRESH_TOKEN_SECRET` = a second fresh random
+   value, generated the same way but **different** from `JWT_SECRET_KEY`. It signs
+   the refresh cookie (#121), so a leak of one secret cannot forge the other. It is
+   declared `sync: false` and must never be committed. **The app refuses to start in
+   production while it is missing or on the dev default.** Rotating it signs every
+   user out.
+6. Service → **Environment** → add the mail settings (#120), all `sync: false`.
    **The app refuses to start in production if any is missing**, because signup
    and password reset would otherwise email nobody.
    - `RESEND_API_KEY`: an API key from Resend (resend.com → API Keys, "Sending

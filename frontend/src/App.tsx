@@ -1,4 +1,4 @@
-import { Suspense, lazy, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { Route, Routes } from "react-router-dom";
 
 import { AuthModal } from "./auth/AuthModal";
@@ -15,8 +15,8 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AppShell } from "./components/layout/AppShell";
 import LoadingSpinner from "./components/ui/LoadingSpinner";
 import { usePageMeta } from "./hooks/usePageMeta";
-import { clearStoredAuth, getStoredAuth } from "./lib/auth";
-import type { AuthResponse } from "./lib/auth";
+import { getStoredUser, logoutSession, restoreSession, subscribeToAuthChanges } from "./lib/auth";
+import type { AuthResponse, AuthUser } from "./lib/auth";
 
 /*
  * Route screens are code-split (issue #66) so the entry chunk ships only the
@@ -101,18 +101,38 @@ const App = () => {
   usePageMeta();
 
   const [authOpen, setAuthOpen] = useState(false);
-  const [auth, setAuth] = useState<AuthResponse | null>(() => getStoredAuth());
+  const [user, setUser] = useState<AuthUser | null>(() => getStoredUser());
 
-  const user = auth?.user ?? null;
+  // A reload starts with no in-memory access token. The httpOnly refresh
+  // cookie recovers the session; a stale one fails quietly and signs out.
+  useEffect(() => {
+    let active = true;
+
+    void restoreSession().then((restored) => {
+      if (active && restored) {
+        setUser(restored.user);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // A failed refresh clears the stored session outside React. Mirror that in
+  // state so the shell and RouteGuard drop access at once, not on next reload.
+  useEffect(() => subscribeToAuthChanges(setUser), []);
 
   const handleLoginSuccess = (authResponse: AuthResponse) => {
-    setAuth(authResponse);
+    // The auth client already persisted this response (token in memory, profile
+    // and surface in storage), so the App only mirrors the user in state.
+    setUser(authResponse.user);
     setAuthOpen(false);
   };
 
   const handleLogout = () => {
-    clearStoredAuth();
-    setAuth(null);
+    setUser(null);
+    void logoutSession();
   };
 
   return (

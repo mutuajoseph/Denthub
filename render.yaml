@@ -60,6 +60,13 @@ services:
       # Generate one with: python -c "import secrets; print(secrets.token_urlsafe(48))"
       - key: JWT_SECRET_KEY
         sync: false
+      # Signs the refresh cookie's JWT (#121), separately from the access-token
+      # secret so a leak of one cannot forge the other. Required in production:
+      # the app refuses to start on the public dev default (app/config.py).
+      # Rotating it signs every user out. Generate one with:
+      # python -c "import secrets; print(secrets.token_urlsafe(48))"
+      - key: REFRESH_TOKEN_SECRET
+        sync: false
       # Set this in the Render dashboard (sync: false) — do NOT commit a
       # connection string. It must be a real Postgres URL, not SQLite: the free
       # plan's filesystem is ephemeral, so a local .db file is wiped on every
