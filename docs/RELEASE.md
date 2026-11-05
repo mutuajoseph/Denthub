@@ -102,8 +102,18 @@ re-running the failed run from the Actions UI.
    declared `sync: false` and must never be committed. **The app refuses to start in
    production while it is missing or on the dev default.** Rotating it signs every
    user out.
-6. Service → **Settings → Deploy Hook** → copy the URL.
-7. Confirm the health check is `/api/v1/health`.
+6. Service → **Environment** → add the mail settings (#120), all `sync: false`.
+   **The app refuses to start in production if any is missing**, because signup
+   and password reset would otherwise email nobody.
+   - `RESEND_API_KEY`: an API key from Resend (resend.com → API Keys, "Sending
+     access"). Verify the sending domain in Resend first (it gives you DNS records
+     to add) or every send is rejected.
+   - `MAIL_FROM`: the From header, on that verified domain, e.g.
+     `DentHub <no-reply@yourdomain>`.
+   - `FRONTEND_URL`: the client's origin, e.g. `https://denthub.vercel.app`.
+     Emailed links point here (`/verify-email`, `/reset-password`).
+7. Service → **Settings → Deploy Hook** → copy the URL.
+8. Confirm the health check is `/api/v1/health`.
 
 > The blueprint's `startCommand` prefixes uvicorn with
 > `uv run python -m app.scripts.seed_all`, which runs `alembic upgrade head` once and

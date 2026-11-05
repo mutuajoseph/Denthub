@@ -28,6 +28,9 @@ def _settings(environment: str) -> Settings:
         jwt_secret_key="test-secret",
         jwt_algorithm="HS256",
         refresh_token_secret="test-refresh-secret",
+        frontend_url="https://example.com",
+        mail_from="DentHub <no-reply@example.com>",
+        resend_api_key=None,
     )
 
 

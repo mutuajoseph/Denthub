@@ -5,16 +5,23 @@ Handles password hashing, token generation/verification, and signup/login flows.
 
 from __future__ import annotations
 
+import secrets
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Any, Literal, cast
+from typing import Annotated, Any, Literal, cast
 
 import bcrypt
 import jwt
-from pydantic import BaseModel, EmailStr
+from pydantic import AfterValidator, BaseModel, EmailStr, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.exceptions import ConflictError, ForbiddenException, UnauthorizedException
+from app.exceptions import (
+    ConflictError,
+    ForbiddenException,
+    InvalidRequestError,
+    UnauthorizedException,
+)
 from app.repositories.profile import (
     PROFILE_FOR_ACCOUNT_TYPE,
     FacilityPermission,
@@ -23,6 +30,8 @@ from app.repositories.profile import (
 )
 from app.repositories.refresh_token import RefreshTokenRepository
 from app.repositories.user import User, UserRepository
+from app.repositories.user_token import TokenPurpose, UserTokenRepository
+from app.utils.mailer import OutgoingEmail
 from app.utils.state import AppState
 
 #: Account types public signup may create (PRD §2). Staff roles are granted by
@@ -96,6 +105,15 @@ STAFF_REFRESH_COOKIE = "denthub_staff_refresh"
 PUBLIC_REFRESH_PATH = "/api/v1/auth"
 STAFF_REFRESH_PATH = "/api/v1/auth/staff"
 
+#: How long an emailed link stays usable (#120, settled with the maintainer).
+VERIFY_EMAIL_TTL = timedelta(hours=48)
+RESET_PASSWORD_TTL = timedelta(hours=1)
+
+#: bcrypt only reads the first 72 bytes; longer passwords are refused at the
+#: boundary as a 422 rather than silently truncated (backend AGENTS.md, "Auth").
+MIN_PASSWORD_LENGTH = 8
+MAX_PASSWORD_BYTES = 72
+
 
 def is_staff_role(role: str) -> bool:
     """Whether a stored role is a staff role rather than a public one."""
@@ -135,6 +153,7 @@ class UserResponse(BaseModel):
     full_name: str
     is_staff: bool
     account_status: AccountStatus = "active"
+    email_verified: bool = False
     profiles: list[ProfileSummary] = []
     memberships: list[MembershipSummary] = []
 
@@ -181,6 +200,46 @@ class UserLogin(BaseModel):
     password: str
 
 
+def _check_new_password(value: str) -> str:
+    if len(value) < MIN_PASSWORD_LENGTH:
+        raise ValueError(f"Password must be at least {MIN_PASSWORD_LENGTH} characters")
+    if len(value.encode("utf-8")) > MAX_PASSWORD_BYTES:
+        raise ValueError(f"Password must be at most {MAX_PASSWORD_BYTES} bytes")
+    return value
+
+
+NewPassword = Annotated[str, AfterValidator(_check_new_password)]
+
+
+#: Emailed tokens are 43 characters (``secrets.token_urlsafe(32)``); anything
+#: far longer is not one of ours.
+EmailedToken = Annotated[str, Field(max_length=128)]
+
+
+class VerifyEmailRequest(BaseModel):
+    token: EmailedToken
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ForgotPasswordResponse(BaseModel):
+    """The same answer whether or not the email has an account."""
+
+    message: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: EmailedToken
+    new_password: NewPassword
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(max_length=256)
+    new_password: NewPassword
+
+
 def hash_password(password: str) -> str:
     """Hash a password using bcrypt."""
     salt = bcrypt.gensalt()
@@ -206,18 +265,27 @@ def refresh_cookie_scope(scope: str) -> tuple[str, str]:
     return PUBLIC_REFRESH_COOKIE, PUBLIC_REFRESH_PATH
 
 
+def _password_stamp(changed_at: datetime | None) -> str | None:
+    return changed_at.isoformat() if changed_at else None
+
+
 def create_access_token(
     state: AppState,
     user_id: str,
     role: str,
     *,
     scope: str = PUBLIC_SCOPE,
+    password_changed_at: datetime | None = None,
 ) -> str:
     """Create a new JSON Web Token for authentication.
 
     ``scope`` selects the token kind: a public token (the default) or a staff
     token minted by the staff sign-in route. Both are signed with the same
     secret, so the issuer and scope claims are what a staff route checks.
+
+    The ``pwd`` claim stamps the User's ``password_changed_at``; ``authenticate``
+    refuses a token whose stamp is stale, so a password change ends every older
+    session exactly (``iat`` has only one-second resolution).
     """
 
     settings = state.settings
@@ -234,6 +302,7 @@ def create_access_token(
         "iss": issuer,
         "iat": int(now.timestamp()),
         "exp": int(expire.timestamp()),
+        "pwd": _password_stamp(password_changed_at),
     }
 
     return jwt.encode(
@@ -343,7 +412,13 @@ async def _authenticate_session(state: AppState, user: User, *, scope: str) -> S
         refresh_token = await _issue_refresh_token(session, state, user, scope=scope)
         await session.commit()
         response = AuthResponseModel(
-            access_token=create_access_token(state, user.id, user.role, scope=scope),
+            access_token=create_access_token(
+                state,
+                user.id,
+                user.role,
+                scope=scope,
+                password_changed_at=user.password_changed_at,
+            ),
             token_type="bearer",
             user=await user_response(session, user),
         )
@@ -387,7 +462,10 @@ async def signup_user(
         if kind is not None:
             await ProfileRepository.add(session, user_id=user.id, kind=kind)
 
+        verify_token = await _issue_token(session, user, "verify_email", VERIFY_EMAIL_TTL)
         await session.commit()
+
+    await _send_verification_email(state, user, verify_token)
 
     return await _authenticate_session(state, user, scope=PUBLIC_SCOPE)
 
@@ -506,6 +584,9 @@ async def authenticate(state: AppState, token: str, *, scope: str) -> User:
     if not user.is_active:
         raise ForbiddenException(message="User account is deactivated")
 
+    if payload.get("pwd") != _password_stamp(user.password_changed_at):
+        raise UnauthorizedException(message="Session ended by a password change")
+
     if scope == STAFF_SCOPE and not is_staff_surface_role(user.role):
         raise ForbiddenException(message="This account may not use the staff surface")
 
@@ -523,6 +604,7 @@ async def user_response(session: AsyncSession, user: User) -> UserResponse:
         full_name=user.full_name,
         is_staff=is_staff_role(user.role),
         account_status=cast(AccountStatus, user.account_status),
+        email_verified=user.email_verified_at is not None,
         profiles=[ProfileSummary(kind=kind) for kind in kinds],
         memberships=[
             MembershipSummary(
@@ -599,7 +681,13 @@ async def refresh_session(state: AppState, *, token: str | None, scope: str) -> 
         await session.commit()
 
         response = AuthResponseModel(
-            access_token=create_access_token(state, user.id, user.role, scope=scope),
+            access_token=create_access_token(
+                state,
+                user.id,
+                user.role,
+                scope=scope,
+                password_changed_at=user.password_changed_at,
+            ),
             token_type="bearer",
             user=await user_response(session, user),
         )
@@ -628,3 +716,165 @@ async def logout_session(state: AppState, *, token: str | None, scope: str) -> N
     async with state.db_session_maker() as session:
         await RefreshTokenRepository.revoke_family(session, family_id=family_id, now=_utcnow())
         await session.commit()
+
+
+# --- Emailed tokens: email verification and password reset (#120) -----------
+
+
+async def _issue_token(
+    session: AsyncSession, user: User, purpose: TokenPurpose, ttl: timedelta
+) -> str:
+    """A fresh single-use token for ``user``; only its hash is stored."""
+    token = secrets.token_urlsafe(32)
+    now = _utcnow()
+    await UserTokenRepository.issue(
+        session,
+        user_id=user.id,
+        purpose=purpose,
+        token=token,
+        expires_at=now + ttl,
+        now=now,
+    )
+    return token
+
+
+async def _send_verification_email(state: AppState, user: User, token: str) -> None:
+    link = f"{state.settings.frontend_url}/verify-email?token={token}"
+    await state.mailer.send(
+        OutgoingEmail(
+            to=user.email,
+            subject="Confirm your DentHub email",
+            text=(
+                f"Hi {user.full_name},\n\n"
+                f"Confirm this is your email address by opening the link below. "
+                f"It works once and expires in {_hours(VERIFY_EMAIL_TTL)}.\n\n{link}\n\n"
+                "If you didn't create a DentHub account, you can ignore this email."
+            ),
+        )
+    )
+
+
+def _hours(ttl: timedelta) -> str:
+    hours = int(ttl.total_seconds() // 3600)
+    return "an hour" if hours == 1 else f"{hours} hours"
+
+
+async def _spend_token(
+    session: AsyncSession, token: str, purpose: TokenPurpose, now: datetime
+) -> User:
+    """The active User a live token belongs to, spending the token; else a 400."""
+    user_id = await UserTokenRepository.spend(session, token=token, purpose=purpose, now=now)
+    user = await UserRepository.get_by_id(session, user_id) if user_id else None
+    if user is None or not user.is_active:
+        raise InvalidRequestError(message="This link is invalid or has expired")
+    return user
+
+
+async def verify_email(state: AppState, data: VerifyEmailRequest) -> None:
+    """Spend a verification token and mark its User's email verified."""
+    now = _utcnow()
+    async with state.db_session_maker() as session:
+        user = await _spend_token(session, data.token, "verify_email", now)
+        user.email_verified_at = user.email_verified_at or now
+        await session.commit()
+
+
+async def resend_verification_email(state: AppState, *, actor: User) -> None:
+    """Email the signed-in User a fresh link; earlier links stop working."""
+    if actor.email_verified_at is not None:
+        raise ConflictError(message="This email is already verified")
+
+    async with state.db_session_maker() as session:
+        token = await _issue_token(session, actor, "verify_email", VERIFY_EMAIL_TTL)
+        await session.commit()
+
+    await _send_verification_email(state, actor, token)
+
+
+FORGOT_PASSWORD_MESSAGE = "If that email has a DentHub account, we've sent a reset link to it."
+
+
+#: Runs work after the response is sent (the route passes FastAPI's
+#: ``BackgroundTasks.add_task``), so logic stays free of the request.
+Defer = Callable[..., Any]
+
+
+def forgot_password(
+    data: ForgotPasswordRequest, *, state: AppState, defer: Defer
+) -> ForgotPasswordResponse:
+    """Answer at once, the same way for every email; the reset work runs afterwards.
+
+    Looking the account up, issuing the token, and sending through the provider
+    all happen after the response, so neither the body, the status, nor the
+    response time says whether the email has an account.
+    """
+    defer(_send_password_reset, state, data.email)
+    return ForgotPasswordResponse(message=FORGOT_PASSWORD_MESSAGE)
+
+
+async def _send_password_reset(state: AppState, email: str) -> None:
+    async with state.db_session_maker() as session:
+        user = await UserRepository.get_by_email(session, email)
+        if user is None or not user.is_active:
+            return
+        token = await _issue_token(session, user, "reset_password", RESET_PASSWORD_TTL)
+        await session.commit()
+
+    link = f"{state.settings.frontend_url}/reset-password?token={token}"
+    await state.mailer.send(
+        OutgoingEmail(
+            to=user.email,
+            subject="Reset your DentHub password",
+            text=(
+                f"Hi {user.full_name},\n\n"
+                "Open the link below to choose a new password. It works once and "
+                f"expires in {_hours(RESET_PASSWORD_TTL)}.\n\n{link}\n\n"
+                "If you didn't ask for this, you can ignore this email; your "
+                "password hasn't changed."
+            ),
+        )
+    )
+
+
+def _set_password(user: User, new_password: str, now: datetime) -> None:
+    """Change the hash and stamp the change, which ends every older session."""
+    user.password_hash = hash_password(new_password)
+    user.password_changed_at = now
+
+
+async def reset_password(state: AppState, data: ResetPasswordRequest) -> None:
+    """Spend a reset token and set its User's new password."""
+    now = _utcnow()
+    async with state.db_session_maker() as session:
+        user = await _spend_token(session, data.token, "reset_password", now)
+        _set_password(user, data.new_password, now)
+        await session.commit()
+
+
+async def change_password(
+    state: AppState, *, actor: User, data: ChangePasswordRequest
+) -> AuthResponseModel:
+    """Change the signed-in User's password and return a fresh session.
+
+    Every other session, including the token that made this call, stops working.
+    """
+    if not verify_password(data.current_password, actor.password_hash):
+        raise InvalidRequestError(message="Current password is incorrect")
+
+    async with state.db_session_maker() as session:
+        user = await UserRepository.get_by_id(session, actor.id)
+        if user is None:
+            raise UnauthorizedException(message="User not found")
+
+        _set_password(user, data.new_password, _utcnow())
+        await session.commit()
+
+    token = create_access_token(
+        state,
+        user.id,
+        user.role,
+        password_changed_at=user.password_changed_at,
+    )
+    return AuthResponseModel(
+        access_token=token, token_type="bearer", user=await describe_user(state, user)
+    )

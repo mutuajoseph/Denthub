@@ -33,6 +33,8 @@ export interface AuthUser {
   full_name: string;
   is_staff: boolean;
   account_status: AccountStatus;
+  /** Whether the User has confirmed they own `email` (#120). Gates nothing yet. */
+  email_verified: boolean;
   /** What the User acts as. The app still routes on `role` until it migrates (ADR-0006). */
   profiles: ProfileSummary[];
   memberships: MembershipSummary[];
@@ -170,6 +172,7 @@ function parseUser(value: unknown): AuthUser {
     role,
     is_staff: value.is_staff === true,
     account_status: value.account_status,
+    email_verified: value.email_verified === true,
     // A session stored before #117 has neither field; it reads as none held.
     profiles: parseProfiles(value.profiles),
     memberships: parseMemberships(value.memberships),
@@ -441,4 +444,24 @@ export async function logoutSession(): Promise<void> {
   } finally {
     clearStoredAuth();
   }
+}
+
+/* Email verification and the password lifecycle (#120). Emailed links carry a
+ * single-use token; the token is the credential, so these calls need no
+ * session. */
+
+export interface ForgotPasswordResponse {
+  message: string;
+}
+
+export async function verifyEmail(token: string): Promise<void> {
+  await postJson<null>("/auth/verify-email", { token });
+}
+
+export async function requestPasswordReset(email: string): Promise<ForgotPasswordResponse> {
+  return postJson<ForgotPasswordResponse>("/auth/password/forgot", { email });
+}
+
+export async function resetPassword(token: string, newPassword: string): Promise<void> {
+  await postJson<null>("/auth/password/reset", { token, new_password: newPassword });
 }

@@ -51,6 +51,7 @@ def test_production_with_real_secrets_starts(monkeypatch: pytest.MonkeyPatch) ->
     monkeypatch.setenv("CORS_ORIGINS", "https://example.com")
     monkeypatch.setenv("JWT_SECRET_KEY", "a-real-secret-from-the-dashboard")
     monkeypatch.setenv("REFRESH_TOKEN_SECRET", "another-real-secret-from-the-dashboard")
+    _set_mail(monkeypatch)
 
     settings = Settings.from_env()
 
@@ -66,6 +67,7 @@ def test_production_without_refresh_secret_refuses_to_start(
     monkeypatch.setenv("ENVIRONMENT", "production")
     monkeypatch.setenv("CORS_ORIGINS", "https://example.com")
     monkeypatch.setenv("JWT_SECRET_KEY", "a-real-secret-from-the-dashboard")
+    _set_mail(monkeypatch)
 
     with pytest.raises(RuntimeError, match="REFRESH_TOKEN_SECRET"):
         Settings.from_env()
@@ -78,9 +80,42 @@ def test_production_with_dev_default_refresh_secret_refuses_to_start(
     monkeypatch.setenv("CORS_ORIGINS", "https://example.com")
     monkeypatch.setenv("JWT_SECRET_KEY", "a-real-secret-from-the-dashboard")
     monkeypatch.setenv("REFRESH_TOKEN_SECRET", DEV_REFRESH_TOKEN_SECRET)
+    _set_mail(monkeypatch)
 
     with pytest.raises(RuntimeError, match="REFRESH_TOKEN_SECRET"):
         Settings.from_env()
+
+
+def _set_mail(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("RESEND_API_KEY", "re_test")
+    monkeypatch.setenv("MAIL_FROM", "DentHub <no-reply@example.com>")
+    monkeypatch.setenv("FRONTEND_URL", "https://denthub.example.com/")
+
+
+@pytest.mark.parametrize("missing", ["RESEND_API_KEY", "MAIL_FROM", "FRONTEND_URL"])
+def test_production_without_mail_settings_refuses_to_start(
+    monkeypatch: pytest.MonkeyPatch, missing: str
+) -> None:
+    """Production must really send mail (#120), so each mail setting is required."""
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("CORS_ORIGINS", "https://example.com")
+    monkeypatch.setenv("JWT_SECRET_KEY", "a-real-secret-from-the-dashboard")
+    _set_mail(monkeypatch)
+    monkeypatch.delenv(missing)
+
+    with pytest.raises(RuntimeError, match=missing):
+        Settings.from_env()
+
+
+def test_frontend_url_drops_a_trailing_slash(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("CORS_ORIGINS", "https://example.com")
+    monkeypatch.setenv("JWT_SECRET_KEY", "a-real-secret-from-the-dashboard")
+    _set_mail(monkeypatch)
+
+    assert Settings.from_env().frontend_url == "https://denthub.example.com"
+
+
 def test_production_without_cors_refuses_to_start(monkeypatch: pytest.MonkeyPatch) -> None:
     """Production must have an explicit CORS_ORIGINS value."""
     _clear_secrets(monkeypatch)

@@ -36,6 +36,12 @@ class Settings:
     jwt_algorithm: str
     #: Signs the refresh cookie's JWT; distinct from ``jwt_secret_key``.
     refresh_token_secret: str
+    #: Where emailed links point: the client's origin, no trailing slash.
+    frontend_url: str
+    #: The From header on every email, e.g. ``DentHub <no-reply@example.com>``.
+    mail_from: str
+    #: Resend API key; unset means the console mailer (local and tests only).
+    resend_api_key: str | None
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -89,6 +95,29 @@ class Settings:
                 "Render dashboard (render.yaml marks it sync: false)."
             )
 
+        resend_api_key = os.getenv("RESEND_API_KEY") or None
+        mail_from = os.getenv("MAIL_FROM")
+        frontend_url = os.getenv("FRONTEND_URL")
+
+        # Production must really send mail (#120): without a provider key,
+        # signup and password reset would silently email nobody.
+        if environment == "production":
+            missing = [
+                name
+                for name, value in (
+                    ("RESEND_API_KEY", resend_api_key),
+                    ("MAIL_FROM", mail_from),
+                    ("FRONTEND_URL", frontend_url),
+                )
+                if not value
+            ]
+            if missing:
+                raise RuntimeError(
+                    f"{', '.join(missing)} must be set in production; refusing to start "
+                    "without a mail provider. Set them in the Render dashboard "
+                    "(render.yaml marks them sync: false)."
+                )
+
         return cls(
             app_name=APP_NAME,
             environment=environment,
@@ -99,4 +128,7 @@ class Settings:
             jwt_secret_key=jwt_secret_key,
             jwt_algorithm=os.getenv("JWT_ALGORITHM", "HS256"),
             refresh_token_secret=refresh_token_secret,
+            frontend_url=(frontend_url or "http://localhost:5173").rstrip("/"),
+            mail_from=mail_from or "DentHub <no-reply@localhost>",
+            resend_api_key=resend_api_key,
         )
