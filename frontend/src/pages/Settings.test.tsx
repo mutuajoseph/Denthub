@@ -55,6 +55,9 @@ const exportedAccount: AccountExportWire = {
   },
   appointments: [],
   messages: [],
+  supplier: null,
+  training_provider: null,
+  specialist: null,
 };
 
 function renderSettings(onAccountDeleted = vi.fn()) {
