@@ -96,9 +96,19 @@ export function subscribeToAuthChanges(listener: (user: AuthUser | null) => void
   }
 
   const handleChange = () => listener(getStoredUser());
+  // Another tab changing or clearing the shared session fires `storage` here.
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key === AUTH_STORAGE_KEY || event.key === null) {
+      listener(getStoredUser());
+    }
+  };
 
   window.addEventListener(AUTH_CHANGE_EVENT, handleChange);
-  return () => window.removeEventListener(AUTH_CHANGE_EVENT, handleChange);
+  window.addEventListener("storage", handleStorage);
+  return () => {
+    window.removeEventListener(AUTH_CHANGE_EVENT, handleChange);
+    window.removeEventListener("storage", handleStorage);
+  };
 }
 
 type UnknownRecord = Record<string, unknown>;
@@ -357,6 +367,22 @@ export function clearStoredAuth(): void {
  */
 let refreshInFlight: Promise<AuthResponse | null> | null = null;
 
+const REFRESH_LOCK = "denthub:refresh";
+
+/**
+ * Serialise rotation across tabs. The cookie jar is shared, so two tabs
+ * refreshing at once would present the same single-use cookie and look like
+ * theft. The Web Locks API makes one tab rotate at a time; the next then sends
+ * the newly rotated cookie. Browsers without it keep the in-tab dedupe only.
+ */
+async function withRefreshLock<T>(task: () => Promise<T>): Promise<T> {
+  if (typeof navigator === "undefined" || !navigator.locks) {
+    return task();
+  }
+
+  return navigator.locks.request(REFRESH_LOCK, task) as Promise<T>;
+}
+
 async function rotateRefreshToken(): Promise<AuthResponse | null> {
   const surface = getStoredSurface();
   const path = surface === "staff" ? "/auth/staff/refresh" : "/auth/refresh";
@@ -384,7 +410,7 @@ async function rotateRefreshToken(): Promise<AuthResponse | null> {
  * not sign anyone out.
  */
 export function refreshSession(): Promise<AuthResponse | null> {
-  refreshInFlight ??= rotateRefreshToken().finally(() => {
+  refreshInFlight ??= withRefreshLock(rotateRefreshToken).finally(() => {
     refreshInFlight = null;
   });
 

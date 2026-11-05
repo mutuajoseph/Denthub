@@ -98,6 +98,7 @@ describe("stored auth: Profiles and Facility Memberships (#117)", () => {
 describe("session storage (#121)", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    Reflect.deleteProperty(window.navigator, "locks");
     window.localStorage.clear();
     clearStoredAuth();
   });
@@ -190,6 +191,37 @@ describe("session storage (#121)", () => {
     expect(listener).toHaveBeenLastCalledWith(session.user);
 
     clearStoredAuth();
+    expect(listener).toHaveBeenLastCalledWith(null);
+
+    unsubscribe();
+  });
+
+  it("serialises rotation through the cross-tab lock", async () => {
+    setSession(session);
+    const request = vi.fn((_name: string, task: () => Promise<unknown>) => task());
+    Object.defineProperty(window.navigator, "locks", {
+      configurable: true,
+      value: { request },
+    });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse(200, { ...session, access_token: "rotated-token" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await refreshSession();
+
+    expect(request).toHaveBeenCalledWith("denthub:refresh", expect.any(Function));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("updates subscribers when another tab clears the session", () => {
+    setSession(session);
+    const listener = vi.fn();
+    const unsubscribe = subscribeToAuthChanges(listener);
+
+    window.localStorage.removeItem(AUTH_STORAGE_KEY);
+    window.dispatchEvent(new StorageEvent("storage", { key: AUTH_STORAGE_KEY }));
+
     expect(listener).toHaveBeenLastCalledWith(null);
 
     unsubscribe();
