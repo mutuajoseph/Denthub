@@ -32,6 +32,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    delete,
     func,
     or_,
     select,
@@ -287,6 +288,30 @@ class ConversationRepository:
                 last_message_sender_id=message.sender_id,
                 updated_at=func.now(),
                 **{unread_column.key: unread_column + 1},
+            )
+        )
+
+    @staticmethod
+    async def delete_for_user(session: AsyncSession, *, user_id: str) -> None:
+        """Delete all conversations and messages involving a User."""
+        await session.execute(
+            delete(Message).where(
+                Message.conversation_id.in_(
+                    select(Conversation.id).where(
+                        or_(
+                            Conversation.participant_a_id == user_id,
+                            Conversation.participant_b_id == user_id,
+                        )
+                    )
+                )
+            )
+        )
+        await session.execute(
+            delete(Conversation).where(
+                or_(
+                    Conversation.participant_a_id == user_id,
+                    Conversation.participant_b_id == user_id,
+                )
             )
         )
 
