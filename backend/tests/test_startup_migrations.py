@@ -27,6 +27,9 @@ def _settings(environment: str) -> Settings:
         database_url="sqlite+aiosqlite:///:memory:",
         jwt_secret_key="test-secret",
         jwt_algorithm="HS256",
+        frontend_url="https://example.com",
+        mail_from="DentHub <no-reply@example.com>",
+        resend_api_key=None,
     )
 
 
