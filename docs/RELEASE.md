@@ -112,6 +112,12 @@ re-running the failed run from the Actions UI.
      `DentHub <no-reply@yourdomain>`.
    - `FRONTEND_URL`: the client's origin, e.g. `https://denthub.vercel.app`.
      Emailed links point here (`/verify-email`, `/reset-password`).
+6. Service → **Environment** → optionally set `CLINICAL_RETENTION_DAYS` = how many
+   days clinician-authored Health Record entries are kept after an account is
+   deleted (#128). It is not a secret; when unset the app uses **2555** (seven
+   years). **The default is provisional and needs legal confirmation** before
+   real patient data is served; change it here when counsel settles the period.
+   The value must be a positive integer or the backend refuses to start.
 7. Service → **Settings → Deploy Hook** → copy the URL.
 8. Confirm the health check is `/api/v1/health`.
 

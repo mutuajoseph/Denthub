@@ -257,3 +257,7 @@ export function patchJson<T>(
 ): Promise<T> {
   return apiRequest<T>(path, { ...options, method: "PATCH", json });
 }
+
+export function deleteJson<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+  return apiRequest<T>(path, { ...options, method: "DELETE" });
+}
