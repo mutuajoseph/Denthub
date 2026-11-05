@@ -31,6 +31,8 @@ export interface AuthUser {
   email: string;
   role: Role;
   full_name: string;
+  phone: string | null;
+  home_country_code: string | null;
   is_staff: boolean;
   account_status: AccountStatus;
   /** Whether the User has confirmed they own `email` (#120). Gates nothing yet. */
@@ -148,7 +150,7 @@ function parseMemberships(value: unknown): MembershipSummary[] {
   });
 }
 
-function parseUser(value: unknown): AuthUser {
+export function parseAuthUser(value: unknown): AuthUser {
   if (!isRecord(value)) {
     throw new Error("Invalid authentication response");
   }
@@ -169,6 +171,8 @@ function parseUser(value: unknown): AuthUser {
     id: value.id,
     email: value.email,
     full_name: value.full_name,
+    phone: typeof value.phone === "string" ? value.phone : null,
+    home_country_code: typeof value.home_country_code === "string" ? value.home_country_code : null,
     role,
     is_staff: value.is_staff === true,
     account_status: value.account_status,
@@ -178,6 +182,8 @@ function parseUser(value: unknown): AuthUser {
     memberships: parseMemberships(value.memberships),
   };
 }
+
+export const parseUser = parseAuthUser;
 
 function parseAuthResponse(value: unknown): AuthResponse {
   if (
@@ -191,7 +197,7 @@ function parseAuthResponse(value: unknown): AuthResponse {
   return {
     access_token: value.access_token,
     token_type: value.token_type,
-    user: parseUser(value.user),
+    user: parseAuthUser(value.user),
   };
 }
 
@@ -250,7 +256,7 @@ export async function login(credentials: LoginRequest): Promise<AuthResponse> {
 }
 
 /**
- * Sign in at the staff surface (PRD §6, issue #80). The backend mints a token
+ * Sign in at the staff surface (PRD Â§6, issue #80). The backend mints a token
  * scoped to the staff issuer; the client stores it under the same key because
  * one browser holds one session.
  */
@@ -314,7 +320,7 @@ export function getStoredUser(): AuthUser | null {
     // is { user, surface }. Read either, so a deploy does not sign everyone out.
     const candidate = isRecord(parsed) && "user" in parsed ? parsed.user : parsed;
 
-    return parseUser(candidate);
+    return parseAuthUser(candidate);
   } catch {
     clearStoredAuth();
     return null;

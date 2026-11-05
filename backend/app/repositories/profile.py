@@ -146,6 +146,12 @@ class ProfileRepository:
         return list((await session.execute(stmt)).scalars().all())
 
     @staticmethod
+    async def has_kind(session: AsyncSession, *, user_id: str, kind: ProfileKind) -> bool:
+        """Whether the User already holds this Profile kind."""
+        stmt = select(Profile.id).where(Profile.user_id == user_id, Profile.kind == kind)
+        return (await session.execute(stmt)).scalar_one_or_none() is not None
+
+    @staticmethod
     async def delete_for_user(session: AsyncSession, *, user_id: str) -> None:
         """Remove every Profile and Facility Membership a User holds (#128)."""
         await session.execute(delete(Profile).where(Profile.user_id == user_id))

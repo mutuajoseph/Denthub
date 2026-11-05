@@ -1,19 +1,10 @@
-"""The caller's own account: data export and erasure (#128).
+"""The caller's own account: data export, erasure, and settings (#119, #128).
 
-``GET /me/export`` builds the signed-in User's copy in the request: the User,
-their Profiles and Facility Memberships, their Health Record and entries, their
-Appointments, and every Message in their conversations. The export is scoped to
-the caller: no other User's Profile, record, or appointment is included, and a
-Message carries its ``sender_id`` so both sides of a thread are distinguishable.
-
-``DELETE /me`` erases the caller immediately. The User row itself stays because
-appointments and retained clinician entries reference it with RESTRICT foreign
-keys; instead every identity field is scrubbed and ``is_active`` is cleared,
-which stops both login and existing tokens. The caller's Profiles, Memberships,
-own Health Record entries, Message text, and Appointment notes are erased, and
-clinician-authored entries are kept for the configured retention window.
-Business listings they owned keep their public data but lose the identity link;
-a Specialist listing, being an individual, also loses its name and slug.
+``GET /me/export`` builds the signed-in User's copy in the request; ``DELETE /me``
+erases the caller immediately. ``GET``/``PATCH /me`` and ``POST /me/profiles`` are
+the User-level account settings surface (``docs/api-map.md``, "Acting as"). A User
+may hold several Profiles at once (ADR-0006), so adding one never changes
+``users.role`` or the account status while clients still route on ``role``.
 """
 
 from __future__ import annotations
@@ -23,18 +14,21 @@ from typing import Literal, cast
 
 from pydantic import BaseModel, Field
 
-from app.exceptions import InvalidRequestError, UnauthorizedException
+from app.exceptions import ConflictError, InvalidRequestError, UnauthorizedException
 from app.logic.v1.auth import (
     AccountStatus,
     MembershipSummary,
     ProfileSummary,
+    UserResponse,
     is_staff_role,
+    user_response,
 )
 from app.repositories.appointment import (
     Appointment,
     AppointmentRepository,
     AppointmentStatus,
 )
+from app.repositories.country import CountryRepository
 from app.repositories.deletion import DeletionRepository
 from app.repositories.health_record import (
     HealthRecordAuthorKind,
@@ -45,7 +39,7 @@ from app.repositories.health_record import (
 from app.repositories.listing import SpecialistRepository
 from app.repositories.message import MessageRepository
 from app.repositories.product import SupplierRepository
-from app.repositories.profile import ProfileRepository
+from app.repositories.profile import ProfileKind, ProfileRepository
 from app.repositories.training import TrainingRepository
 from app.repositories.user import User, UserRepository
 from app.utils.state import AppState
@@ -62,6 +56,20 @@ DELETED_MESSAGE_BODY = "[deleted]"
 #: slug are erased with the owner; the id keeps the slug unique.
 DELETED_SPECIALIST_NAME = "Deleted specialist"
 DELETED_SPECIALIST_SLUG_PREFIX = "deleted-specialist-"
+
+
+class MeUpdate(BaseModel):
+    """The account fields a User may change; omitted fields stay unchanged."""
+
+    full_name: str | None = Field(default=None, max_length=100)
+    phone: str | None = Field(default=None, max_length=50)
+    home_country_code: str | None = Field(default=None, max_length=2)
+
+
+class ProfileCreate(BaseModel):
+    """A Profile kind the User wants to add."""
+
+    kind: ProfileKind
 
 
 class ExportedUser(BaseModel):
@@ -312,3 +320,68 @@ async def delete_account(state: AppState, *, actor: User) -> None:
         )
 
         await session.commit()
+
+
+async def get_me(state: AppState, *, actor: User) -> UserResponse:
+    """The caller's own account settings."""
+    async with state.db_session_maker() as session:
+        user = await UserRepository.get_by_id(session, actor.id)
+
+        if user is None:
+            raise UnauthorizedException(message="User not found")
+
+        return await user_response(session, user)
+
+
+async def update_me(state: AppState, *, actor: User, data: MeUpdate) -> UserResponse:
+    """Apply a partial update to the caller's own account.
+
+    An explicit ``null`` clears ``phone`` or ``home_country_code``; a supplied
+    ``full_name`` may not be blank. A home Country must be one DentHub operates
+    in and has not retired.
+    """
+    fields = data.model_dump(exclude_unset=True)
+
+    async with state.db_session_maker() as session:
+        user = await UserRepository.get_by_id(session, actor.id)
+
+        if user is None:
+            raise UnauthorizedException(message="User not found")
+
+        if "full_name" in fields:
+            name = (fields["full_name"] or "").strip()
+            if not name:
+                raise InvalidRequestError(message="Name cannot be empty")
+            await UserRepository.update(user, full_name=name)
+
+        if "phone" in fields:
+            await UserRepository.update(user, phone=fields["phone"])
+
+        if "home_country_code" in fields:
+            code = fields["home_country_code"]
+            if code is None:
+                await UserRepository.update(user, home_country_code=None)
+            else:
+                country = await CountryRepository.get(session, code)
+                if country is None or not country.is_active:
+                    raise InvalidRequestError(message="Unknown or inactive home Country")
+                await UserRepository.update(user, home_country_code=country.code)
+
+        await session.commit()
+        return await user_response(session, user)
+
+
+async def add_profile(state: AppState, *, actor: User, data: ProfileCreate) -> UserResponse:
+    """Add one Profile kind the caller does not already hold."""
+    async with state.db_session_maker() as session:
+        user = await UserRepository.get_by_id(session, actor.id)
+
+        if user is None:
+            raise UnauthorizedException(message="User not found")
+
+        if await ProfileRepository.has_kind(session, user_id=user.id, kind=data.kind):
+            raise ConflictError(message="This account already holds that Profile")
+
+        await ProfileRepository.add(session, user_id=user.id, kind=data.kind)
+        await session.commit()
+        return await user_response(session, user)

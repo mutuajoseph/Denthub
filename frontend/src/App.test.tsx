@@ -122,6 +122,8 @@ const specialistDetail: SpecialistDetail = {
     clinic_name: "SmileCare Dental Centre",
   },
   slug: "dr-wanjiku-kamau",
+  bio: null,
+  avatar_key: null,
   specialties: [],
   branches: [],
 };
@@ -173,6 +175,8 @@ function seedAuth(role: Role): void {
       id: "user-1",
       email: "user@example.com",
       full_name: "Test User",
+      phone: null,
+      home_country_code: null,
       role,
       is_staff: role === ROLE.STAFF,
       account_status: "active",

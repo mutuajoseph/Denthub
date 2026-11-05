@@ -26,9 +26,12 @@ const baseUser = {
   id: "u-1",
   email: "amina@example.com",
   full_name: "Amina Wanjiku",
+  phone: null,
+  home_country_code: null,
   role: "facility_dentist",
   is_staff: false,
   account_status: "active",
+  email_verified: true,
 };
 
 function store(user: Record<string, unknown>) {
@@ -93,6 +96,28 @@ describe("stored auth: Profiles and Facility Memberships (#117)", () => {
 
     expect(getStoredAuth()?.user.memberships).toEqual([]);
   });
+
+  it("reads the account phone and home Country", () => {
+    store({
+      ...baseUser,
+      phone: "+254700000000",
+      home_country_code: "KE",
+    });
+
+    const user = getStoredAuth()?.user;
+
+    expect(user?.phone).toBe("+254700000000");
+    expect(user?.home_country_code).toBe("KE");
+  });
+
+  it("treats a session stored before #119 as having no phone or home Country", () => {
+    store(baseUser);
+
+    const user = getStoredAuth()?.user;
+
+    expect(user?.phone).toBeNull();
+    expect(user?.home_country_code).toBeNull();
+  });
 });
 
 describe("session storage (#121)", () => {
@@ -110,6 +135,8 @@ describe("session storage (#121)", () => {
       id: "u-1",
       email: "amina@example.com",
       full_name: "Amina Wanjiku",
+      phone: null,
+      home_country_code: null,
       role: "patient",
       is_staff: false,
       account_status: "active",

@@ -151,6 +151,8 @@ class UserResponse(BaseModel):
     email: str
     role: str
     full_name: str
+    phone: str | None = None
+    home_country_code: str | None = None
     is_staff: bool
     account_status: AccountStatus = "active"
     email_verified: bool = False
@@ -602,6 +604,8 @@ async def user_response(session: AsyncSession, user: User) -> UserResponse:
         email=user.email,
         role=user.role,
         full_name=user.full_name,
+        phone=user.phone,
+        home_country_code=user.home_country_code,
         is_staff=is_staff_role(user.role),
         account_status=cast(AccountStatus, user.account_status),
         email_verified=user.email_verified_at is not None,

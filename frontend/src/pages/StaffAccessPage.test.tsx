@@ -21,6 +21,8 @@ const staffAuth: AuthResponse = {
     id: "staff-1",
     email: "admin@example.com",
     full_name: "Platform Admin",
+    phone: null,
+    home_country_code: null,
     role: "admin",
     is_staff: true,
     account_status: "active",

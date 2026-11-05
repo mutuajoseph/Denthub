@@ -27,6 +27,8 @@ const user: AuthUser = {
   id: "user-1",
   email: "specialist@example.com",
   full_name: "Sam Otieno",
+  phone: null,
+  home_country_code: null,
   role: "specialist",
   is_staff: false,
   account_status: "active",

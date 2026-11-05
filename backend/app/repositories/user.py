@@ -58,6 +58,15 @@ class User(Base):
         index=True,
     )
 
+    #: The Country a User calls home, chosen in account settings (#119). Null
+    #: until they choose one; never inferred from the request's market.
+    home_country_code: Mapped[str | None] = mapped_column(
+        String(2),
+        ForeignKey("countries.code", ondelete="SET NULL", name="fk_users_home_country_code"),
+        nullable=True,
+        index=True,
+    )
+
     #: A Platform Operator's one Division and their tier inside it (PRD §2,
     #: ``CONTEXT.md`` "Operator"). Both null for every non-operator, and the
     #: console reads them fresh per request so granting or revoking a Division
@@ -134,6 +143,14 @@ class UserRepository:
         session.add(user)
         # Flush to generate IDs/timestamps before returning
         await session.flush()
+        return user
+
+    @staticmethod
+    @staticmethod
+    async def update(user: User, **kwargs: Any) -> User:
+        """Apply ``kwargs`` to an existing user."""
+        for key, value in kwargs.items():
+            setattr(user, key, value)
         return user
 
     @staticmethod

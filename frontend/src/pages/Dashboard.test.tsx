@@ -6,7 +6,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppointmentWire } from "../lib/appointmentApi";
 import { fetchMyAppointments } from "../lib/appointmentApi";
 import type { AuthUser } from "../lib/auth";
+import { fetchCountries, fetchSpecialties } from "../lib/countryConfigApi";
 import { fetchHealthRecord } from "../lib/healthRecordApi";
+import { fetchMe } from "../lib/meApi";
 import { Dashboard } from "./Dashboard";
 
 vi.mock("../lib/appointmentApi", async (importOriginal) => {
@@ -19,13 +21,29 @@ vi.mock("../lib/healthRecordApi", async (importOriginal) => {
   return { ...actual, fetchHealthRecord: vi.fn() };
 });
 
+vi.mock("../lib/meApi", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../lib/meApi")>();
+  return { ...actual, fetchMe: vi.fn() };
+});
+
+vi.mock("../lib/countryConfigApi", () => ({
+  fetchCountries: vi.fn(),
+  fetchCountryConfig: vi.fn(),
+  fetchSpecialties: vi.fn(),
+}));
+
 const fetchMyAppointmentsMock = vi.mocked(fetchMyAppointments);
 const fetchHealthRecordMock = vi.mocked(fetchHealthRecord);
+const fetchMeMock = vi.mocked(fetchMe);
+const fetchCountriesMock = vi.mocked(fetchCountries);
+const fetchSpecialtiesMock = vi.mocked(fetchSpecialties);
 
 const patient: AuthUser = {
   id: "user-1",
   email: "patient@example.com",
   full_name: "Amina Yusuf",
+  phone: null,
+  home_country_code: null,
   role: "patient",
   is_staff: false,
   account_status: "active",
@@ -38,6 +56,8 @@ const facilityOwner: AuthUser = {
   id: "user-2",
   email: "owner@example.com",
   full_name: "Sam Otieno",
+  phone: null,
+  home_country_code: null,
   role: "facility_owner",
   is_staff: false,
   account_status: "active",
@@ -62,6 +82,8 @@ function appointment(overrides: Partial<AppointmentWire> = {}): AppointmentWire 
 }
 
 function renderDashboard(user: AuthUser | null) {
+  if (user) fetchMeMock.mockResolvedValue(user);
+
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: 0, gcTime: 0 } },
   });
@@ -69,7 +91,7 @@ function renderDashboard(user: AuthUser | null) {
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <Dashboard user={user} />
+        <Dashboard user={user} onUserUpdated={() => {}} />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -78,6 +100,8 @@ function renderDashboard(user: AuthUser | null) {
 describe("Dashboard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    fetchCountriesMock.mockResolvedValue({ items: [], default_country_code: "KE" });
+    fetchSpecialtiesMock.mockResolvedValue([]);
     fetchMyAppointmentsMock.mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 });
     fetchHealthRecordMock.mockResolvedValue({
       id: "hr-1",

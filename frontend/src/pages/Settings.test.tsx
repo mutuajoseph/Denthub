@@ -20,6 +20,8 @@ const patient: AuthUser = {
   id: "user-1",
   email: "patient@example.com",
   full_name: "Amina Yusuf",
+  phone: null,
+  home_country_code: null,
   role: "patient",
   is_staff: false,
   account_status: "active",

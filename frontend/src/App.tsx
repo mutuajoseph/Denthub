@@ -21,7 +21,7 @@ import type { AuthResponse, AuthUser } from "./lib/auth";
 
 /*
  * Route screens are code-split (issue #66) so the entry chunk ships only the
- * shell — React, the router, the layout and this route table. Each screen is a
+ * shell â€” React, the router, the layout and this route table. Each screen is a
  * separate chunk fetched on first navigation to it. Named exports become a
  * default via the `.then()` shim; Home/NotFound/OralCareShopPage/Suppliers are
  * already default exports.
@@ -170,7 +170,7 @@ const App = () => {
               path="/dashboard"
               element={
                 <RouteGuard user={user} allowedRoles={PUBLIC_ROLES} unauthorizedPath="/">
-                  <Dashboard user={user} />
+                  <Dashboard user={user} onUserUpdated={(updated) => setUser(updated)} />
                 </RouteGuard>
               }
             />

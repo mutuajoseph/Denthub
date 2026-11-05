@@ -379,6 +379,17 @@ class InsuranceProviderRepository:
 
 class SpecialtyRepository:
     @staticmethod
+    async def get_by_codes(session: AsyncSession, codes: list[str]) -> list[Specialty]:
+        """Specialties matching ``codes``, in the order the codes were given."""
+        if not codes:
+            return []
+
+        stmt = select(Specialty).where(Specialty.code.in_(codes))
+        rows = list((await session.execute(stmt)).scalars().all())
+        by_code = {row.code: row for row in rows}
+        return [by_code[code] for code in dict.fromkeys(codes) if code in by_code]
+
+    @staticmethod
     async def list_all(
         session: AsyncSession,
         *,
