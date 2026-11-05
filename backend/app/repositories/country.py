@@ -108,6 +108,10 @@ class Subdivision(Base):
     )
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     code: Mapped[str] = mapped_column(String(30), nullable=False)
+    #: A retired Subdivision stays on rows that already name it but drops out of
+    #: the public region lists. It is never hard-deleted, so historic listings
+    #: keep resolving their subdivision code.
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     country: Mapped[Country] = relationship(back_populates="subdivisions")
 
@@ -152,6 +156,9 @@ class InsuranceProvider(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     #: True for a nationwide scheme (NHIF, NHS), false for a commercial panel.
     is_national: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    #: Retired providers stay linked to nothing today but are kept for history;
+    #: the public country config and filter lists only serve active rows.
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     country: Mapped[Country] = relationship(back_populates="insurance_providers")
 
@@ -173,6 +180,9 @@ class Specialty(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     #: Presentation order in filter menus; lower sorts first.
     display_order: Mapped[int] = mapped_column(Integer, default=100, nullable=False)
+    #: A retired Specialty is hidden from filters but kept on every listing and
+    #: Course that already names it, so its history stays readable.
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
 
 class CountryRepository:
@@ -271,25 +281,44 @@ class CountryFeatureRepository:
 
 class SubdivisionRepository:
     @staticmethod
-    async def get(session: AsyncSession, *, country_code: str, code: str) -> Subdivision | None:
-        """One Subdivision by its Country-scoped code."""
-        stmt = select(Subdivision).where(
-            Subdivision.country_code == country_code.upper(),
-            Subdivision.code == code,
-        )
+    async def list_all(
+        session: AsyncSession,
+        *,
+        country_code: str,
+        include_inactive: bool = False,
+    ) -> list[Subdivision]:
+        """Every Subdivision in a Country, alphabetical by name.
+
+        The public region filter asks for active rows only; the admin console
+        passes ``include_inactive=True`` so a retired Subdivision can be restored.
+        """
+        stmt = select(Subdivision).where(Subdivision.country_code == country_code.upper())
+        if not include_inactive:
+            stmt = stmt.where(Subdivision.is_active.is_(True))
+        result = await session.execute(stmt.order_by(Subdivision.name.asc()))
+        return list(result.scalars().all())
+
+    @staticmethod
+    async def get(session: AsyncSession, subdivision_id: str) -> Subdivision | None:
+        """Fetch one Subdivision by id."""
+        stmt = select(Subdivision).where(Subdivision.id == subdivision_id)
         result = await session.execute(stmt)
         return result.scalar_one_or_none()
 
     @staticmethod
-    async def list_all(session: AsyncSession, *, country_code: str) -> list[Subdivision]:
-        """Every Subdivision in a Country, alphabetical by name."""
-        stmt = (
-            select(Subdivision)
-            .where(Subdivision.country_code == country_code.upper())
-            .order_by(Subdivision.name.asc())
+    async def get_by_code(
+        session: AsyncSession,
+        *,
+        country_code: str,
+        code: str,
+    ) -> Subdivision | None:
+        """Fetch one Subdivision by its per-Country code."""
+        stmt = select(Subdivision).where(
+            Subdivision.country_code == country_code.upper(),
+            Subdivision.code == code.upper(),
         )
         result = await session.execute(stmt)
-        return list(result.scalars().all())
+        return result.scalar_one_or_none()
 
     @staticmethod
     async def create(session: AsyncSession, **kwargs: Any) -> Subdivision:
@@ -298,6 +327,54 @@ class SubdivisionRepository:
         session.add(subdivision)
         await session.flush()
         return subdivision
+
+
+class InsuranceProviderRepository:
+    @staticmethod
+    async def list_all(
+        session: AsyncSession,
+        *,
+        country_code: str,
+        include_inactive: bool = False,
+    ) -> list[InsuranceProvider]:
+        """Every insurance provider in a Country, alphabetical by name."""
+        stmt = select(InsuranceProvider).where(
+            InsuranceProvider.country_code == country_code.upper()
+        )
+        if not include_inactive:
+            stmt = stmt.where(InsuranceProvider.is_active.is_(True))
+        result = await session.execute(stmt.order_by(InsuranceProvider.name.asc()))
+        return list(result.scalars().all())
+
+    @staticmethod
+    async def get(session: AsyncSession, provider_id: str) -> InsuranceProvider | None:
+        """Fetch one provider by id."""
+        stmt = select(InsuranceProvider).where(InsuranceProvider.id == provider_id)
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def get_by_name(
+        session: AsyncSession,
+        *,
+        country_code: str,
+        name: str,
+    ) -> InsuranceProvider | None:
+        """Fetch one provider by its per-Country unique name."""
+        stmt = select(InsuranceProvider).where(
+            InsuranceProvider.country_code == country_code.upper(),
+            InsuranceProvider.name == name,
+        )
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def create(session: AsyncSession, **kwargs: Any) -> InsuranceProvider:
+        """Create and persist an InsuranceProvider."""
+        provider = InsuranceProvider(**kwargs)
+        session.add(provider)
+        await session.flush()
+        return provider
 
 
 class SpecialtyRepository:
@@ -313,11 +390,33 @@ class SpecialtyRepository:
         return [by_code[code] for code in dict.fromkeys(codes) if code in by_code]
 
     @staticmethod
-    async def list_all(session: AsyncSession) -> list[Specialty]:
+    async def list_all(
+        session: AsyncSession,
+        *,
+        include_inactive: bool = False,
+    ) -> list[Specialty]:
         """Every Specialty in display order, then alphabetically."""
-        stmt = select(Specialty).order_by(Specialty.display_order.asc(), Specialty.name.asc())
-        result = await session.execute(stmt)
+        stmt = select(Specialty)
+        if not include_inactive:
+            stmt = stmt.where(Specialty.is_active.is_(True))
+        result = await session.execute(
+            stmt.order_by(Specialty.display_order.asc(), Specialty.name.asc())
+        )
         return list(result.scalars().all())
+
+    @staticmethod
+    async def get(session: AsyncSession, specialty_id: str) -> Specialty | None:
+        """Fetch one Specialty by id."""
+        stmt = select(Specialty).where(Specialty.id == specialty_id)
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def get_by_code(session: AsyncSession, code: str) -> Specialty | None:
+        """Fetch one Specialty by its stable code."""
+        stmt = select(Specialty).where(Specialty.code == code)
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()
 
     @staticmethod
     async def create(session: AsyncSession, **kwargs: Any) -> Specialty:

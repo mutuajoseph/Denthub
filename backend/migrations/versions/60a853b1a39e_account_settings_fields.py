@@ -1,7 +1,7 @@
 """account settings fields
 
 Revision ID: 60a853b1a39e
-Revises: a03c4a379430
+Revises: e85d22bf80a9
 Create Date: 2026-11-03 13:56:59.957716
 
 Adds the columns account settings needs (#119): a User's chosen home Country,
@@ -18,7 +18,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = '60a853b1a39e'
-down_revision: Union[str, Sequence[str], None] = 'a03c4a379430'
+down_revision: Union[str, Sequence[str], None] = 'e85d22bf80a9'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

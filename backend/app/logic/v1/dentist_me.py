@@ -137,7 +137,7 @@ async def _listing_country(session: AsyncSession, code: str) -> Country:
 async def _validate_subdivision(
     session: AsyncSession, *, country_code: str, subdivision_code: str
 ) -> None:
-    subdivision = await SubdivisionRepository.get(
+    subdivision = await SubdivisionRepository.get_by_code(
         session, country_code=country_code, code=subdivision_code
     )
 

@@ -18,10 +18,13 @@ from app.exceptions import BaseApiException
 from app.repositories.country import (
     Country,
     CountryRepository,
+    InsuranceProvider,
+    InsuranceProviderRepository,
     SpecialtyRepository,
     Subdivision,
     SubdivisionRepository,
 )
+from app.repositories.treatment import Treatment, TreatmentRepository
 from app.utils.state import AppState
 
 
@@ -137,12 +140,51 @@ class SpecialtyList(BaseModel):
     items: list[SpecialtyResponse]
 
 
+class InsuranceProviderList(BaseModel):
+    """The active insurers in one Country, for the insurance filter."""
+
+    country_code: str
+    items: list[InsuranceProviderSummary]
+
+
+class TreatmentResponse(BaseModel):
+    """A platform-wide treatment a Branch's Services are drawn from."""
+
+    id: str
+    code: str
+    name: str
+    description: str | None
+    display_order: int
+
+
+class TreatmentList(BaseModel):
+    items: list[TreatmentResponse]
+
+
 def _serialize_subdivision(subdivision: Subdivision) -> SubdivisionResponse:
     return SubdivisionResponse(
         id=subdivision.id,
         name=subdivision.name,
         code=subdivision.code,
         country_code=subdivision.country_code,
+    )
+
+
+def _serialize_insurance_provider(provider: InsuranceProvider) -> InsuranceProviderSummary:
+    return InsuranceProviderSummary(
+        id=provider.id,
+        name=provider.name,
+        is_national=provider.is_national,
+    )
+
+
+def _serialize_treatment(treatment: Treatment) -> TreatmentResponse:
+    return TreatmentResponse(
+        id=treatment.id,
+        code=treatment.code,
+        name=treatment.name,
+        description=treatment.description,
+        display_order=treatment.display_order,
     )
 
 
@@ -172,12 +214,11 @@ def _serialize_country(country: Country) -> CountryConfig:
             for feature in sorted(country.features, key=lambda row: row.feature)
         ],
         insurance_providers=[
-            InsuranceProviderSummary(
-                id=provider.id,
-                name=provider.name,
-                is_national=provider.is_national,
+            _serialize_insurance_provider(provider)
+            for provider in sorted(
+                (row for row in country.insurance_providers if row.is_active),
+                key=lambda row: row.name,
             )
-            for provider in sorted(country.insurance_providers, key=lambda row: row.name)
         ],
         subdivisions=[],
     )
@@ -256,7 +297,7 @@ async def list_subdivisions(state: AppState, *, country_code: str) -> Subdivisio
 
 
 async def list_specialties(state: AppState) -> SpecialtyList:
-    """Every Specialty, in filter-menu order."""
+    """Every active Specialty, in filter-menu order."""
     async with state.db_session_maker() as session:
         rows = await SpecialtyRepository.list_all(session)
 
@@ -271,4 +312,30 @@ async def list_specialties(state: AppState) -> SpecialtyList:
             )
             for row in rows
         ]
+    )
+
+
+async def list_treatments(state: AppState) -> TreatmentList:
+    """Every active treatment, in Service-picker order."""
+    async with state.db_session_maker() as session:
+        rows = await TreatmentRepository.list_all(session)
+
+    return TreatmentList(items=[_serialize_treatment(row) for row in rows])
+
+
+async def list_insurance_providers(state: AppState, *, country_code: str) -> InsuranceProviderList:
+    """The active insurers in one Country, alphabetical.
+
+    Like ``/config/country/regions`` an unknown Country yields an empty list
+    rather than falling back to Kenya: a filter offering Kenyan insurers to a
+    Nigerian visitor is worse than an empty one.
+    """
+    wanted = country_code.upper()
+
+    async with state.db_session_maker() as session:
+        rows = await InsuranceProviderRepository.list_all(session, country_code=wanted)
+
+    return InsuranceProviderList(
+        country_code=wanted,
+        items=[_serialize_insurance_provider(row) for row in rows],
     )
