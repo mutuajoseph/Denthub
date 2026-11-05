@@ -36,6 +36,7 @@ const operator: AuthUser = {
   role: "platform_operator",
   is_staff: true,
   account_status: "active",
+  email_verified: true,
   profiles: [],
   memberships: [],
 };

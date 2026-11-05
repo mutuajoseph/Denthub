@@ -17,6 +17,7 @@ const patient: AuthUser = {
   role: "patient",
   is_staff: false,
   account_status: "active",
+  email_verified: true,
   profiles: [],
   memberships: [],
 };
@@ -30,6 +31,7 @@ const facilityOwner: AuthUser = {
   role: "facility_owner",
   is_staff: false,
   account_status: "active",
+  email_verified: true,
   profiles: [],
   memberships: [],
 };

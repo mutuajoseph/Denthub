@@ -1,5 +1,5 @@
 import { type Role, isPublicRole, normalizeRole } from "../auth/roles";
-import { postJson } from "./apiClient";
+import { ApiError, apiRequest, postJson } from "./apiClient";
 
 export type AccountStatus = "active" | "pending";
 
@@ -35,6 +35,8 @@ export interface AuthUser {
   home_country_code: string | null;
   is_staff: boolean;
   account_status: AccountStatus;
+  /** Whether the User has confirmed they own `email` (#120). Gates nothing yet. */
+  email_verified: boolean;
   /** What the User acts as. The app still routes on `role` until it migrates (ADR-0006). */
   profiles: ProfileSummary[];
   memberships: MembershipSummary[];
@@ -60,6 +62,58 @@ export interface RegisterRequest {
 }
 
 export const AUTH_STORAGE_KEY = "denthub_auth";
+
+/**
+ * Which auth surface the stored session belongs to. The backend keeps a
+ * separate cookie and path per surface (#121), so refresh and logout must call
+ * the matching route; one browser still holds one session.
+ */
+export type AuthSurface = "public" | "staff";
+
+/**
+ * The access token lives in memory only (ADR-0003 follow-up, #121). An XSS bug
+ * can still act as the user while its page is open, but nothing long-lived is
+ * readable from storage, and a reload recovers the session through the
+ * httpOnly refresh cookie instead.
+ */
+let accessToken: string | null = null;
+let accessSurface: AuthSurface | null = null;
+
+const AUTH_CHANGE_EVENT = "denthub:auth-change";
+
+/**
+ * Tell mounted subscribers that the stored session changed. A failed refresh
+ * clears the session outside React, so `App` subscribes to drop its stale
+ * `user` state instead of staying visually signed in until a reload.
+ */
+function notifyAuthChange(): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
+}
+
+export function subscribeToAuthChanges(listener: (user: AuthUser | null) => void): () => void {
+  if (typeof window === "undefined") {
+    return () => undefined;
+  }
+
+  const handleChange = () => listener(getStoredUser());
+  // Another tab changing or clearing the shared session fires `storage` here.
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key === AUTH_STORAGE_KEY || event.key === null) {
+      listener(getStoredUser());
+    }
+  };
+
+  window.addEventListener(AUTH_CHANGE_EVENT, handleChange);
+  window.addEventListener("storage", handleStorage);
+  return () => {
+    window.removeEventListener(AUTH_CHANGE_EVENT, handleChange);
+    window.removeEventListener("storage", handleStorage);
+  };
+}
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -122,18 +176,20 @@ export function parseAuthUser(value: unknown): AuthUser {
     role,
     is_staff: value.is_staff === true,
     account_status: value.account_status,
+    email_verified: value.email_verified === true,
     // A session stored before #117 has neither field; it reads as none held.
     profiles: parseProfiles(value.profiles),
     memberships: parseMemberships(value.memberships),
   };
 }
 
+export const parseUser = parseAuthUser;
+
 function parseAuthResponse(value: unknown): AuthResponse {
   if (
     !isRecord(value) ||
     typeof value.access_token !== "string" ||
-    typeof value.token_type !== "string" ||
-    !isRecord(value.user)
+    typeof value.token_type !== "string"
   ) {
     throw new Error("Invalid authentication response");
   }
@@ -157,45 +213,62 @@ function getStorage(): Storage | null {
   }
 }
 
-export function saveStoredAuth(auth: AuthResponse): void {
+function saveStoredAuth(auth: AuthResponse, surface: AuthSurface): void {
+  accessToken = auth.access_token;
+  accessSurface = surface;
+
   const storage = getStorage();
 
-  if (!storage) {
-    return;
+  if (storage) {
+    try {
+      // Only the profile and its surface are persisted. The token is never
+      // written to storage.
+      storage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ user: auth.user, surface }));
+    } catch {
+      // A blocked localStorage must not stop the in-memory session.
+    }
   }
 
-  try {
-    storage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth));
-  } catch {
-    return;
-  }
+  notifyAuthChange();
 }
 
-async function postAuth(path: string, body: UnknownRecord): Promise<AuthResponse> {
+async function postAuth(
+  path: string,
+  body: UnknownRecord,
+  surface: AuthSurface,
+): Promise<AuthResponse> {
   const data = await postJson<unknown>(path, body);
 
   const authResponse = parseAuthResponse(data);
-  saveStoredAuth(authResponse);
+  saveStoredAuth(authResponse, surface);
   return authResponse;
 }
 
 export async function login(credentials: LoginRequest): Promise<AuthResponse> {
-  return postAuth("/auth/login", {
-    email: credentials.email,
-    password: credentials.password,
-  });
+  return postAuth(
+    "/auth/login",
+    {
+      email: credentials.email,
+      password: credentials.password,
+    },
+    "public",
+  );
 }
 
 /**
- * Sign in at the staff surface (PRD §6, issue #80). The backend mints a token
+ * Sign in at the staff surface (PRD Â§6, issue #80). The backend mints a token
  * scoped to the staff issuer; the client stores it under the same key because
  * one browser holds one session.
  */
 export async function loginStaff(credentials: LoginRequest): Promise<AuthResponse> {
-  return postAuth("/auth/staff/login", {
-    email: credentials.email,
-    password: credentials.password,
-  });
+  return postAuth(
+    "/auth/staff/login",
+    {
+      email: credentials.email,
+      password: credentials.password,
+    },
+    "staff",
+  );
 }
 
 export async function register(data: RegisterRequest): Promise<AuthResponse> {
@@ -205,16 +278,30 @@ export async function register(data: RegisterRequest): Promise<AuthResponse> {
     throw new Error("Invalid registration account type");
   }
 
-  return postAuth("/auth/register", {
-    full_name: data.full_name,
-    email: data.email,
-    password: data.password,
-    account_type: accountType,
-    ...(data.phone === undefined ? {} : { phone: data.phone }),
-  });
+  return postAuth(
+    "/auth/register",
+    {
+      full_name: data.full_name,
+      email: data.email,
+      password: data.password,
+      account_type: accountType,
+      ...(data.phone === undefined ? {} : { phone: data.phone }),
+    },
+    "public",
+  );
 }
 
 export function getStoredAuth(): AuthResponse | null {
+  const user = getStoredUser();
+
+  if (!user) {
+    return null;
+  }
+
+  return { access_token: accessToken ?? "", token_type: "bearer", user };
+}
+
+export function getStoredUser(): AuthUser | null {
   const storage = getStorage();
 
   if (!storage) {
@@ -228,31 +315,159 @@ export function getStoredAuth(): AuthResponse | null {
       return null;
     }
 
-    return parseAuthResponse(JSON.parse(stored) as unknown);
+    const parsed = JSON.parse(stored) as unknown;
+    // Before #121 the whole { access_token, user } response was stored; now it
+    // is { user, surface }. Read either, so a deploy does not sign everyone out.
+    const candidate = isRecord(parsed) && "user" in parsed ? parsed.user : parsed;
+
+    return parseAuthUser(candidate);
   } catch {
     clearStoredAuth();
     return null;
   }
 }
 
-export function getStoredUser(): AuthUser | null {
-  return getStoredAuth()?.user ?? null;
-}
-
-export function getStoredToken(): string | null {
-  return getStoredAuth()?.access_token ?? null;
-}
-
-export function clearStoredAuth(): void {
+/** Which surface the stored session is on; a legacy record was public. */
+export function getStoredSurface(): AuthSurface {
   const storage = getStorage();
 
   if (!storage) {
-    return;
+    return accessSurface ?? "public";
   }
 
   try {
-    storage.removeItem(AUTH_STORAGE_KEY);
+    const parsed = JSON.parse(storage.getItem(AUTH_STORAGE_KEY) ?? "null") as unknown;
+    return isRecord(parsed) && parsed.surface === "staff" ? "staff" : "public";
   } catch {
-    return;
+    return accessSurface ?? "public";
   }
+}
+
+export function getStoredToken(): string | null {
+  return accessToken;
+}
+
+/** Adopt a session the API just returned: token in memory, profile persisted. */
+export function setSession(auth: AuthResponse, surface: AuthSurface = "public"): void {
+  saveStoredAuth(auth, surface);
+}
+
+export function clearStoredAuth(): void {
+  accessToken = null;
+  accessSurface = null;
+
+  const storage = getStorage();
+
+  if (storage) {
+    try {
+      storage.removeItem(AUTH_STORAGE_KEY);
+    } catch {
+      // The in-memory token is already gone; a blocked storage still signs out.
+    }
+  }
+
+  notifyAuthChange();
+}
+
+/**
+ * One rotation at a time. Refresh tokens are single-use, so two concurrent
+ * rotations with the same cookie would make the second look like a replay and
+ * revoke the whole family. Concurrent callers share the in-flight request.
+ */
+let refreshInFlight: Promise<AuthResponse | null> | null = null;
+
+const REFRESH_LOCK = "denthub:refresh";
+
+/**
+ * Serialise rotation across tabs. The cookie jar is shared, so two tabs
+ * refreshing at once would present the same single-use cookie and look like
+ * theft. The Web Locks API makes one tab rotate at a time; the next then sends
+ * the newly rotated cookie. Browsers without it keep the in-tab dedupe only.
+ */
+async function withRefreshLock<T>(task: () => Promise<T>): Promise<T> {
+  if (typeof navigator === "undefined" || !navigator.locks) {
+    return task();
+  }
+
+  return navigator.locks.request(REFRESH_LOCK, task) as Promise<T>;
+}
+
+async function rotateRefreshToken(): Promise<AuthResponse | null> {
+  const surface = getStoredSurface();
+  const path = surface === "staff" ? "/auth/staff/refresh" : "/auth/refresh";
+
+  try {
+    const data = await postJson<unknown>(path, undefined, {
+      retryOnUnauthorized: false,
+    });
+    const auth = parseAuthResponse(data);
+    saveStoredAuth(auth, surface);
+    return auth;
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      clearStoredAuth();
+    }
+    return null;
+  }
+}
+
+/**
+ * Rotate the refresh cookie and adopt the new access token.
+ *
+ * A 401 means the session is over and the stored profile goes with it. Any
+ * other failure (offline, server down) keeps the profile: a bad network must
+ * not sign anyone out.
+ */
+export function refreshSession(): Promise<AuthResponse | null> {
+  refreshInFlight ??= withRefreshLock(rotateRefreshToken).finally(() => {
+    refreshInFlight = null;
+  });
+
+  return refreshInFlight;
+}
+
+/** Recover the in-memory token after a reload, if a profile was stored. */
+export async function restoreSession(): Promise<AuthResponse | null> {
+  if (!getStoredUser()) {
+    return null;
+  }
+
+  return refreshSession();
+}
+
+/** End the session on the server and locally; succeeds even when offline. */
+export async function logoutSession(): Promise<void> {
+  const surface = getStoredSurface();
+  const path = surface === "staff" ? "/auth/staff/logout" : "/auth/logout";
+
+  try {
+    await apiRequest<void>(path, {
+      method: "POST",
+      retryOnUnauthorized: false,
+    });
+  } catch {
+    // The local session ends either way; a cookie left behind expires on its own.
+  } finally {
+    clearStoredAuth();
+  }
+}
+
+/* Email verification and the password lifecycle (#120). Emailed links carry a
+ * single-use token; the token is the credential, so these calls need no
+ * session. */
+
+export interface ForgotPasswordResponse {
+  message: string;
+}
+
+export async function verifyEmail(token: string): Promise<void> {
+  await postJson<null>("/auth/verify-email", { token });
+}
+
+export async function requestPasswordReset(email: string): Promise<ForgotPasswordResponse> {
+  return postJson<ForgotPasswordResponse>("/auth/password/forgot", { email });
+}
+
+export async function resetPassword(token: string, newPassword: string): Promise<void> {
+  await postJson<null>("/auth/password/reset", { token, new_password: newPassword });
 }

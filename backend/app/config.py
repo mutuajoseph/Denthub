@@ -16,6 +16,16 @@ API_V1_PREFIX = "/api/v1"
 # real JWT_SECRET_KEY; this literal must never sign a production token.
 DEV_JWT_SECRET_KEY = "denthub-super-secret-dev-key-change-in-prod"
 
+# The refresh cookie is signed with its own secret (ADR-0003 follow-up, #121),
+# so an access-token secret leak cannot also mint refresh tokens. Same rule:
+# a development default only, refused in production.
+DEV_REFRESH_TOKEN_SECRET = "denthub-super-secret-dev-refresh-key-change-in-prod"
+
+#: Provisional clinical retention window (about seven years) for
+#: clinician-authored Health Record entries after an account is deleted (#128).
+#: Confirm against the applicable jurisdiction before relying on it.
+DEFAULT_CLINICAL_RETENTION_DAYS = 2555
+
 
 @dataclass(frozen=True)
 class Settings:
@@ -29,6 +39,17 @@ class Settings:
     database_url: str
     jwt_secret_key: str
     jwt_algorithm: str
+    #: Signs the refresh cookie's JWT; distinct from ``jwt_secret_key``.
+    refresh_token_secret: str
+    #: How long clinician-authored Health Record entries are kept after an
+    #: account is deleted (#128). Provisional default; see ``docs/RELEASE.md``.
+    clinical_retention_days: int = DEFAULT_CLINICAL_RETENTION_DAYS
+    #: Where emailed links point: the client's origin, no trailing slash.
+    frontend_url: str = "http://localhost:5173"
+    #: The From header on every email, e.g. ``DentHub <no-reply@example.com>``.
+    mail_from: str = "DentHub <no-reply@localhost>"
+    #: Resend API key; unset means the console mailer (local and tests only).
+    resend_api_key: str | None = None
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -73,6 +94,48 @@ class Settings:
                 "Render dashboard (render.yaml marks it sync: false)."
             )
 
+        refresh_token_secret = os.getenv("REFRESH_TOKEN_SECRET", DEV_REFRESH_TOKEN_SECRET)
+
+        if environment == "production" and refresh_token_secret == DEV_REFRESH_TOKEN_SECRET:
+            raise RuntimeError(
+                "REFRESH_TOKEN_SECRET must be set to a real secret in production; "
+                "refusing to start with the development default. Set it in the "
+                "Render dashboard (render.yaml marks it sync: false)."
+            )
+
+        retention_raw = os.getenv("CLINICAL_RETENTION_DAYS", str(DEFAULT_CLINICAL_RETENTION_DAYS))
+        try:
+            clinical_retention_days = int(retention_raw)
+        except ValueError as exc:
+            raise RuntimeError(
+                "CLINICAL_RETENTION_DAYS must be a positive integer number of days."
+            ) from exc
+        if clinical_retention_days <= 0:
+            raise RuntimeError("CLINICAL_RETENTION_DAYS must be a positive integer number of days.")
+
+        resend_api_key = os.getenv("RESEND_API_KEY") or None
+        mail_from = os.getenv("MAIL_FROM")
+        frontend_url = os.getenv("FRONTEND_URL")
+
+        # Production must really send mail (#120): without a provider key,
+        # signup and password reset would silently email nobody.
+        if environment == "production":
+            missing = [
+                name
+                for name, value in (
+                    ("RESEND_API_KEY", resend_api_key),
+                    ("MAIL_FROM", mail_from),
+                    ("FRONTEND_URL", frontend_url),
+                )
+                if not value
+            ]
+            if missing:
+                raise RuntimeError(
+                    f"{', '.join(missing)} must be set in production; refusing to start "
+                    "without a mail provider. Set them in the Render dashboard "
+                    "(render.yaml marks them sync: false)."
+                )
+
         return cls(
             app_name=APP_NAME,
             environment=environment,
@@ -82,4 +145,9 @@ class Settings:
             database_url=database_url,
             jwt_secret_key=jwt_secret_key,
             jwt_algorithm=os.getenv("JWT_ALGORITHM", "HS256"),
+            refresh_token_secret=refresh_token_secret,
+            clinical_retention_days=clinical_retention_days,
+            frontend_url=(frontend_url or "http://localhost:5173").rstrip("/"),
+            mail_from=mail_from or "DentHub <no-reply@localhost>",
+            resend_api_key=resend_api_key,
         )

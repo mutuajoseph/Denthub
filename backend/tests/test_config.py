@@ -9,12 +9,19 @@ from __future__ import annotations
 
 import pytest
 
-from app.config import DEV_JWT_SECRET_KEY, Settings
+from app.config import DEV_JWT_SECRET_KEY, DEV_REFRESH_TOKEN_SECRET, Settings
 
 
 def _clear_secrets(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("JWT_SECRET_KEY", raising=False)
+    monkeypatch.delenv("REFRESH_TOKEN_SECRET", raising=False)
     monkeypatch.delenv("CORS_ORIGINS", raising=False)
+
+
+def _set_mail(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("RESEND_API_KEY", "re_test")
+    monkeypatch.setenv("MAIL_FROM", "DentHub <no-reply@example.com>")
+    monkeypatch.setenv("FRONTEND_URL", "https://denthub.example.com/")
 
 
 def test_local_without_secret_uses_dev_default(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -45,17 +52,103 @@ def test_production_with_dev_default_secret_refuses_to_start(
         Settings.from_env()
 
 
-def test_production_with_real_secret_starts(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_production_with_real_secrets_starts(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("ENVIRONMENT", "production")
     monkeypatch.setenv("CORS_ORIGINS", "https://example.com")
     monkeypatch.setenv("JWT_SECRET_KEY", "a-real-secret-from-the-dashboard")
+    monkeypatch.setenv("REFRESH_TOKEN_SECRET", "another-real-secret-from-the-dashboard")
+    _set_mail(monkeypatch)
 
-    assert Settings.from_env().jwt_secret_key == "a-real-secret-from-the-dashboard"
+    settings = Settings.from_env()
+
+    assert settings.jwt_secret_key == "a-real-secret-from-the-dashboard"
+    assert settings.refresh_token_secret == "another-real-secret-from-the-dashboard"
+
+
+def test_production_without_refresh_secret_refuses_to_start(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The refresh cookie is signed with its own secret (#121), also required."""
+    _clear_secrets(monkeypatch)
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("CORS_ORIGINS", "https://example.com")
+    monkeypatch.setenv("JWT_SECRET_KEY", "a-real-secret-from-the-dashboard")
+    _set_mail(monkeypatch)
+
+    with pytest.raises(RuntimeError, match="REFRESH_TOKEN_SECRET"):
+        Settings.from_env()
+
+
+def test_production_with_dev_default_refresh_secret_refuses_to_start(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("CORS_ORIGINS", "https://example.com")
+    monkeypatch.setenv("JWT_SECRET_KEY", "a-real-secret-from-the-dashboard")
+    monkeypatch.setenv("REFRESH_TOKEN_SECRET", DEV_REFRESH_TOKEN_SECRET)
+    _set_mail(monkeypatch)
+
+    with pytest.raises(RuntimeError, match="REFRESH_TOKEN_SECRET"):
+        Settings.from_env()
+
+
+@pytest.mark.parametrize("missing", ["RESEND_API_KEY", "MAIL_FROM", "FRONTEND_URL"])
+def test_production_without_mail_settings_refuses_to_start(
+    monkeypatch: pytest.MonkeyPatch, missing: str
+) -> None:
+    """Production must really send mail (#120), so each mail setting is required."""
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("CORS_ORIGINS", "https://example.com")
+    monkeypatch.setenv("JWT_SECRET_KEY", "a-real-secret-from-the-dashboard")
+    monkeypatch.setenv("REFRESH_TOKEN_SECRET", "another-real-secret-from-the-dashboard")
+    _set_mail(monkeypatch)
+    monkeypatch.delenv(missing)
+
+    with pytest.raises(RuntimeError, match=missing):
+        Settings.from_env()
+
+
+def test_frontend_url_drops_a_trailing_slash(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("CORS_ORIGINS", "https://example.com")
+    monkeypatch.setenv("JWT_SECRET_KEY", "a-real-secret-from-the-dashboard")
+    monkeypatch.setenv("REFRESH_TOKEN_SECRET", "another-real-secret-from-the-dashboard")
+    _set_mail(monkeypatch)
+
+    assert Settings.from_env().frontend_url == "https://denthub.example.com"
+
+
 def test_production_without_cors_refuses_to_start(monkeypatch: pytest.MonkeyPatch) -> None:
     """Production must have an explicit CORS_ORIGINS value."""
     _clear_secrets(monkeypatch)
     monkeypatch.setenv("ENVIRONMENT", "production")
     monkeypatch.setenv("JWT_SECRET_KEY", "a-real-secret-from-the-dashboard")
+    monkeypatch.setenv("REFRESH_TOKEN_SECRET", "another-real-secret-from-the-dashboard")
 
     with pytest.raises(RuntimeError, match="CORS_ORIGINS"):
+        Settings.from_env()
+
+
+def test_clinical_retention_days_defaults_to_seven_years(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("CLINICAL_RETENTION_DAYS", raising=False)
+
+    assert Settings.from_env().clinical_retention_days == 2555
+
+
+def test_clinical_retention_days_is_configurable(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CLINICAL_RETENTION_DAYS", "3650")
+
+    assert Settings.from_env().clinical_retention_days == 3650
+
+
+@pytest.mark.parametrize("value", ["0", "-1", "not-a-number"])
+def test_clinical_retention_days_must_be_a_positive_integer(
+    monkeypatch: pytest.MonkeyPatch,
+    value: str,
+) -> None:
+    monkeypatch.setenv("CLINICAL_RETENTION_DAYS", value)
+
+    with pytest.raises(RuntimeError, match="CLINICAL_RETENTION_DAYS"):
         Settings.from_env()

@@ -20,6 +20,7 @@ from sqlalchemy import (
     ForeignKey,
     String,
     UniqueConstraint,
+    delete,
     select,
 )
 from sqlalchemy import Enum as SAEnum
@@ -149,6 +150,14 @@ class ProfileRepository:
         """Whether the User already holds this Profile kind."""
         stmt = select(Profile.id).where(Profile.user_id == user_id, Profile.kind == kind)
         return (await session.execute(stmt)).scalar_one_or_none() is not None
+
+    @staticmethod
+    async def delete_for_user(session: AsyncSession, *, user_id: str) -> None:
+        """Remove every Profile and Facility Membership a User holds (#128)."""
+        await session.execute(delete(Profile).where(Profile.user_id == user_id))
+        await session.execute(
+            delete(FacilityMembership).where(FacilityMembership.user_id == user_id)
+        )
 
     @staticmethod
     async def memberships_for_user(session: AsyncSession, user_id: str) -> list[MembershipView]:

@@ -6,6 +6,11 @@ here is scoped to that one Facility: a clinic never sees another's Appointments
 or staff, and an Appointment belonging to a different clinic is a 404 rather than
 a 403, so the endpoint never confirms that another clinic's booking exists.
 
+The appointment workflow also covers a Specialist-listing Appointment (#113),
+which has no Facility: its provider side is the account that runs the booked
+Specialist listing (``specialists.user_id``, ADR-0006), and anyone else gets the
+same 404.
+
 ``scheduled_at`` is a wall-clock time at the Facility's Country, so "today" is the
 clinic's own day, not the server's UTC day (``CONTEXT.md``, *Appointment*).
 """
@@ -23,7 +28,7 @@ from app.logic.v1.appointments import AppointmentResponse, _serialize
 from app.logic.v1.country import CountryConfigurationMissingException
 from app.repositories.appointment import AppointmentRepository, AppointmentStatus
 from app.repositories.country import CountryRepository
-from app.repositories.listing import FacilityRepository
+from app.repositories.listing import FacilityRepository, SpecialistRepository
 from app.repositories.user import User, UserRepository
 from app.utils.state import AppState
 
@@ -35,23 +40,23 @@ FACILITY_DASHBOARD_LIMIT = 50
 #: and no chart exists yet.
 FACILITY_ROLES: frozenset[str] = frozenset({"facility_owner", "front_office", "facility_dentist"})
 
-#: The provider-side workflow as a forward map: each state to the one the clinic
-#: moves it to next (PRD §3.2). A Patient may only ever withdraw (#88); these
-#: steps belong to the clinic.
-FACILITY_TRANSITIONS: dict[AppointmentStatus, AppointmentStatus] = {
+#: The provider-side workflow as a forward map: each state to the one the
+#: provider — a Facility or a Specialist — moves it to next (PRD §3.2). A Patient
+#: may only ever withdraw (#88); these steps belong to the provider.
+PROVIDER_TRANSITIONS: dict[AppointmentStatus, AppointmentStatus] = {
     "PENDING": "CONFIRMED",
     "CONFIRMED": "IN_PROGRESS",
     "IN_PROGRESS": "COMPLETED",
 }
 
-#: The steps a facility account may drive — the values of the map above.
-FacilityAppointmentStatus = Literal["CONFIRMED", "IN_PROGRESS", "COMPLETED"]
+#: The steps a provider account may drive — the values of the map above.
+ProviderAppointmentStatus = Literal["CONFIRMED", "IN_PROGRESS", "COMPLETED"]
 
 
-class FacilityAppointmentUpdateRequest(BaseModel):
-    """Move one of the clinic's Appointments forward along the workflow."""
+class ProviderAppointmentUpdateRequest(BaseModel):
+    """Move a Facility's or Specialist's Appointment forward along the workflow."""
 
-    status: FacilityAppointmentStatus
+    status: ProviderAppointmentStatus
 
 
 class FacilityStaffResponse(BaseModel):
@@ -146,37 +151,50 @@ async def get_facility_dashboard(
     )
 
 
-async def update_facility_appointment(
+async def advance_appointment(
     state: AppState,
     *,
     actor: User,
     appointment_id: str,
-    request: FacilityAppointmentUpdateRequest,
+    request: ProviderAppointmentUpdateRequest,
 ) -> AppointmentResponse:
-    """Move one of the clinic's Appointments forward along the workflow.
+    """Move an Appointment forward along the provider workflow.
 
-    Scoped to the caller's Facility: an Appointment that is missing or belongs to
-    another clinic is a 404. A step that is not the next one in the workflow —
-    skipping, going backwards, or touching a terminal state — is a 400.
+    A Facility-booking is scoped to the caller's Facility: a facility role with
+    no linked clinic is a 403, and an Appointment that is missing or belongs to
+    another clinic is a 404. A Specialist-booking (#113) belongs to the account
+    that runs the booked Specialist listing; anyone else gets the same 404.
+
+    A step that is not the next one in the workflow — skipping, going backwards,
+    or touching a terminal state — is a 400.
     """
-    _user_id, facility_id = _require_facility(actor)
-
     async with state.db_session_maker() as session:
         appointment = await AppointmentRepository.get(session, appointment_id)
 
-        # Missing, or another clinic's, is the same 404.
-        if appointment is None or appointment.facility_id != facility_id:
+        if appointment is None:
             raise NotFoundException(message="Appointment not found")
 
-        expected_next = FACILITY_TRANSITIONS.get(appointment.status)
+        if appointment.facility_id is not None:
+            _user_id, facility_id = _require_facility(actor)
+            if appointment.facility_id != facility_id:
+                raise NotFoundException(message="Appointment not found")
+            listing_name: str | None = None
+        else:
+            owned = await SpecialistRepository.get_by_user_id(session, actor.id)
+            if owned is None or appointment.specialist_id != owned.id:
+                raise NotFoundException(message="Appointment not found")
+            listing_name = owned.name
+
+        expected_next = PROVIDER_TRANSITIONS.get(appointment.status)
 
         if expected_next is None or expected_next != request.status:
             raise InvalidRequestError(message="That transition is not allowed from this status")
 
         await AppointmentRepository.update(session, appointment, status=request.status)
 
-        facility = await FacilityRepository.get(session, facility_id)
-        listing_name = facility.name if facility is not None else None
+        if appointment.facility_id is not None:
+            facility = await FacilityRepository.get(session, appointment.facility_id)
+            listing_name = facility.name if facility is not None else None
 
         await session.commit()
 

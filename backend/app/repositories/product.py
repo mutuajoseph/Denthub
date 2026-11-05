@@ -23,6 +23,7 @@ from sqlalchemy import (
     func,
     or_,
     select,
+    update,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column, relationship, selectinload
@@ -125,6 +126,15 @@ class SupplierRepository:
         stmt = select(Supplier).where(Supplier.owner_user_id == owner_user_id)
         result = await session.execute(stmt)
         return result.scalar_one_or_none()
+
+    @staticmethod
+    async def detach_owner(session: AsyncSession, *, owner_user_id: str) -> None:
+        """Clear a deleted account's link to its Supplier storefront (#128)."""
+        await session.execute(
+            update(Supplier)
+            .where(Supplier.owner_user_id == owner_user_id)
+            .values(owner_user_id=None)
+        )
 
     @staticmethod
     async def get_by_slug(session: AsyncSession, slug: str) -> Supplier | None:

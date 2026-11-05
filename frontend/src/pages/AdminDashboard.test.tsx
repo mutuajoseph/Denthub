@@ -66,6 +66,7 @@ const admin: AuthUser = {
   role: "admin",
   is_staff: true,
   account_status: "active",
+  email_verified: true,
   profiles: [],
   memberships: [],
 };

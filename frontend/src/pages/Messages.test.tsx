@@ -42,6 +42,7 @@ const patient: AuthUser = {
   home_country_code: null,
   is_staff: false,
   account_status: "active",
+  email_verified: true,
   profiles: [],
   memberships: [],
 };

@@ -386,3 +386,31 @@ async def update_my_appointment(
         await session.commit()
 
         return _serialize(appointment, listing_name=listing_name)
+
+
+async def list_specialist_appointments(
+    state: AppState,
+    *,
+    actor: User,
+) -> list[AppointmentResponse]:
+    """Appointments naming the signed-in Specialist's own listing (#151).
+
+    Role-gated to specialists. A specialist account without a linked listing
+    gets an empty list. Times are stored as wall-clock at the listing's
+    Country, so they are returned as-is.
+    """
+    if actor.role != "specialist":
+        raise ForbiddenException(message="Only specialists may view their appointments")
+
+    async with state.db_session_maker() as session:
+        specialist = await SpecialistRepository.get_by_user_id(session, actor.id)
+
+        if specialist is None:
+            return []
+
+        rows = await AppointmentRepository.list_for_specialist(
+            session,
+            specialist_id=specialist.id,
+        )
+
+        return [_serialize(row, listing_name=specialist.name) for row in rows]

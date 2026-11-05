@@ -156,6 +156,7 @@ const patient: AuthUser = {
   role: "patient",
   is_staff: false,
   account_status: "active",
+  email_verified: true,
   profiles: [],
   memberships: [],
 };
