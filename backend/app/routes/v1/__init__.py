@@ -13,6 +13,7 @@ from app.routes.v1 import (
     appointments,
     auth,
     config,
+    dentist,
     facility,
     health,
     health_records,
@@ -46,6 +47,7 @@ v1_router.include_router(messages.router)
 v1_router.include_router(magazine.router)
 v1_router.include_router(training.router)
 v1_router.include_router(appointments.router)
+v1_router.include_router(dentist.router)
 v1_router.include_router(facility.router)
 v1_router.include_router(health_records.router)
 v1_router.include_router(me.router)
