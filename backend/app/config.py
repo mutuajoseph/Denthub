@@ -16,6 +16,11 @@ API_V1_PREFIX = "/api/v1"
 # real JWT_SECRET_KEY; this literal must never sign a production token.
 DEV_JWT_SECRET_KEY = "denthub-super-secret-dev-key-change-in-prod"
 
+#: Provisional clinical retention window (about seven years) for
+#: clinician-authored Health Record entries after an account is deleted (#128).
+#: Confirm against the applicable jurisdiction before relying on it.
+DEFAULT_CLINICAL_RETENTION_DAYS = 2555
+
 
 @dataclass(frozen=True)
 class Settings:
@@ -29,12 +34,15 @@ class Settings:
     database_url: str
     jwt_secret_key: str
     jwt_algorithm: str
+    #: How long clinician-authored Health Record entries are kept after an
+    #: account is deleted (#128). Provisional default; see ``docs/RELEASE.md``.
+    clinical_retention_days: int = DEFAULT_CLINICAL_RETENTION_DAYS
     #: Where emailed links point: the client's origin, no trailing slash.
-    frontend_url: str
+    frontend_url: str = "http://localhost:5173"
     #: The From header on every email, e.g. ``DentHub <no-reply@example.com>``.
-    mail_from: str
+    mail_from: str = "DentHub <no-reply@localhost>"
     #: Resend API key; unset means the console mailer (local and tests only).
-    resend_api_key: str | None
+    resend_api_key: str | None = None
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -79,6 +87,16 @@ class Settings:
                 "Render dashboard (render.yaml marks it sync: false)."
             )
 
+        retention_raw = os.getenv("CLINICAL_RETENTION_DAYS", str(DEFAULT_CLINICAL_RETENTION_DAYS))
+        try:
+            clinical_retention_days = int(retention_raw)
+        except ValueError as exc:
+            raise RuntimeError(
+                "CLINICAL_RETENTION_DAYS must be a positive integer number of days."
+            ) from exc
+        if clinical_retention_days <= 0:
+            raise RuntimeError("CLINICAL_RETENTION_DAYS must be a positive integer number of days.")
+
         resend_api_key = os.getenv("RESEND_API_KEY") or None
         mail_from = os.getenv("MAIL_FROM")
         frontend_url = os.getenv("FRONTEND_URL")
@@ -111,6 +129,7 @@ class Settings:
             database_url=database_url,
             jwt_secret_key=jwt_secret_key,
             jwt_algorithm=os.getenv("JWT_ALGORITHM", "HS256"),
+            clinical_retention_days=clinical_retention_days,
             frontend_url=(frontend_url or "http://localhost:5173").rstrip("/"),
             mail_from=mail_from or "DentHub <no-reply@localhost>",
             resend_api_key=resend_api_key,
