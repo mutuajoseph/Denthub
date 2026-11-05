@@ -38,7 +38,7 @@ from app.repositories.health_record import (
 )
 from app.repositories.listing import SpecialistRepository
 from app.repositories.message import MessageRepository
-from app.repositories.product import SupplierRepository
+from app.repositories.product import ProductRepository, SupplierRepository
 from app.repositories.profile import ProfileKind, ProfileRepository
 from app.repositories.training import TrainingRepository
 from app.repositories.user import User, UserRepository
@@ -133,6 +133,109 @@ class ExportedMessage(BaseModel):
     created_at: datetime
 
 
+class ExportedProduct(BaseModel):
+    """One product in a Supplier's catalog."""
+
+    id: str
+    name: str
+    brand: str | None
+    category: str
+    description: str | None
+    image_url: str | None
+    currency: str
+    retail_price: str
+    wholesale_price: str | None
+    wholesale_min_qty: int
+    in_stock: bool
+    country_code: str
+    created_at: datetime
+
+
+class ExportedSupplier(BaseModel):
+    """A Supplier storefront the caller owns, with its products."""
+
+    id: str
+    name: str
+    slug: str
+    description: str | None
+    country_code: str
+    scope: str
+    is_verified: bool
+    created_at: datetime
+    products: list[ExportedProduct] = Field(default_factory=list)
+
+
+class ExportedTrainingCourse(BaseModel):
+    """One course in a Training Provider's catalog."""
+
+    id: str
+    title: str
+    description: str
+    country_code: str
+    subdivision_code: str
+    delivery_mode: str
+    price: str | None
+    currency: str | None
+    cpd_points: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class ExportedTrainingWebinar(BaseModel):
+    """One webinar in a Training Provider's catalog."""
+
+    id: str
+    title: str
+    description: str
+    country_code: str
+    join_url: str
+    scheduled_start: datetime
+    cpd_points: int
+
+
+class ExportedTrainingProvider(BaseModel):
+    """A Training Provider the caller owns, with its courses and webinars."""
+
+    id: str
+    name: str
+    country_code: str
+    is_verified: bool
+    created_at: datetime
+    courses: list[ExportedTrainingCourse] = Field(default_factory=list)
+    webinars: list[ExportedTrainingWebinar] = Field(default_factory=list)
+
+
+class ExportedBranch(BaseModel):
+    """One branch in a Specialist's listing."""
+
+    id: str
+    name: str | None
+    subdivision_code: str
+    address: str | None
+    phone: str | None
+    email: str | None
+    open_now: bool | None = None
+
+
+class ExportedSpecialist(BaseModel):
+    """The caller's full Specialist listing."""
+
+    id: str
+    name: str
+    slug: str
+    bio: str | None
+    avatar_key: str | None
+    country_code: str
+    subdivision_code: str
+    verification_tier: str
+    currency: str
+    list_price: str | None
+    rating: str | None
+    review_count: int
+    specialties: list[str] = Field(default_factory=list)
+    branches: list[ExportedBranch] = Field(default_factory=list)
+
+
 class AccountExportResponse(BaseModel):
     """A complete copy of the caller's own account data."""
 
@@ -143,6 +246,9 @@ class AccountExportResponse(BaseModel):
     health_record: ExportedHealthRecord | None = None
     appointments: list[ExportedAppointment] = Field(default_factory=list)
     messages: list[ExportedMessage] = Field(default_factory=list)
+    supplier: ExportedSupplier | None = None
+    training_provider: ExportedTrainingProvider | None = None
+    specialist: ExportedSpecialist | None = None
 
 
 def _exported_user(user: User) -> ExportedUser:
@@ -232,6 +338,126 @@ async def export_account(state: AppState, *, actor: User) -> AccountExportRespon
         )
         messages = await MessageRepository.list_for_user(session, user_id=actor.id)
 
+        # Supplier storefront + products the caller owns.
+        supplier = await SupplierRepository.get_by_owner(session, actor.id)
+        exported_supplier: ExportedSupplier | None = None
+        if supplier is not None:
+            products = await ProductRepository.list_for_supplier(
+                session, supplier.id, limit=100000, offset=0
+            )
+            exported_supplier = ExportedSupplier(
+                id=supplier.id,
+                name=supplier.name,
+                slug=supplier.slug,
+                description=supplier.description,
+                country_code=supplier.country_code,
+                scope=supplier.scope,
+                is_verified=supplier.is_verified,
+                created_at=supplier.created_at,
+                products=[
+                    ExportedProduct(
+                        id=product.id,
+                        name=product.name,
+                        brand=product.brand,
+                        category=product.category,
+                        description=product.description,
+                        image_url=product.image_url,
+                        currency=product.currency,
+                        retail_price=str(product.retail_price),
+                        wholesale_price=(
+                            str(product.wholesale_price)
+                            if product.wholesale_price is not None
+                            else None
+                        ),
+                        wholesale_min_qty=product.wholesale_min_qty,
+                        in_stock=product.in_stock,
+                        country_code=product.country_code,
+                        created_at=product.created_at,
+                    )
+                    for product in products
+                ],
+            )
+
+        # Training Provider the caller owns, with its courses and webinars.
+        training_provider = await TrainingRepository.get_provider_by_owner(session, actor.id)
+        exported_training: ExportedTrainingProvider | None = None
+        if training_provider is not None:
+            courses = await TrainingRepository.list_courses_for_provider(
+                session, training_provider.id, limit=100000, offset=0
+            )
+            webinars = await TrainingRepository.list_webinars_for_provider(
+                session, training_provider.id, limit=100000, offset=0
+            )
+            exported_training = ExportedTrainingProvider(
+                id=training_provider.id,
+                name=training_provider.name,
+                country_code=training_provider.country_code,
+                is_verified=training_provider.is_verified,
+                created_at=training_provider.created_at,
+                courses=[
+                    ExportedTrainingCourse(
+                        id=course.id,
+                        title=course.title,
+                        description=course.description,
+                        country_code=course.country_code,
+                        subdivision_code=course.subdivision_code,
+                        delivery_mode=course.delivery_mode,
+                        price=str(course.price) if course.price is not None else None,
+                        currency=course.currency,
+                        cpd_points=course.cpd_points,
+                        created_at=course.created_at,
+                        updated_at=course.updated_at,
+                    )
+                    for course in courses
+                ],
+                webinars=[
+                    ExportedTrainingWebinar(
+                        id=webinar.id,
+                        title=webinar.title,
+                        description=webinar.description,
+                        country_code=webinar.country_code,
+                        join_url=webinar.join_url,
+                        scheduled_start=webinar.scheduled_start,
+                        cpd_points=webinar.cpd_points,
+                    )
+                    for webinar in webinars
+                ],
+            )
+
+        # Specialist listing the caller runs.
+        specialist = await SpecialistRepository.get_by_user(session, actor.id)
+        exported_specialist: ExportedSpecialist | None = None
+        if specialist is not None:
+            exported_specialist = ExportedSpecialist(
+                id=specialist.id,
+                name=specialist.name,
+                slug=specialist.slug,
+                bio=specialist.bio,
+                avatar_key=specialist.avatar_key,
+                country_code=specialist.country_code,
+                subdivision_code=specialist.subdivision_code,
+                verification_tier=str(specialist.verification_tier),
+                currency=specialist.currency,
+                list_price=(
+                    str(specialist.list_price) if specialist.list_price is not None else None
+                ),
+                rating=str(specialist.rating) if specialist.rating is not None else None,
+                review_count=specialist.review_count,
+                specialties=[specialty.code for specialty in specialist.specialties],
+                branches=[
+                    ExportedBranch(
+                        id=branch.id,
+                        name=branch.name,
+                        subdivision_code=branch.subdivision_code,
+                        address=branch.address,
+                        phone=branch.phone,
+                        email=branch.email,
+                        open_now=None,
+                    )
+                    for branch in specialist.branches
+                ],
+            )
+
         return AccountExportResponse(
             exported_at=datetime.now(UTC),
             user=_exported_user(actor),
@@ -259,6 +485,9 @@ async def export_account(state: AppState, *, actor: User) -> AccountExportRespon
                 )
                 for message in messages
             ],
+            supplier=exported_supplier,
+            training_provider=exported_training,
+            specialist=exported_specialist,
         )
 
 

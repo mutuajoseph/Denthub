@@ -292,6 +292,15 @@ class ProductRepository:
         return list(result.scalars().all())
 
     @staticmethod
+    async def list_all_for_supplier(session: AsyncSession, supplier_id: str) -> list[Product]:
+        """Return every product a store sells, ordered by name."""
+        stmt = (
+            select(Product).where(Product.supplier_id == supplier_id).order_by(Product.name.asc())
+        )
+        result = await session.execute(stmt)
+        return list(result.scalars().all())
+
+    @staticmethod
     async def count_for_supplier(session: AsyncSession, supplier_id: str) -> int:
         """Count a store's products with the same scope as the list."""
         stmt = select(func.count()).select_from(Product).where(Product.supplier_id == supplier_id)
