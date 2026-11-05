@@ -75,6 +75,32 @@ export type AuthSurface = "public" | "staff";
 let accessToken: string | null = null;
 let accessSurface: AuthSurface | null = null;
 
+const AUTH_CHANGE_EVENT = "denthub:auth-change";
+
+/**
+ * Tell mounted subscribers that the stored session changed. A failed refresh
+ * clears the session outside React, so `App` subscribes to drop its stale
+ * `user` state instead of staying visually signed in until a reload.
+ */
+function notifyAuthChange(): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
+}
+
+export function subscribeToAuthChanges(listener: (user: AuthUser | null) => void): () => void {
+  if (typeof window === "undefined") {
+    return () => undefined;
+  }
+
+  const handleChange = () => listener(getStoredUser());
+
+  window.addEventListener(AUTH_CHANGE_EVENT, handleChange);
+  return () => window.removeEventListener(AUTH_CHANGE_EVENT, handleChange);
+}
+
 type UnknownRecord = Record<string, unknown>;
 
 function isRecord(value: unknown): value is UnknownRecord {
@@ -174,17 +200,17 @@ function saveStoredAuth(auth: AuthResponse, surface: AuthSurface): void {
 
   const storage = getStorage();
 
-  if (!storage) {
-    return;
+  if (storage) {
+    try {
+      // Only the profile and its surface are persisted. The token is never
+      // written to storage.
+      storage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ user: auth.user, surface }));
+    } catch {
+      // A blocked localStorage must not stop the in-memory session.
+    }
   }
 
-  try {
-    // Only the profile and its surface are persisted. The token is never
-    // written to storage.
-    storage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ user: auth.user, surface }));
-  } catch {
-    return;
-  }
+  notifyAuthChange();
 }
 
 async function postAuth(
@@ -313,15 +339,15 @@ export function clearStoredAuth(): void {
 
   const storage = getStorage();
 
-  if (!storage) {
-    return;
+  if (storage) {
+    try {
+      storage.removeItem(AUTH_STORAGE_KEY);
+    } catch {
+      // The in-memory token is already gone; a blocked storage still signs out.
+    }
   }
 
-  try {
-    storage.removeItem(AUTH_STORAGE_KEY);
-  } catch {
-    return;
-  }
+  notifyAuthChange();
 }
 
 /**

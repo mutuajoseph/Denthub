@@ -10,6 +10,7 @@ import {
   getStoredUser,
   refreshSession,
   setSession,
+  subscribeToAuthChanges,
 } from "./auth";
 
 function jsonResponse(status: number, body: unknown): Response {
@@ -179,5 +180,18 @@ describe("session storage (#121)", () => {
 
     // Single-use tokens: two rotations would read as theft and end the session.
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("notifies subscribers when the session changes", () => {
+    const listener = vi.fn();
+    const unsubscribe = subscribeToAuthChanges(listener);
+
+    setSession(session);
+    expect(listener).toHaveBeenLastCalledWith(session.user);
+
+    clearStoredAuth();
+    expect(listener).toHaveBeenLastCalledWith(null);
+
+    unsubscribe();
   });
 });

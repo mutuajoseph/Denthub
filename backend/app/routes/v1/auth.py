@@ -4,6 +4,9 @@ Provides endpoints for signup, login, refresh, logout, and fetching the current
 authenticated user profile. The refresh token travels only in an httpOnly
 cookie; the JSON body carries a short-lived access token (ADR-0003 follow-up,
 #121).
+
+Refresh and logout are deliberately not role-gated: the httpOnly cookie is the
+credential, and the scope in its JWT is what confines it to one surface (#121).
 """
 
 from __future__ import annotations

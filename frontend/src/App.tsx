@@ -15,7 +15,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AppShell } from "./components/layout/AppShell";
 import LoadingSpinner from "./components/ui/LoadingSpinner";
 import { usePageMeta } from "./hooks/usePageMeta";
-import { getStoredUser, logoutSession, restoreSession } from "./lib/auth";
+import { getStoredUser, logoutSession, restoreSession, subscribeToAuthChanges } from "./lib/auth";
 import type { AuthResponse, AuthUser } from "./lib/auth";
 
 /*
@@ -109,6 +109,10 @@ const App = () => {
       active = false;
     };
   }, []);
+
+  // A failed refresh clears the stored session outside React. Mirror that in
+  // state so the shell and RouteGuard drop access at once, not on next reload.
+  useEffect(() => subscribeToAuthChanges(setUser), []);
 
   const handleLoginSuccess = (authResponse: AuthResponse) => {
     // The auth client already persisted this response (token in memory, profile

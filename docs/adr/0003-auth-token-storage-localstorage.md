@@ -53,7 +53,10 @@ running system.
   secret, so an access-token compromise cannot mint refresh tokens), delivered
   only in an `HttpOnly`, `Secure` (production), `SameSite=Lax` cookie. One
   cookie name and one narrow `Path` per surface: `denthub_refresh` on
-  `/api/v1/auth`, `denthub_staff_refresh` on `/api/v1/auth/staff`.
+  `/api/v1/auth`, `denthub_staff_refresh` on `/api/v1/auth/staff`. Because the
+  public path is a prefix of the staff path, the public cookie is also sent on
+  staff requests; the distinct names and the JWT's scope, not the path, are
+  what stop one cookie refreshing the other surface.
 - **Rotation and reuse detection**: each refresh token's `jti` is a row in
   `refresh_tokens` with its `family_id`. Refreshing revokes the presented row
   and issues a new one in the same family; presenting a revoked row is treated

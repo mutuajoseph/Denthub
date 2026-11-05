@@ -8,8 +8,10 @@ attributes are set in exactly one place:
 - ``Secure`` in production only, so local http development still works.
 - ``SameSite=Lax`` — a cross-site POST never carries it, which is the CSRF
   protection ADR-0003 step 3 asked for (recorded in that ADR).
-- A narrow ``Path`` per auth surface, so a staff cookie is never even sent to a
-  public refresh route, or the reverse.
+- A distinct cookie name per auth surface, so each route reads only its own
+  cookie. The public ``Path`` is a prefix of the staff path, so both cookies
+  may be sent on a staff request; the name and the JWT scope keep the surfaces
+  apart, not the path.
 """
 
 from __future__ import annotations
