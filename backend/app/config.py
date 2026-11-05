@@ -45,7 +45,7 @@ class Settings:
     resend_api_key: str | None = None
 
     @classmethod
-    def from_env(cls) -> "Settings":
+    def from_env(cls) -> Settings:
         environment = os.getenv("ENVIRONMENT", "local")
 
         cors_origins_env = os.getenv("CORS_ORIGINS")
@@ -87,9 +87,7 @@ class Settings:
                 "Render dashboard (render.yaml marks it sync: false)."
             )
 
-        retention_raw = os.getenv(
-            "CLINICAL_RETENTION_DAYS", str(DEFAULT_CLINICAL_RETENTION_DAYS)
-        )
+        retention_raw = os.getenv("CLINICAL_RETENTION_DAYS", str(DEFAULT_CLINICAL_RETENTION_DAYS))
         try:
             clinical_retention_days = int(retention_raw)
         except ValueError as exc:
@@ -97,9 +95,7 @@ class Settings:
                 "CLINICAL_RETENTION_DAYS must be a positive integer number of days."
             ) from exc
         if clinical_retention_days <= 0:
-            raise RuntimeError(
-                "CLINICAL_RETENTION_DAYS must be a positive integer number of days."
-            )
+            raise RuntimeError("CLINICAL_RETENTION_DAYS must be a positive integer number of days.")
 
         resend_api_key = os.getenv("RESEND_API_KEY") or None
         mail_from = os.getenv("MAIL_FROM")
@@ -129,9 +125,7 @@ class Settings:
             environment=environment,
             dev_mode=os.getenv("DEV_MODE", "1") == "1",
             log_level=os.getenv("LOG_LEVEL", "INFO"),
-            cors_origins=tuple(
-                origin.strip() for origin in origins.split(",") if origin.strip()
-            ),
+            cors_origins=tuple(origin.strip() for origin in origins.split(",") if origin.strip()),
             database_url=database_url,
             jwt_secret_key=jwt_secret_key,
             jwt_algorithm=os.getenv("JWT_ALGORITHM", "HS256"),
