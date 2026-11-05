@@ -62,6 +62,7 @@ from app.repositories.product import Product, Supplier  # noqa: F401
 from app.repositories.profile import FacilityMembership, Profile  # noqa: F401
 from app.repositories.treatment import Treatment  # noqa: F401
 from app.repositories.user import User  # noqa: F401
+from app.repositories.user_token import UserToken  # noqa: F401
 from app.repositories.message import Conversation, Message  # noqa: F401
 
 settings = Settings.from_env()
