@@ -100,6 +100,7 @@ def test_production_without_mail_settings_refuses_to_start(
     monkeypatch.setenv("ENVIRONMENT", "production")
     monkeypatch.setenv("CORS_ORIGINS", "https://example.com")
     monkeypatch.setenv("JWT_SECRET_KEY", "a-real-secret-from-the-dashboard")
+    monkeypatch.setenv("REFRESH_TOKEN_SECRET", "another-real-secret-from-the-dashboard")
     _set_mail(monkeypatch)
     monkeypatch.delenv(missing)
 
@@ -111,6 +112,7 @@ def test_frontend_url_drops_a_trailing_slash(monkeypatch: pytest.MonkeyPatch) ->
     monkeypatch.setenv("ENVIRONMENT", "production")
     monkeypatch.setenv("CORS_ORIGINS", "https://example.com")
     monkeypatch.setenv("JWT_SECRET_KEY", "a-real-secret-from-the-dashboard")
+    monkeypatch.setenv("REFRESH_TOKEN_SECRET", "another-real-secret-from-the-dashboard")
     _set_mail(monkeypatch)
 
     assert Settings.from_env().frontend_url == "https://denthub.example.com"
