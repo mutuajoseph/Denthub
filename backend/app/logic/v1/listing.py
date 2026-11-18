@@ -136,6 +136,8 @@ class SpecialistDetail(BaseModel):
 
     listing: DentistListing
     slug: str
+    bio: str | None
+    avatar_key: str | None
     specialties: list[SpecialtyResponse]
     branches: list[BranchResponse]
 
@@ -211,7 +213,7 @@ def _serialize_hours(hours: Sequence[OpeningHour]) -> list[OpeningHourResponse]:
     ]
 
 
-def _serialize_branch(
+def serialize_branch(
     branch: Branch,
     *,
     facility_name: str,
@@ -232,7 +234,7 @@ def _serialize_branch(
     )
 
 
-def _serialize_specialties(specialties: Sequence[Specialty]) -> list[SpecialtyResponse]:
+def serialize_specialties(specialties: Sequence[Specialty]) -> list[SpecialtyResponse]:
     return [
         SpecialtyResponse(
             id=row.id,
@@ -309,7 +311,7 @@ def _specialist_listing(
         name=specialist.name,
         country_code=specialist.country_code,
         subdivision_code=specialist.subdivision_code,
-        specialty_codes=[row.code for row in _serialize_specialties(specialist.specialties)],
+        specialty_codes=[row.code for row in serialize_specialties(specialist.specialties)],
         rating=specialist.rating,
         review_count=specialist.review_count,
         list_price=(
@@ -389,7 +391,7 @@ async def get_facility(state: AppState, *, facility_id: str) -> FacilityDetail:
 
     now = datetime.now(UTC)
     branches = [
-        _serialize_branch(
+        serialize_branch(
             branch,
             facility_name=facility.name,
             timezone_name=country.timezone,
@@ -467,11 +469,11 @@ async def get_specialist(state: AppState, *, specialist_id: str) -> SpecialistDe
             raise NotFoundException(message="Specialist not found")
 
         country = await _resolve_country(session, specialist.country_code)
-        specialties = _serialize_specialties(specialist.specialties)
+        specialties = serialize_specialties(specialist.specialties)
 
     now = datetime.now(UTC)
     branches = [
-        _serialize_branch(
+        serialize_branch(
             branch,
             facility_name=branch.facility.name,
             timezone_name=country.timezone,
@@ -488,6 +490,8 @@ async def get_specialist(state: AppState, *, specialist_id: str) -> SpecialistDe
             now=now,
         ),
         slug=specialist.slug,
+        bio=specialist.bio,
+        avatar_key=specialist.avatar_key,
         specialties=specialties,
         branches=branches,
     )

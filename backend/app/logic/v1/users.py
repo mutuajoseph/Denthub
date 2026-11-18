@@ -5,8 +5,8 @@ from __future__ import annotations
 from typing import Any
 
 from app.exceptions import NotFoundException
+from app.logic.v1.audit import audit
 from app.logic.v1.auth import UserResponse, is_staff_role
-from app.repositories.admin import AdminAuditRepository
 from app.repositories.listing import FacilityRepository
 from app.repositories.profile import ProfileRepository
 from app.repositories.user import User, UserRepository
@@ -40,7 +40,7 @@ async def approve_user(
         if not user:
             raise NotFoundException(message="User not found")
 
-        before = user.account_status
+        before: dict[str, object] = {"account_status": user.account_status}
         user.account_status = "active"
         owned = await ProfileRepository.owned_facility_ids(session, user.id)
         unlisted = await FacilityRepository.list_unlisted(session, owned)
@@ -50,15 +50,13 @@ async def approve_user(
         after: dict[str, Any] = {"account_status": "active"}
         if unlisted:
             after["listed_facility_ids"] = [facility.id for facility in unlisted]
-        await AdminAuditRepository.record(
+        await audit(
             session,
-            actor_id=actor.id,
-            actor_email=actor.email,
-            actor_role=actor.role,
+            actor,
             action="user.approve",
             entity_type="user",
             entity_id=user.id,
-            before={"account_status": before},
+            before=before,
             after=after,
         )
         await session.commit()

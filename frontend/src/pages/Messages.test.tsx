@@ -38,8 +38,11 @@ const patient: AuthUser = {
   email: "amina@example.com",
   role: "patient",
   full_name: "Amina Wanjiku",
+  phone: null,
+  home_country_code: null,
   is_staff: false,
   account_status: "active",
+  email_verified: true,
   profiles: [],
   memberships: [],
 };

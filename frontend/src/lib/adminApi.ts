@@ -10,7 +10,7 @@
  * response rather than a second list kept here.
  */
 
-import { getJson, patchJson } from "./apiClient";
+import { getJson, patchJson, postJson } from "./apiClient";
 
 /** The graded value one Facility or Specialist profile is verified at. */
 export type VerificationTier = "unverified" | "basic" | "verified" | "featured";
@@ -77,6 +77,51 @@ export interface AdminAuditEntryWire {
 
 export interface AdminAuditListWire {
   items: AdminAuditEntryWire[];
+}
+
+/** A role a Super Admin may grant. `staff` is not part of the staff surface. */
+export type PlatformStaffRole = "admin" | "super_admin" | "platform_operator";
+
+/** The Division an Operator belongs to — exactly one. */
+export type OperatorDivision =
+  | "jobs"
+  | "shop"
+  | "training"
+  | "dentist"
+  | "international"
+  | "suppliers";
+
+/** An Operator's authority inside their Division. */
+export type OperatorTier = "lead" | "assistant";
+
+export interface PlatformStaffMemberWire {
+  id: string;
+  full_name: string;
+  email: string;
+  role: PlatformStaffRole;
+  operator_division: OperatorDivision | null;
+  operator_tier: OperatorTier | null;
+  is_active: boolean;
+}
+
+export interface PlatformStaffListWire {
+  items: PlatformStaffMemberWire[];
+}
+
+export interface CreatePlatformStaffRequest {
+  full_name: string;
+  email: string;
+  password: string;
+  role: PlatformStaffRole;
+  operator_division?: OperatorDivision | null;
+  operator_tier?: OperatorTier | null;
+}
+
+export interface UpdatePlatformStaffRequest {
+  role?: PlatformStaffRole;
+  operator_division?: OperatorDivision | null;
+  operator_tier?: OperatorTier | null;
+  is_active?: boolean;
 }
 
 export function fetchAdminCountries(options: { signal?: AbortSignal } = {}) {
@@ -159,4 +204,23 @@ export function fetchAdminAudit(options: { signal?: AbortSignal } = {}) {
     auth: true,
     signal: options.signal,
   });
+}
+
+export function fetchAdminStaff(options: { signal?: AbortSignal } = {}) {
+  return getJson<PlatformStaffListWire>("/admin/staff", {
+    auth: true,
+    signal: options.signal,
+  });
+}
+
+export function createPlatformStaff(request: CreatePlatformStaffRequest) {
+  return postJson<PlatformStaffMemberWire>("/admin/staff", request, { auth: true });
+}
+
+export function updatePlatformStaff(staffId: string, request: UpdatePlatformStaffRequest) {
+  return patchJson<PlatformStaffMemberWire>(
+    `/admin/staff/${encodeURIComponent(staffId)}`,
+    request,
+    { auth: true },
+  );
 }

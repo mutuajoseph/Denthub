@@ -32,6 +32,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    delete,
     func,
     or_,
     select,
@@ -290,6 +291,30 @@ class ConversationRepository:
             )
         )
 
+    @staticmethod
+    async def delete_for_user(session: AsyncSession, *, user_id: str) -> None:
+        """Delete all conversations and messages involving a User."""
+        await session.execute(
+            delete(Message).where(
+                Message.conversation_id.in_(
+                    select(Conversation.id).where(
+                        or_(
+                            Conversation.participant_a_id == user_id,
+                            Conversation.participant_b_id == user_id,
+                        )
+                    )
+                )
+            )
+        )
+        await session.execute(
+            delete(Conversation).where(
+                or_(
+                    Conversation.participant_a_id == user_id,
+                    Conversation.participant_b_id == user_id,
+                )
+            )
+        )
+
 
 class MessageRepository:
     """Message rows: one insert path, one thread-read path."""
@@ -313,6 +338,54 @@ class MessageRepository:
         await session.flush()
         await session.refresh(message)
         return message
+
+    @staticmethod
+    async def list_for_user(
+        session: AsyncSession,
+        *,
+        user_id: str,
+    ) -> list[Message]:
+        """Every Message in the User's threads, oldest first, for the export (#128).
+
+        Both directions: a thread is the exporting User's own correspondence,
+        so the other participant's Messages are part of that copy. The export
+        reports each Message's ``sender_id`` so the caller can tell them apart.
+        """
+        stmt = (
+            select(Message)
+            .join(Conversation, Conversation.id == Message.conversation_id)
+            .where(
+                or_(
+                    Conversation.participant_a_id == user_id,
+                    Conversation.participant_b_id == user_id,
+                )
+            )
+            .order_by(Message.created_at.asc(), Message.id.asc())
+        )
+        result = await session.execute(stmt)
+        return list(result.scalars().all())
+
+    @staticmethod
+    async def scrub_sender(
+        session: AsyncSession,
+        *,
+        sender_id: str,
+        replacement_body: str,
+    ) -> None:
+        """Erase one User's Message bodies and inbox previews (#128).
+
+        The rows stay so the other participant's thread keeps its shape, but no
+        message text the deleted User wrote survives. A preview only ever holds
+        the sender's own last Message, so it is cleared with it.
+        """
+        await session.execute(
+            update(Message).where(Message.sender_id == sender_id).values(body=replacement_body)
+        )
+        await session.execute(
+            update(Conversation)
+            .where(Conversation.last_message_sender_id == sender_id)
+            .values(last_message_preview=None, last_message_sender_id=None)
+        )
 
     @staticmethod
     async def list_for_conversation(

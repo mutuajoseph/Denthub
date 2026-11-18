@@ -158,6 +158,17 @@ export function DentistProfile({ user }: { user: AuthUser | null }) {
                 </span>
               </div>
 
+              {profile.bio && (
+                <section className="mt-8" aria-labelledby="about-heading">
+                  <h2 id="about-heading" className="font-heading text-lg font-semibold text-ink">
+                    About
+                  </h2>
+                  <p className="mt-3 whitespace-pre-line text-sm leading-6 text-charcoal">
+                    {profile.bio}
+                  </p>
+                </section>
+              )}
+
               {listing.specialties.length > 0 && (
                 <section className="mt-8" aria-labelledby="specialties-heading">
                   <h2

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -8,7 +8,7 @@ import { ROLE, type Role } from "./auth/roles";
 import { NAV_LINKS } from "./components/Navbar";
 import { getPageMeta } from "./hooks/usePageMeta";
 import { ApiError } from "./lib/apiClient";
-import { AUTH_STORAGE_KEY, type AuthResponse } from "./lib/auth";
+import { AUTH_STORAGE_KEY, type AuthResponse, clearStoredAuth } from "./lib/auth";
 import {
   type CountryConfig,
   fetchCountries,
@@ -122,6 +122,8 @@ const specialistDetail: SpecialistDetail = {
     clinic_name: "SmileCare Dental Centre",
   },
   slug: "dr-wanjiku-kamau",
+  bio: null,
+  avatar_key: null,
   specialties: [],
   branches: [],
 };
@@ -173,9 +175,12 @@ function seedAuth(role: Role): void {
       id: "user-1",
       email: "user@example.com",
       full_name: "Test User",
+      phone: null,
+      home_country_code: null,
       role,
       is_staff: role === ROLE.STAFF,
       account_status: "active",
+      email_verified: true,
       profiles: [],
       memberships: [],
     },
@@ -294,6 +299,10 @@ describe("App routes", () => {
     }
   });
 
+  it("titles the account settings route", () => {
+    expect(getPageMeta("/settings", "DentHub").title).toMatch(/settings/i);
+  });
+
   it("titles typed and legacy dentist profile routes alike", () => {
     for (const path of ["/dentists/facility/f-1", "/dentists/sp-1", "/dentist/sp-1"]) {
       expect(getPageMeta(path, "DentHub").title).toMatch(/dentist profile/i);
@@ -307,6 +316,24 @@ describe("App routes", () => {
       await screen.findByRole("heading", { name: /sign in to your account/i }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: /page not found/i })).toBeNull();
+  });
+
+  it("sends a guest from /settings to the routed sign-in page", async () => {
+    renderApp("/settings");
+
+    expect(
+      await screen.findByRole("heading", { name: /sign in to your account/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("renders the settings page for a signed-in public account", async () => {
+    seedAuth(ROLE.PATIENT);
+
+    renderApp("/settings");
+
+    expect(await screen.findByRole("heading", { name: /^settings$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /download my data/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete my account" })).toBeInTheDocument();
   });
 
   it("renders the standalone staff surface at /staff/access", async () => {
@@ -414,5 +441,22 @@ describe("App routes", () => {
     expect(
       await screen.findByRole("heading", { name: /create your provider profile/i }),
     ).toBeInTheDocument();
+  });
+
+  it("drops a signed-in user when a failed refresh clears the session", async () => {
+    seedAuth(ROLE.PATIENT);
+
+    renderApp("/");
+
+    expect(screen.getByRole("button", { name: /account menu for test user/i })).toBeInTheDocument();
+
+    act(() => {
+      clearStoredAuth();
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: /account menu for test user/i })).toBeNull();
+    });
+    expect(screen.getAllByText("Sign in").length).toBeGreaterThan(0);
   });
 });

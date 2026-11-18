@@ -11,8 +11,16 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Header, Query
 
-from app.dependencies import get_app_state
+from app.dependencies import current_user, get_app_state
 from app.logic.v1.country import DEFAULT_COUNTRY_CODE
+from app.logic.v1.dentist_me import (
+    MySpecialist,
+    MySpecialistCreate,
+    MySpecialistUpdate,
+    create_my_specialist,
+    get_my_specialist,
+    update_my_specialist,
+)
 from app.logic.v1.listing import (
     LISTING_PAGE_SIZE,
     FacilityDetail,
@@ -24,6 +32,7 @@ from app.logic.v1.listing import (
     list_facilities,
     list_specialists,
 )
+from app.repositories.user import User
 from app.utils.openapi_helpers import standard_error_responses
 from app.utils.state import AppState
 
@@ -96,6 +105,47 @@ async def read_specialists(
         limit=limit,
         offset=offset,
     )
+
+
+@router.get(
+    "/dentists/me",
+    response_model=MySpecialist,
+    responses=standard_error_responses(401, 403),
+)
+async def read_my_specialist(
+    actor: User = Depends(current_user),
+    state: AppState = Depends(get_app_state),
+) -> MySpecialist:
+    """The caller's own Specialist listing, or 404 until they create one."""
+    return await get_my_specialist(state, actor=actor)
+
+
+@router.post(
+    "/dentists/me",
+    response_model=MySpecialist,
+    responses=standard_error_responses(401, 403),
+)
+async def create_specialist_listing(
+    data: MySpecialistCreate,
+    actor: User = Depends(current_user),
+    state: AppState = Depends(get_app_state),
+) -> MySpecialist:
+    """Create the listing behind the caller's Specialist Profile."""
+    return await create_my_specialist(state, actor=actor, data=data)
+
+
+@router.patch(
+    "/dentists/me",
+    response_model=MySpecialist,
+    responses=standard_error_responses(401, 403),
+)
+async def patch_my_specialist(
+    data: MySpecialistUpdate,
+    actor: User = Depends(current_user),
+    state: AppState = Depends(get_app_state),
+) -> MySpecialist:
+    """Change the caller's bio, Specialties, Workplaces, or listing geography."""
+    return await update_my_specialist(state, actor=actor, data=data)
 
 
 @router.get(

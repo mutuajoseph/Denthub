@@ -60,12 +60,11 @@ routes are role-gated and the roles are the user's call).
 
 ## Bugs on `main` (fix first, each its own `fix:` issue, test red first)
 
-1. **A Specialist Appointment can never be confirmed** (#113). It is stored with
-   `facility_id = NULL`, and the only confirm path requires the caller's
-   Facility to match
-   ([`facility.py:174`](../backend/app/logic/v1/facility.py)). The interim fix
-   lets the booked Specialist's linked account confirm it; the structural fix
-   is ADR-0008 (P1).
+1. ~~**A Specialist Appointment can never be confirmed** (#113).~~ **Fixed in
+   #113**: a Specialist booking is still stored with `facility_id = NULL`, and
+   `PATCH /facility/appointments/{id}` now lets the account linked to the booked
+   Specialist listing (`specialists.user_id`) advance it; anyone else gets a
+   404. The structural fix is ADR-0008 (P1).
 2. **`POST /users/{id}/approve` accepts a public-scope token and writes no
    audit row** (#114) ([`users.py`](../backend/app/logic/v1/users.py)), unlike every
    `/admin` route. Require a staff token, and audit it.

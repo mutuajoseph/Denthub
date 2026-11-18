@@ -158,6 +158,8 @@ describe("mapProfile", () => {
     const detail: SpecialistDetail = {
       listing: wireSpecialist,
       slug: "dr-wanjiku-kamau",
+      bio: "Preventive dentistry and clear aligners.",
+      avatar_key: null,
       specialties: [
         {
           id: "sp1",
@@ -180,6 +182,7 @@ describe("mapProfile", () => {
     const profile = mapProfile(detail, specialtyResolver);
 
     expect(profile.listing.specialties).toEqual(["Orthodontics", "Periodontics"]);
+    expect(profile.bio).toBe("Preventive dentistry and clear aligners.");
     expect(profile.address).toBeNull();
     expect(profile.email).toBeNull();
     expect(profile.branches).toHaveLength(1);

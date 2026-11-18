@@ -9,9 +9,12 @@ function makeUser(accountStatus: AuthUser["account_status"]): AuthUser {
     id: "user-1",
     email: "dentist@example.com",
     full_name: "Dentist User",
+    phone: null,
+    home_country_code: null,
     role: "dentist",
     is_staff: false,
     account_status: accountStatus,
+    email_verified: true,
     profiles: [],
     memberships: [],
   };

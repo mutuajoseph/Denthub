@@ -26,7 +26,9 @@ from app.repositories.country import (
     Specialty,
     Subdivision,
 )
+from app.repositories.treatment import Treatment
 from app.utils.logger import configure_logging
+from app.utils.slugs import slug_code
 from app.utils.state import AppState
 from app.utils.urls import describe_url
 
@@ -360,6 +362,109 @@ SPECIALTIES: list[tuple[str, str, str, int]] = [
     ),
 ]
 
+#: (code, name, description, display_order). The platform-wide treatments a
+#: Branch's Services point at. Deliberately the common procedures a clinic lists
+#: as "from" prices, not a clinical taxonomy: a Service is a treatment plus a
+#: starting price, and the client uses the code as its cache key.
+TREATMENTS: list[tuple[str, str, str, int]] = [
+    (
+        "consultation",
+        "Consultation",
+        "An examination and treatment plan, the first visit most patients book.",
+        10,
+    ),
+    (
+        "scale-and-polish",
+        "Scale and Polish",
+        "Professional cleaning that removes plaque and tartar above the gumline.",
+        20,
+    ),
+    (
+        "composite-filling",
+        "Composite Filling",
+        "A tooth-coloured filling for a cavity or a chipped tooth.",
+        30,
+    ),
+    (
+        "root-canal-treatment",
+        "Root Canal Treatment",
+        "Removing infected pulp and sealing the canal to save a painful tooth.",
+        40,
+    ),
+    (
+        "tooth-extraction",
+        "Tooth Extraction",
+        "Removing a tooth that cannot be saved, under local anaesthetic.",
+        50,
+    ),
+    (
+        "wisdom-tooth-removal",
+        "Wisdom Tooth Removal",
+        "Surgical removal of an impacted or troublesome wisdom tooth.",
+        60,
+    ),
+    (
+        "dental-crown",
+        "Dental Crown",
+        "A cap that restores the shape, strength, and appearance of a damaged tooth.",
+        70,
+    ),
+    (
+        "dental-bridge",
+        "Dental Bridge",
+        "A fixed replacement for one or more missing teeth, anchored on neighbours.",
+        80,
+    ),
+    (
+        "denture",
+        "Denture",
+        "A removable set of false teeth for a partial or full arch.",
+        90,
+    ),
+    (
+        "dental-implant",
+        "Dental Implant",
+        "A titanium post that replaces a tooth root and anchors a crown.",
+        100,
+    ),
+    (
+        "teeth-whitening",
+        "Teeth Whitening",
+        "In-chair or take-home bleaching for a lighter, more even shade.",
+        110,
+    ),
+    (
+        "dental-veneers",
+        "Dental Veneers",
+        "Thin porcelain or composite facings that reshape the front teeth.",
+        120,
+    ),
+    (
+        "orthodontic-braces",
+        "Orthodontic Braces",
+        "Fixed braces that straighten teeth and correct a bite over time.",
+        130,
+    ),
+    (
+        "clear-aligners",
+        "Clear Aligners",
+        "Removable transparent trays that move teeth for a milder correction.",
+        140,
+    ),
+    (
+        "gum-treatment",
+        "Gum Treatment",
+        "Deep cleaning and follow-up for gum disease beyond a routine scale.",
+        150,
+    ),
+    (
+        "child-checkup",
+        "Child Check-up",
+        "A first or routine visit for a child, including prevention and advice.",
+        160,
+    ),
+]
+
 
 async def seed(state: AppState) -> None:
     """Insert or update the country reference data."""
@@ -386,7 +491,7 @@ async def seed(state: AppState) -> None:
                     )
                 )
                 subdivision = subdivision_result.scalar_one_or_none()
-                code = _subdivision_code(name)
+                code = slug_code(name)
 
                 if subdivision is None:
                     session.add(Subdivision(country_code=country_code, name=name, code=code))
@@ -451,6 +556,26 @@ async def seed(state: AppState) -> None:
                 specialty_row.description = description
                 specialty_row.display_order = display_order
 
+        for code, name, description, display_order in TREATMENTS:
+            treatment_result = await session.execute(
+                select(Treatment).where(Treatment.code == code)
+            )
+            treatment_row = treatment_result.scalar_one_or_none()
+
+            if treatment_row is None:
+                session.add(
+                    Treatment(
+                        code=code,
+                        name=name,
+                        description=description,
+                        display_order=display_order,
+                    )
+                )
+            else:
+                treatment_row.name = name
+                treatment_row.description = description
+                treatment_row.display_order = display_order
+
         await session.commit()
 
     state.logger.info(
@@ -460,22 +585,8 @@ async def seed(state: AppState) -> None:
         features=len(COUNTRY_FEATURES),
         insurance_providers=len(INSURANCE_PROVIDERS),
         specialties=len(SPECIALTIES),
+        treatments=len(TREATMENTS),
     )
-
-
-def _subdivision_code(name: str) -> str:
-    """Derive a stable code from a subdivision name.
-
-    Matches the client's historical ``slug`` so a subdivision selected before
-    this table existed resolves to the same row: uppercase, accents stripped,
-    every other run of characters collapsed to an underscore.
-    """
-    import re
-    import unicodedata
-
-    normalized = unicodedata.normalize("NFD", name)
-    stripped = "".join(char for char in normalized if not unicodedata.combining(char))
-    return re.sub(r"[^A-Za-z0-9]+", "_", stripped).strip("_").upper()
 
 
 async def seed_database(settings: Settings, logger: FilteringBoundLogger) -> None:

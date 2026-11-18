@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 
-import { type AuthUser, getStoredAuth } from "../lib/auth";
+import { type AuthUser, getStoredUser } from "../lib/auth";
 import {
   ADMIN_ROLES,
   FACILITY_ROLES,
@@ -89,7 +89,7 @@ export default function RouteGuard({
   unauthorizedPath,
 }: RouteGuardProps) {
   const location = useLocation();
-  const currentUser = user === undefined ? (getStoredAuth()?.user ?? null) : user;
+  const currentUser = user === undefined ? getStoredUser() : user;
   const requestedRoles = allowedRoles ?? requiredRoles ?? [];
   const roles = canonicalRoles(requestedRoles, scope);
   const attempted = attemptedUrl(location.pathname, location.search, location.hash);

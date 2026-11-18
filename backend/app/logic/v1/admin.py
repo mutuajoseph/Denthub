@@ -27,9 +27,9 @@ from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.exceptions import NotFoundException
+from app.logic.v1.audit import audit
 from app.repositories.admin import AdminAuditLog, AdminAuditRepository
 from app.repositories.country import (
     Country,
@@ -241,30 +241,6 @@ def _limit(limit: int) -> int:
     return max(1, min(limit, MAX_LIST_LIMIT))
 
 
-async def _audit(
-    session: AsyncSession,
-    *,
-    actor: User,
-    action: str,
-    entity_type: str,
-    entity_id: str,
-    before: dict[str, object] | None,
-    after: dict[str, object] | None,
-) -> None:
-    """Append the audit row for a write that is about to be committed."""
-    await AdminAuditRepository.record(
-        session,
-        actor_id=actor.id,
-        actor_email=actor.email,
-        actor_role=actor.role,
-        action=action,
-        entity_type=entity_type,
-        entity_id=entity_id,
-        before=before,
-        after=after,
-    )
-
-
 async def list_countries(state: AppState, *, actor: User) -> AdminCountryList:
     """Every Country, active or retired, with its feature flags."""
 
@@ -300,7 +276,7 @@ async def update_country(
         country.is_active = request.is_active
         after: dict[str, object] = {"is_active": country.is_active}
 
-        await _audit(
+        await audit(
             session,
             actor=actor,
             action="country.update",
@@ -363,7 +339,7 @@ async def update_country_feature(
             "primary_scheme": row.primary_scheme,
         }
 
-        await _audit(
+        await audit(
             session,
             actor=actor,
             action="country.feature.update",
@@ -420,7 +396,7 @@ async def _set_verification(
             after = {"verification_tier": specialist.verification_tier}
             item = _serialize_specialist_verification(specialist)
 
-        await _audit(
+        await audit(
             session,
             actor=actor,
             action="verification.set",
@@ -513,7 +489,7 @@ async def _set_moderation_status(
             after = {"status": posting.status}
             item = _serialize_job(posting)
 
-        await _audit(
+        await audit(
             session,
             actor=actor,
             action="moderation.status",

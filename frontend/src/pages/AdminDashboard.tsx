@@ -1,3 +1,5 @@
+import { type FormEvent, useState } from "react";
+
 import Badge from "../components/ui/Badge";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
@@ -5,13 +7,23 @@ import {
   useAdminAudit,
   useAdminCountries,
   useAdminModeration,
+  useAdminStaff,
   useAdminVerifications,
+  useCreatePlatformStaff,
   useModerateContent,
   useSetVerificationTier,
   useUpdateCountry,
   useUpdateCountryFeature,
+  useUpdatePlatformStaff,
 } from "../hooks/useAdmin";
-import type { AdminAuditEntryWire, ModerationItemWire, VerificationTier } from "../lib/adminApi";
+import type {
+  AdminAuditEntryWire,
+  ModerationItemWire,
+  OperatorDivision,
+  OperatorTier,
+  PlatformStaffRole,
+  VerificationTier,
+} from "../lib/adminApi";
 import type { AuthUser } from "../lib/auth";
 
 type AdminDashboardProps = {
@@ -30,6 +42,7 @@ const ENTITY_LABELS: Record<string, string> = {
   specialist: "Specialist",
   magazine: "Magazine item",
   job: "Job posting",
+  staff: "Platform Staff",
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -37,7 +50,28 @@ const ACTION_LABELS: Record<string, string> = {
   "country.feature.update": "Feature flag changed",
   "verification.set": "Verification tier set",
   "moderation.status": "Moderation status changed",
+  "staff.create": "Platform Staff created",
+  "staff.update": "Platform Staff updated",
 };
+
+const STAFF_ROLES: PlatformStaffRole[] = ["admin", "super_admin", "platform_operator"];
+
+const STAFF_ROLE_LABELS: Record<PlatformStaffRole, string> = {
+  admin: "Admin",
+  super_admin: "Super Admin",
+  platform_operator: "Operator",
+};
+
+const OPERATOR_DIVISIONS: OperatorDivision[] = [
+  "jobs",
+  "shop",
+  "training",
+  "dentist",
+  "international",
+  "suppliers",
+];
+
+const OPERATOR_TIERS: OperatorTier[] = ["lead", "assistant"];
 
 function describeError(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
@@ -317,6 +351,390 @@ function ModerationSection({ userId }: { userId: string | null }) {
   );
 }
 
+function StaffSection({ userId }: { userId: string | null }) {
+  const query = useAdminStaff(userId);
+  const createStaff = useCreatePlatformStaff();
+  const updateStaff = useUpdatePlatformStaff();
+  const members = query.data;
+
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState<PlatformStaffRole>("admin");
+  const [division, setDivision] = useState<OperatorDivision>("jobs");
+  const [tier, setTier] = useState<OperatorTier>("lead");
+  const isOperator = role === "platform_operator";
+  const [promotion, setPromotion] = useState<{
+    id: string;
+    division: OperatorDivision | "";
+    tier: OperatorTier | "";
+  } | null>(null);
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    createStaff.mutate(
+      {
+        full_name: fullName.trim(),
+        email: email.trim(),
+        password,
+        role,
+        ...(isOperator
+          ? { operator_division: division, operator_tier: tier }
+          : { operator_division: null, operator_tier: null }),
+      },
+      {
+        onSuccess: () => {
+          setFullName("");
+          setEmail("");
+          setPassword("");
+          setRole("admin");
+          setDivision("jobs");
+          setTier("lead");
+        },
+      },
+    );
+  };
+
+  return (
+    <Card hover={false}>
+      <h2 className="font-display text-lg font-semibold tracking-[-0.02em] text-ink">
+        Platform Staff
+      </h2>
+      <p className="mt-1 text-sm text-charcoal">
+        Give a User a staff role. An Operator carries one Division and a tier; every other role
+        carries neither. Changes apply on the member&apos;s next request.
+      </p>
+
+      {query.isPending ? (
+        <output className="mt-3 block text-sm text-slate">Loading Platform Staff...</output>
+      ) : query.error || !members ? (
+        <SectionError error={query.error} onRetry={() => void query.refetch()} />
+      ) : members.length === 0 ? (
+        <p className="mt-3 text-sm text-charcoal">No Platform Staff yet.</p>
+      ) : (
+        <ul className="mt-4 space-y-2">
+          {members.map((member) => (
+            <li key={member.id} className="rounded-button border border-steel bg-paper px-4 py-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-ink">{member.full_name}</p>
+                  <p className="mt-0.5 text-xs text-slate">{member.email}</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="neutral">{STAFF_ROLE_LABELS[member.role]}</Badge>
+                  <Badge variant={member.is_active ? "success" : "danger"}>
+                    {member.is_active ? "Active" : "Inactive"}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-end gap-3 border-t border-steel pt-3">
+                <div className="flex flex-col gap-1 text-xs font-medium text-charcoal">
+                  <span>Role</span>
+                  <select
+                    aria-label={`Role for ${member.full_name}`}
+                    value={member.role}
+                    disabled={updateStaff.isPending}
+                    onChange={(event) => {
+                      const nextRole = event.target.value as PlatformStaffRole;
+                      if (
+                        nextRole === "platform_operator" &&
+                        (member.operator_division === null || member.operator_tier === null)
+                      ) {
+                        setPromotion({ id: member.id, division: "", tier: "" });
+                        return;
+                      }
+                      updateStaff.mutate({
+                        staffId: member.id,
+                        request: {
+                          role: nextRole,
+                          operator_division:
+                            nextRole === "platform_operator" ? member.operator_division : null,
+                          operator_tier:
+                            nextRole === "platform_operator" ? member.operator_tier : null,
+                        },
+                      });
+                    }}
+                    className="min-h-9 rounded-button border border-steel bg-paper px-2 text-sm text-ink"
+                  >
+                    {STAFF_ROLES.map((option) => (
+                      <option key={option} value={option}>
+                        {STAFF_ROLE_LABELS[option]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {promotion?.id === member.id && (
+                  <>
+                    <div className="flex flex-col gap-1 text-xs font-medium text-charcoal">
+                      <span>Division</span>
+                      <select
+                        aria-label={`Division for ${member.full_name}`}
+                        value={promotion.division}
+                        disabled={updateStaff.isPending}
+                        onChange={(event) =>
+                          setPromotion({
+                            ...promotion,
+                            division: event.target.value as OperatorDivision | "",
+                          })
+                        }
+                        className="min-h-9 rounded-button border border-steel bg-paper px-2 text-sm text-ink"
+                      >
+                        <option value="">Select Division</option>
+                        {OPERATOR_DIVISIONS.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col gap-1 text-xs font-medium text-charcoal">
+                      <span>Tier</span>
+                      <select
+                        aria-label={`Tier for ${member.full_name}`}
+                        value={promotion.tier}
+                        disabled={updateStaff.isPending}
+                        onChange={(event) =>
+                          setPromotion({
+                            ...promotion,
+                            tier: event.target.value as OperatorTier | "",
+                          })
+                        }
+                        className="min-h-9 rounded-button border border-steel bg-paper px-2 text-sm text-ink"
+                      >
+                        <option value="">Select tier</option>
+                        {OPERATOR_TIERS.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="graphite"
+                      size="sm"
+                      aria-label={`Save ${member.full_name}`}
+                      disabled={
+                        updateStaff.isPending || promotion.division === "" || promotion.tier === ""
+                      }
+                      onClick={() => {
+                        if (promotion.division === "" || promotion.tier === "") return;
+                        updateStaff.mutate(
+                          {
+                            staffId: member.id,
+                            request: {
+                              role: "platform_operator",
+                              operator_division: promotion.division,
+                              operator_tier: promotion.tier,
+                            },
+                          },
+                          { onSuccess: () => setPromotion(null) },
+                        );
+                      }}
+                    >
+                      Save
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      aria-label={`Cancel ${member.full_name}`}
+                      onClick={() => setPromotion(null)}
+                    >
+                      Cancel
+                    </Button>
+                  </>
+                )}
+
+                {member.role === "platform_operator" && (
+                  <>
+                    <div className="flex flex-col gap-1 text-xs font-medium text-charcoal">
+                      <span>Division</span>
+                      <select
+                        aria-label={`Division for ${member.full_name}`}
+                        value={member.operator_division ?? "jobs"}
+                        disabled={updateStaff.isPending}
+                        onChange={(event) =>
+                          updateStaff.mutate({
+                            staffId: member.id,
+                            request: {
+                              operator_division: event.target.value as OperatorDivision,
+                            },
+                          })
+                        }
+                        className="min-h-9 rounded-button border border-steel bg-paper px-2 text-sm text-ink"
+                      >
+                        {OPERATOR_DIVISIONS.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col gap-1 text-xs font-medium text-charcoal">
+                      <span>Tier</span>
+                      <select
+                        aria-label={`Tier for ${member.full_name}`}
+                        value={member.operator_tier ?? "lead"}
+                        disabled={updateStaff.isPending}
+                        onChange={(event) =>
+                          updateStaff.mutate({
+                            staffId: member.id,
+                            request: { operator_tier: event.target.value as OperatorTier },
+                          })
+                        }
+                        className="min-h-9 rounded-button border border-steel bg-paper px-2 text-sm text-ink"
+                      >
+                        {OPERATOR_TIERS.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </>
+                )}
+
+                <Button
+                  variant={member.is_active ? "secondary" : "graphite"}
+                  size="sm"
+                  aria-label={
+                    member.is_active
+                      ? `Deactivate ${member.full_name}`
+                      : `Reactivate ${member.full_name}`
+                  }
+                  disabled={updateStaff.isPending}
+                  onClick={() =>
+                    updateStaff.mutate({
+                      staffId: member.id,
+                      request: { is_active: !member.is_active },
+                    })
+                  }
+                >
+                  {member.is_active ? "Deactivate" : "Reactivate"}
+                </Button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <form className="mt-6 grid gap-3 border-t border-steel pt-4 sm:grid-cols-2" onSubmit={submit}>
+        <h3 className="font-display text-base font-semibold text-ink sm:col-span-2">
+          Add a staff member
+        </h3>
+
+        <label className="flex flex-col gap-1 text-xs font-medium text-charcoal">
+          Full name
+          <input
+            required
+            maxLength={100}
+            value={fullName}
+            onChange={(event) => setFullName(event.target.value)}
+            className="min-h-9 rounded-button border border-steel bg-paper px-2 text-sm text-ink"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs font-medium text-charcoal">
+          Email
+          <input
+            required
+            type="email"
+            maxLength={255}
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            className="min-h-9 rounded-button border border-steel bg-paper px-2 text-sm text-ink"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs font-medium text-charcoal">
+          Password
+          <input
+            required
+            type="password"
+            autoComplete="new-password"
+            minLength={8}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            className="min-h-9 rounded-button border border-steel bg-paper px-2 text-sm text-ink"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs font-medium text-charcoal">
+          Role
+          <select
+            value={role}
+            onChange={(event) => setRole(event.target.value as PlatformStaffRole)}
+            className="min-h-9 rounded-button border border-steel bg-paper px-2 text-sm text-ink"
+          >
+            {STAFF_ROLES.map((option) => (
+              <option key={option} value={option}>
+                {STAFF_ROLE_LABELS[option]}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {isOperator && (
+          <>
+            <label className="flex flex-col gap-1 text-xs font-medium text-charcoal">
+              Division
+              <select
+                value={division}
+                onChange={(event) => setDivision(event.target.value as OperatorDivision)}
+                className="min-h-9 rounded-button border border-steel bg-paper px-2 text-sm text-ink"
+              >
+                {OPERATOR_DIVISIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="flex flex-col gap-1 text-xs font-medium text-charcoal">
+              Operator tier
+              <select
+                value={tier}
+                onChange={(event) => setTier(event.target.value as OperatorTier)}
+                className="min-h-9 rounded-button border border-steel bg-paper px-2 text-sm text-ink"
+              >
+                {OPERATOR_TIERS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </>
+        )}
+
+        <div className="sm:col-span-2">
+          <Button type="submit" variant="graphite" size="sm" disabled={createStaff.isPending}>
+            Create staff member
+          </Button>
+        </div>
+      </form>
+
+      {createStaff.error && (
+        <p role="alert" className="mt-3 text-sm text-red-700">
+          {describeError(createStaff.error, "The staff member could not be created.")}
+        </p>
+      )}
+      {updateStaff.error && (
+        <p role="alert" className="mt-3 text-sm text-red-700">
+          {describeError(updateStaff.error, "The staff member could not be updated.")}
+        </p>
+      )}
+    </Card>
+  );
+}
+
 function AuditSection({ userId }: { userId: string | null }) {
   const query = useAdminAudit(userId);
   const entries = query.data;
@@ -385,6 +803,7 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
         <CountriesSection userId={user.id} />
         <VerificationSection userId={user.id} />
         <ModerationSection userId={user.id} />
+        {user.role === "super_admin" && <StaffSection userId={user.id} />}
         <AuditSection userId={user.id} />
       </div>
     </section>

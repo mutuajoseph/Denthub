@@ -13,6 +13,7 @@ from app.routes.v1 import (
     appointments,
     auth,
     config,
+    dentist,
     facility,
     health,
     health_records,
@@ -20,6 +21,7 @@ from app.routes.v1 import (
     jobs,
     listing,
     magazine,
+    me,
     messages,
     operations,
     products,
@@ -34,6 +36,7 @@ v1_router.include_router(health.router)
 v1_router.include_router(admin.router)
 v1_router.include_router(operations.router)
 v1_router.include_router(auth.router, prefix="/auth")
+v1_router.include_router(me.router)
 v1_router.include_router(config.router)
 v1_router.include_router(products.router)
 v1_router.include_router(suppliers.router)
@@ -45,6 +48,8 @@ v1_router.include_router(messages.router)
 v1_router.include_router(magazine.router)
 v1_router.include_router(training.router)
 v1_router.include_router(appointments.router)
+v1_router.include_router(dentist.router)
 v1_router.include_router(facility.router)
 v1_router.include_router(health_records.router)
+v1_router.include_router(me.router)
 v1_router.include_router(training_provider.router)

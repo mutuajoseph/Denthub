@@ -194,6 +194,41 @@ async def test_approve_is_idempotent(
     assert response.json()["account_status"] == "active"
 
 
+async def test_approving_an_active_user_writes_no_audit_row(
+    client: AsyncClient,
+    session_maker: async_sessionmaker[Any],
+) -> None:
+    # A patient is active on signup, so this approval changes nothing. The
+    # trail records decisions, not repeats, so it stays empty.
+    email, password = await _create_admin(session_maker)
+    admin_headers = await _staff_login(client, email, password)
+
+    signup = await client.post(
+        "/api/v1/auth/register",
+        json={
+            "full_name": "Brian Ochieng",
+            "email": "brian@example.com",
+            "password": "correct horse battery staple",
+            "account_type": "patient",
+        },
+    )
+    user_id = signup.json()["user"]["id"]
+    assert signup.json()["user"]["account_status"] == "active"
+
+    before = await client.get("/api/v1/admin/audit", headers=admin_headers)
+    assert before.json()["items"] == []
+
+    response = await client.post(
+        f"/api/v1/users/{user_id}/approve",
+        headers=admin_headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["account_status"] == "active"
+
+    after = await client.get("/api/v1/admin/audit", headers=admin_headers)
+    assert after.json()["items"] == []
+
+
 async def test_approve_refuses_an_admins_public_token(
     client: AsyncClient,
     session_maker: async_sessionmaker[Any],

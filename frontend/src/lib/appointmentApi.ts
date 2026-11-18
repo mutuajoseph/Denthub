@@ -147,3 +147,11 @@ export function updateAppointment(
 ): Promise<AppointmentWire> {
   return patchJson<AppointmentWire>(`/appointments/${appointmentId}`, request, { auth: true });
 }
+
+/** Appointments naming the signed-in Specialist's own listing (#151). */
+export function fetchSpecialistAppointments(
+  options: { signal?: AbortSignal } = {},
+): Promise<AppointmentWire[]> {
+  const { signal } = options;
+  return getJson<AppointmentWire[]>("/dentists/me/appointments", { auth: true, signal });
+}

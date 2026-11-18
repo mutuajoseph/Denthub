@@ -1,7 +1,7 @@
 """add facilities listed
 
 Revision ID: 09ac3f801860
-Revises: a03c4a379430
+Revises: 60a853b1a39e
 Create Date: 2026-10-29 13:50:17.985580
 
 Whether the directory shows a Facility (#118). Every existing Facility stays
@@ -19,7 +19,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = '09ac3f801860'
-down_revision: Union[str, Sequence[str], None] = 'a03c4a379430'
+down_revision: Union[str, Sequence[str], None] = '60a853b1a39e'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

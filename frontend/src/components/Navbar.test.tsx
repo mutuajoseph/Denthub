@@ -38,9 +38,12 @@ function makeUser(role: Role): AuthUser {
     id: "user-1",
     email: "user@example.com",
     full_name: "Test User",
+    phone: null,
+    home_country_code: null,
     role,
     is_staff: false,
     account_status: "active",
+    email_verified: true,
     profiles: [],
     memberships: [],
   };
@@ -138,10 +141,23 @@ describe("Navbar account menu", () => {
     expect(screen.getByRole("menuitem", { name: "Messages" })).toHaveAttribute("href", "/messages");
   });
 
+  it("gives a public account its settings page", async () => {
+    await openAccountMenu(makeUser(ROLE.PATIENT));
+
+    expect(screen.getByRole("menuitem", { name: "Settings" })).toHaveAttribute("href", "/settings");
+  });
+
+  it("gives a facility account its settings page", async () => {
+    await openAccountMenu(makeUser(ROLE.FACILITY_OWNER));
+
+    expect(screen.getByRole("menuitem", { name: "Settings" })).toHaveAttribute("href", "/settings");
+  });
+
   it("gives a staff account no account destinations", async () => {
     await openAccountMenu(makeUser(ROLE.ADMIN));
 
     expect(screen.queryByRole("menuitem", { name: "Messages" })).toBeNull();
     expect(screen.queryByRole("menuitem", { name: "Dashboard" })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: "Settings" })).toBeNull();
   });
 });

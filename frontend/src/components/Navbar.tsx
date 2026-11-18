@@ -68,7 +68,10 @@ function accountLinksFor(user: AuthUser): AccountLink[] {
   }
 
   if (isFacilityRole(user)) {
-    return [{ label: "Facility", href: "/dashboard/facility" }];
+    return [
+      { label: "Facility", href: "/dashboard/facility" },
+      { label: "Settings", href: "/settings" },
+    ];
   }
 
   if (!isPublicRole(user)) {
@@ -87,6 +90,8 @@ function accountLinksFor(user: AuthUser): AccountLink[] {
   if (isTrainingProviderRole(user)) {
     links.push({ label: "Training", href: "/dashboard/training" });
   }
+
+  links.push({ label: "Settings", href: "/settings" });
 
   return links;
 }
