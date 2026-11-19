@@ -146,7 +146,8 @@ async def _resolve_listing(
     ``listing_type="specialist"`` is a not-found rather than a stored mismatch.
     """
     if listing_type == "facility":
-        facility = await FacilityRepository.get(session, listing_id)
+        # An unlisted Facility is not bookable: it has not passed staff review.
+        facility = await FacilityRepository.get_listed(session, listing_id)
 
         if facility is None:
             return None

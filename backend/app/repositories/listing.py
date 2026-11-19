@@ -34,6 +34,7 @@ from sqlalchemy import (
     delete,
     func,
     select,
+    true,
 )
 from sqlalchemy import (
     Enum as SAEnum,
@@ -79,6 +80,12 @@ class Facility(Base):
         ),
         default="unverified",
         nullable=False,
+    )
+    #: Whether the directory shows it. A Facility created at signup stays
+    #: unlisted until staff approve its owner (#118), so no unreviewed Facility
+    #: reaches search, its profile page, or booking.
+    listed: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default=true(), nullable=False
     )
 
     #: Every monetary record carries its own currency (root ``AGENTS.md``), so a
@@ -276,6 +283,11 @@ class SpecialistSpecialty(Base):
     )
 
 
+def _listed() -> ColumnElement[bool]:
+    """The one place "the directory shows this Facility" is written (#118)."""
+    return Facility.listed.is_(True)
+
+
 class FacilityFilters:
     """Filter set shared by :meth:`FacilityRepository.search` and ``count``."""
 
@@ -291,7 +303,10 @@ class FacilityFilters:
         self.verification_tier = verification_tier
 
     def conditions(self) -> list[ColumnElement[bool]]:
-        clauses: list[ColumnElement[bool]] = [Facility.country_code == self.country_code]
+        clauses: list[ColumnElement[bool]] = [
+            Facility.country_code == self.country_code,
+            _listed(),
+        ]
 
         if self.subdivision_code:
             clauses.append(Facility.subdivision_code == self.subdivision_code)
@@ -370,6 +385,7 @@ class FacilityRepository:
             .select_from(Facility)
             .where(
                 Facility.country_code == country_code,
+                _listed(),
                 Facility.verification_tier != "unverified",
             )
         )
@@ -382,7 +398,7 @@ class FacilityRepository:
         stmt = (
             select(func.count(func.distinct(Facility.subdivision_code)))
             .select_from(Facility)
-            .where(Facility.country_code == country_code)
+            .where(Facility.country_code == country_code, _listed())
         )
         result = await session.execute(stmt)
         return int(result.scalar_one())
@@ -432,6 +448,17 @@ class FacilityRepository:
         return result.scalar_one_or_none()
 
     @staticmethod
+    async def get_listed(session: AsyncSession, facility_id: str) -> Facility | None:
+        """One Facility as the public sees it: ``None`` while it is unlisted."""
+        stmt = (
+            select(Facility)
+            .options(selectinload(Facility.branches).selectinload(Branch.opening_hours))
+            .where(Facility.id == facility_id, _listed())
+        )
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    @staticmethod
     async def list_all(session: AsyncSession) -> list[Facility]:
         """Every Facility, for the admin verification list."""
         stmt = select(Facility).order_by(Facility.name.asc())
@@ -460,6 +487,16 @@ class FacilityRepository:
         session.add(facility)
         await session.flush()
         return facility
+
+    @staticmethod
+    async def list_unlisted(session: AsyncSession, facility_ids: list[str]) -> list[Facility]:
+        """The Facilities among ``facility_ids`` the directory does not show yet."""
+        if not facility_ids:
+            return []
+
+        stmt = select(Facility).where(Facility.id.in_(facility_ids), Facility.listed.is_(False))
+        result = await session.execute(stmt)
+        return list(result.scalars().all())
 
     @staticmethod
     async def update(facility: Facility, **kwargs: Any) -> Facility:

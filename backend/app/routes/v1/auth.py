@@ -11,7 +11,7 @@ credential, and the scope in its JWT is what confines it to one surface (#121).
 
 from __future__ import annotations
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, Request, Response, status
 
 from app.dependencies import current_staff, current_user, get_app_state
 from app.logic.v1.auth import (
@@ -39,6 +39,7 @@ from app.logic.v1.auth import (
     signup_user,
     verify_email,
 )
+from app.logic.v1.country import DEFAULT_COUNTRY_CODE
 from app.repositories.user import User
 from app.utils.cookies import clear_refresh_cookie, set_refresh_cookie
 from app.utils.openapi_helpers import standard_error_responses
@@ -51,10 +52,14 @@ router = APIRouter(tags=["auth"])
 async def signup(
     data: UserSignup,
     response: Response,
+    accept_country: str = Header(default=DEFAULT_COUNTRY_CODE, alias="Accept-Country"),
     state: AppState = Depends(get_app_state),
 ) -> AuthResponseModel:
-    """Create a new user profile, sign it in, and return an access token."""
-    session = await signup_user(state, data)
+    """Create a new user profile, sign it in, and return an access token.
+
+    ``Accept-Country`` is the market a Facility signup's Facility is in.
+    """
+    session = await signup_user(state, data, country_code=accept_country)
     set_refresh_cookie(response, state, token=session.refresh_token, scope=PUBLIC_SCOPE)
     return session.response
 

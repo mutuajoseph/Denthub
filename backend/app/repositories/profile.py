@@ -38,7 +38,7 @@ FacilityPermission = Literal["owner", "front_office", "clinical"]
 
 #: The Profile each signup Account Type creates (``CONTEXT.md`` "Account
 #: Type"). A Facility signup creates no Profile: owning a Facility is a
-#: membership, and the Facility itself is created by #118. The #117 migration
+#: membership, and signup creates the Facility beside it (#118). The #117 migration
 #: keeps its own frozen copy of this mapping for the backfill.
 PROFILE_FOR_ACCOUNT_TYPE: dict[str, ProfileKind] = {
     "patient": "patient",
@@ -139,6 +139,20 @@ class ProfileRepository:
     async def add(session: AsyncSession, *, user_id: str, kind: ProfileKind) -> None:
         session.add(Profile(user_id=user_id, kind=kind))
         await session.flush()
+
+    @staticmethod
+    async def add_owner(session: AsyncSession, *, user_id: str, facility_id: str) -> None:
+        """Give a User the owner Facility Membership for one Facility."""
+        session.add(FacilityMembership(user_id=user_id, facility_id=facility_id, owner=True))
+        await session.flush()
+
+    @staticmethod
+    async def owned_facility_ids(session: AsyncSession, user_id: str) -> list[str]:
+        """Every Facility the User owns, for listing the ones signup left unlisted."""
+        stmt = select(FacilityMembership.facility_id).where(
+            FacilityMembership.user_id == user_id, FacilityMembership.owner.is_(True)
+        )
+        return list((await session.execute(stmt)).scalars().all())
 
     @staticmethod
     async def kinds_for_user(session: AsyncSession, user_id: str) -> list[ProfileKind]:
