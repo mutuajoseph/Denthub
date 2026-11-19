@@ -30,19 +30,19 @@ async def _register(
     full_name: str,
 ) -> dict[str, Any]:
     """Register an account and return its id plus an Authorization header."""
-    body: dict[str, Any] = {
+    payload: dict[str, Any] = {
         "full_name": full_name,
         "email": f"{uuid.uuid4().hex[:12]}@example.com",
         "password": PASSWORD,
         "account_type": account_type,
     }
     if account_type == "facility_owner":
-        body["facility"] = {
+        payload["facility"] = {
             "name": full_name,
             "subdivision_code": "NAIROBI",
             "address": "Waiyaki Way, Westlands",
         }
-    response = await client.post("/api/v1/auth/register", json=body)
+    response = await client.post("/api/v1/auth/register", json=payload)
     assert response.status_code == 200, response.text
     body = response.json()
     return {

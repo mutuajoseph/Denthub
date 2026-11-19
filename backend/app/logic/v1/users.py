@@ -28,7 +28,7 @@ async def approve_user(
     first, so the flip itself carries the authorisation check.
 
     Approving a Facility owner also lists the Facilities they own that signup
-    left unlisted (#118), so the clinic reaches the directory only once staff
+    left unlisted (#118), so the Facility reaches the directory only once staff
     have looked at its owner.
     """
     async with state.db_session_maker() as session:

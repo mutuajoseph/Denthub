@@ -379,7 +379,7 @@ async def list_facilities(
 
 
 async def get_facility(state: AppState, *, facility_id: str) -> FacilityDetail:
-    """One clinic profile, with every Branch and its hours."""
+    """One Facility profile, with every Branch and its hours."""
     async with state.db_session_maker() as session:
         facility = await FacilityRepository.get_listed(session, facility_id)
 

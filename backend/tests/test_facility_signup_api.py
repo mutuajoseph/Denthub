@@ -1,7 +1,7 @@
 """A Facility signup creates the Facility, its first Branch, and an owner (#118).
 
 The Facility is hidden from the directory until staff approve its owner, so a
-signup can never put an unreviewed clinic in front of patients. ``users.role``
+signup can never put an unreviewed Facility in front of patients. ``users.role``
 and ``users.facility_id`` are still written beside the membership (ADR-0006).
 """
 
@@ -179,7 +179,7 @@ async def test_facility_details_on_another_account_type_are_a_422(client: AsyncC
     assert response.status_code == 422
 
 
-async def test_a_county_outside_the_country_is_refused_and_creates_nothing(
+async def test_a_subdivision_outside_the_country_is_refused_and_creates_nothing(
     client: AsyncClient, state: AppState
 ) -> None:
     response = await _sign_up_facility(client, subdivision_code="LAGOS")

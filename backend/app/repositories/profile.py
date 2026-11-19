@@ -142,11 +142,13 @@ class ProfileRepository:
 
     @staticmethod
     async def add_owner(session: AsyncSession, *, user_id: str, facility_id: str) -> None:
+        """Give a User the owner Facility Membership for one Facility."""
         session.add(FacilityMembership(user_id=user_id, facility_id=facility_id, owner=True))
         await session.flush()
 
     @staticmethod
     async def owned_facility_ids(session: AsyncSession, user_id: str) -> list[str]:
+        """Every Facility the User owns, for listing the ones signup left unlisted."""
         stmt = select(FacilityMembership.facility_id).where(
             FacilityMembership.user_id == user_id, FacilityMembership.owner.is_(True)
         )

@@ -46,7 +46,7 @@ describe("Register", () => {
     useRegionStore.setState({ regionCode: "KE", hasManualSelection: true });
   });
 
-  it("asks a clinic for its name, county and address and sends them as its Facility", async () => {
+  it("asks a Facility for its name, subdivision and address and sends them as its Facility", async () => {
     const user = userEvent.setup();
     renderRegister();
 

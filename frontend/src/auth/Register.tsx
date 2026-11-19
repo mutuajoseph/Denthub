@@ -18,7 +18,7 @@ import { useState } from "react";
 
 import { useCountryConfig } from "../hooks/useCountryConfig";
 import { useRegion } from "../hooks/useRegion";
-import { type AuthResponse, register } from "../lib/auth";
+import { type AuthResponse, type FacilitySignup, register } from "../lib/auth";
 import { ROLE } from "./roles";
 
 type RegisterProps = {
@@ -104,9 +104,11 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [facilityName, setFacilityName] = useState("");
-  const [subdivisionCode, setSubdivisionCode] = useState("");
-  const [address, setAddress] = useState("");
+  const [facility, setFacility] = useState<FacilitySignup>({
+    name: "",
+    subdivision_code: "",
+    address: "",
+  });
 
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -142,9 +144,9 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
         ...(isFacility
           ? {
               facility: {
-                name: facilityName.trim(),
-                subdivision_code: subdivisionCode,
-                address: address.trim(),
+                ...facility,
+                name: facility.name.trim(),
+                address: facility.address.trim(),
               },
             }
           : {}),
@@ -300,8 +302,8 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
                     required
                     maxLength={150}
                     autoComplete="organization"
-                    value={facilityName}
-                    onChange={(event) => setFacilityName(event.target.value)}
+                    value={facility.name}
+                    onChange={(event) => setFacility({ ...facility, name: event.target.value })}
                     className={inputClass}
                   />
                 </div>
@@ -317,8 +319,10 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
                     id="facility-subdivision"
                     name="subdivision_code"
                     required
-                    value={subdivisionCode}
-                    onChange={(event) => setSubdivisionCode(event.target.value)}
+                    value={facility.subdivision_code}
+                    onChange={(event) =>
+                      setFacility({ ...facility, subdivision_code: event.target.value })
+                    }
                     className={inputClass}
                   >
                     <option value="">Choose a {subdivisionLabel.toLowerCase()}</option>
@@ -345,8 +349,8 @@ export default function Register({ onClose, onSignIn, onRegisterSuccess }: Regis
                     required
                     maxLength={255}
                     autoComplete="street-address"
-                    value={address}
-                    onChange={(event) => setAddress(event.target.value)}
+                    value={facility.address}
+                    onChange={(event) => setFacility({ ...facility, address: event.target.value })}
                     className={inputClass}
                   />
                 </div>

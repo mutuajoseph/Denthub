@@ -82,7 +82,7 @@ class Facility(Base):
         nullable=False,
     )
     #: Whether the directory shows it. A Facility created at signup stays
-    #: unlisted until staff approve its owner (#118), so no unreviewed clinic
+    #: unlisted until staff approve its owner (#118), so no unreviewed Facility
     #: reaches search, its profile page, or booking.
     listed: Mapped[bool] = mapped_column(
         Boolean, default=True, server_default=true(), nullable=False
