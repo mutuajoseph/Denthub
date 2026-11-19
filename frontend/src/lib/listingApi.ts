@@ -104,6 +104,7 @@ export interface SpecialistDetail {
   slug: string;
   bio: string | null;
   avatar_key: string | null;
+  avatar_url: string | null;
   specialties: Specialty[];
   branches: Branch[];
 }
@@ -165,6 +166,8 @@ export interface BranchView {
 export interface ListingProfileView {
   listing: ListingView;
   bio: string | null;
+  /** A Specialist's public avatar URL; `null` for a Facility or no avatar. */
+  avatarUrl: string | null;
   /** The Facility's address; `null` for a Specialist, whose Branches carry theirs. */
   address: string | null;
   email: string | null;
@@ -236,6 +239,7 @@ export function mapProfile(
   return {
     listing: { ...listing, specialties: names },
     bio: "bio" in detail ? detail.bio : null,
+    avatarUrl: "avatar_url" in detail ? detail.avatar_url : null,
     address: isFacility ? detail.address : null,
     email: isFacility ? detail.email : null,
     branches: detail.branches.map(mapBranch),

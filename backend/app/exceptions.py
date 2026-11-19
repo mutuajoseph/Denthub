@@ -49,7 +49,7 @@ class InvalidRequestError(BaseApiException):
 
 
 class UnprocessableError(BaseApiException):
-    """A well-formed request whose values fail a check only the database can make."""
+    """A well-formed request whose values fail a domain check (422)."""
 
     code = 422
     message = "Validation error"

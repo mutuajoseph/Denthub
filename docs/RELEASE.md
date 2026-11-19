@@ -110,16 +110,33 @@ re-running the failed run from the Actions UI.
      to add) or every send is rejected.
    - `MAIL_FROM`: the From header, on that verified domain, e.g.
      `DentHub <no-reply@yourdomain>`.
-   - `FRONTEND_URL`: the client's origin, e.g. `https://denthub.vercel.app`.
-     Emailed links point here (`/verify-email`, `/reset-password`).
-6. Service → **Environment** → optionally set `CLINICAL_RETENTION_DAYS` = how many
-   days clinician-authored Health Record entries are kept after an account is
-   deleted (#128). It is not a secret; when unset the app uses **2555** (seven
-   years). **The default is provisional and needs legal confirmation** before
-   real patient data is served; change it here when counsel settles the period.
-   The value must be a positive integer or the backend refuses to start.
-7. Service → **Settings → Deploy Hook** → copy the URL.
-8. Confirm the health check is `/api/v1/health`.
+    - `FRONTEND_URL`: the client's origin, e.g. `https://denthub.vercel.app`.
+      Emailed links point here (`/verify-email`, `/reset-password`).
+ 7. Service → **Environment** → add the object-storage settings (#123, ADR-0007),
+    all `sync: false`. **The app refuses to start in production if any is
+    missing**, because presigned uploads would have nowhere to write.
+    - `STORAGE_ENDPOINT`: the S3-compatible API endpoint, e.g. the R2
+      account endpoint `https://<account>.r2.cloudflarestorage.com`.
+    - `STORAGE_ACCESS_KEY_ID` and `STORAGE_SECRET_ACCESS_KEY`: an API token
+      scoped to the two buckets. Create it in the provider dashboard; never
+      commit it.
+    - `STORAGE_PUBLIC_BUCKET`: the bucket for Avatars and other public images.
+      Enable public read access on it (or put its custom domain in the next
+      setting).
+    - `STORAGE_PRIVATE_BUCKET`: the bucket for Verification documents and
+      other private files. Keep public access **off**; they are read only via
+      short-lived signed URLs.
+    - `STORAGE_PUBLIC_BASE_URL`: the public bucket's read origin, e.g.
+      `https://images.yourdomain.com`, with no trailing slash. It is not a
+      secret, but is declared `sync: false` so it is set alongside the rest.
+ 8. Service → **Environment** → optionally set `CLINICAL_RETENTION_DAYS` = how many
+    days clinician-authored Health Record entries are kept after an account is
+    deleted (#128). It is not a secret; when unset the app uses **2555** (seven
+    years). **The default is provisional and needs legal confirmation** before
+    real patient data is served; change it here when counsel settles the period.
+    The value must be a positive integer or the backend refuses to start.
+ 9. Service → **Settings → Deploy Hook** → copy the URL.
+ 10. Confirm the health check is `/api/v1/health`.
 
 > The blueprint's `startCommand` prefixes uvicorn with
 > `uv run python -m app.scripts.seed_all`, which runs `alembic upgrade head` once and

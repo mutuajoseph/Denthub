@@ -160,6 +160,7 @@ describe("mapProfile", () => {
       slug: "dr-wanjiku-kamau",
       bio: "Preventive dentistry and clear aligners.",
       avatar_key: null,
+      avatar_url: null,
       specialties: [
         {
           id: "sp1",

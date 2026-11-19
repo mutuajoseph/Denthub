@@ -124,6 +124,7 @@ const specialistDetail: SpecialistDetail = {
   slug: "dr-wanjiku-kamau",
   bio: null,
   avatar_key: null,
+  avatar_url: null,
   specialties: [],
   branches: [],
 };

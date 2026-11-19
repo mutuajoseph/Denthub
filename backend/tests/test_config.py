@@ -24,6 +24,15 @@ def _set_mail(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("FRONTEND_URL", "https://denthub.example.com/")
 
 
+def _set_storage(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("STORAGE_ENDPOINT", "https://objects.example.com")
+    monkeypatch.setenv("STORAGE_ACCESS_KEY_ID", "key-from-the-dashboard")
+    monkeypatch.setenv("STORAGE_SECRET_ACCESS_KEY", "secret-from-the-dashboard")
+    monkeypatch.setenv("STORAGE_PUBLIC_BUCKET", "denthub-images")
+    monkeypatch.setenv("STORAGE_PRIVATE_BUCKET", "denthub-documents")
+    monkeypatch.setenv("STORAGE_PUBLIC_BASE_URL", "https://images.example.com")
+
+
 def test_local_without_secret_uses_dev_default(monkeypatch: pytest.MonkeyPatch) -> None:
     """Local development still works out of the box."""
     _clear_secrets(monkeypatch)
@@ -58,6 +67,7 @@ def test_production_with_real_secrets_starts(monkeypatch: pytest.MonkeyPatch) ->
     monkeypatch.setenv("JWT_SECRET_KEY", "a-real-secret-from-the-dashboard")
     monkeypatch.setenv("REFRESH_TOKEN_SECRET", "another-real-secret-from-the-dashboard")
     _set_mail(monkeypatch)
+    _set_storage(monkeypatch)
 
     settings = Settings.from_env()
 
@@ -108,12 +118,40 @@ def test_production_without_mail_settings_refuses_to_start(
         Settings.from_env()
 
 
+@pytest.mark.parametrize(
+    "missing",
+    [
+        "STORAGE_ENDPOINT",
+        "STORAGE_ACCESS_KEY_ID",
+        "STORAGE_SECRET_ACCESS_KEY",
+        "STORAGE_PUBLIC_BUCKET",
+        "STORAGE_PRIVATE_BUCKET",
+        "STORAGE_PUBLIC_BASE_URL",
+    ],
+)
+def test_production_without_storage_settings_refuses_to_start(
+    monkeypatch: pytest.MonkeyPatch, missing: str
+) -> None:
+    """ADR-0007: presigned uploads need a configured bucket and credentials."""
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("CORS_ORIGINS", "https://example.com")
+    monkeypatch.setenv("JWT_SECRET_KEY", "a-real-secret-from-the-dashboard")
+    monkeypatch.setenv("REFRESH_TOKEN_SECRET", "another-real-secret-from-the-dashboard")
+    _set_mail(monkeypatch)
+    _set_storage(monkeypatch)
+    monkeypatch.delenv(missing)
+
+    with pytest.raises(RuntimeError, match=missing):
+        Settings.from_env()
+
+
 def test_frontend_url_drops_a_trailing_slash(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("ENVIRONMENT", "production")
     monkeypatch.setenv("CORS_ORIGINS", "https://example.com")
     monkeypatch.setenv("JWT_SECRET_KEY", "a-real-secret-from-the-dashboard")
     monkeypatch.setenv("REFRESH_TOKEN_SECRET", "another-real-secret-from-the-dashboard")
     _set_mail(monkeypatch)
+    _set_storage(monkeypatch)
 
     assert Settings.from_env().frontend_url == "https://denthub.example.com"
 

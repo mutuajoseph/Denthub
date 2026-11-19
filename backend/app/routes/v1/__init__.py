@@ -28,8 +28,12 @@ from app.routes.v1 import (
     suppliers,
     training,
     training_provider,
+    uploads,
     users,
 )
+
+#: The in-process storage stand-in's HTTP endpoints, never mounted in production.
+local_storage_router = uploads.local_router
 
 v1_router = APIRouter()
 v1_router.include_router(health.router)
@@ -53,3 +57,4 @@ v1_router.include_router(facility.router)
 v1_router.include_router(health_records.router)
 v1_router.include_router(me.router)
 v1_router.include_router(training_provider.router)
+v1_router.include_router(uploads.router)
