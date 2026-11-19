@@ -50,6 +50,14 @@ class Settings:
     mail_from: str = "DentHub <no-reply@localhost>"
     #: Resend API key; unset means the console mailer (local and tests only).
     resend_api_key: str | None = None
+    #: S3-compatible object storage (ADR-0007). Unset locally means the
+    #: in-process storage stand-in; production must supply every field.
+    storage_endpoint: str | None = None
+    storage_access_key_id: str | None = None
+    storage_secret_access_key: str | None = None
+    storage_public_bucket: str | None = None
+    storage_private_bucket: str | None = None
+    storage_public_base_url: str | None = None
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -117,6 +125,13 @@ class Settings:
         mail_from = os.getenv("MAIL_FROM")
         frontend_url = os.getenv("FRONTEND_URL")
 
+        storage_endpoint = os.getenv("STORAGE_ENDPOINT") or None
+        storage_access_key_id = os.getenv("STORAGE_ACCESS_KEY_ID") or None
+        storage_secret_access_key = os.getenv("STORAGE_SECRET_ACCESS_KEY") or None
+        storage_public_bucket = os.getenv("STORAGE_PUBLIC_BUCKET") or None
+        storage_private_bucket = os.getenv("STORAGE_PRIVATE_BUCKET") or None
+        storage_public_base_url = os.getenv("STORAGE_PUBLIC_BASE_URL") or None
+
         # Production must really send mail (#120): without a provider key,
         # signup and password reset would silently email nobody.
         if environment == "production":
@@ -136,6 +151,22 @@ class Settings:
                     "(render.yaml marks them sync: false)."
                 )
 
+            storage = (
+                ("STORAGE_ENDPOINT", storage_endpoint),
+                ("STORAGE_ACCESS_KEY_ID", storage_access_key_id),
+                ("STORAGE_SECRET_ACCESS_KEY", storage_secret_access_key),
+                ("STORAGE_PUBLIC_BUCKET", storage_public_bucket),
+                ("STORAGE_PRIVATE_BUCKET", storage_private_bucket),
+                ("STORAGE_PUBLIC_BASE_URL", storage_public_base_url),
+            )
+            missing_storage = [name for name, value in storage if not value]
+            if missing_storage:
+                raise RuntimeError(
+                    f"{', '.join(missing_storage)} must be set in production; refusing to "
+                    "start without object storage (ADR-0007). Set them in the Render "
+                    "dashboard (render.yaml marks them sync: false)."
+                )
+
         return cls(
             app_name=APP_NAME,
             environment=environment,
@@ -150,4 +181,10 @@ class Settings:
             frontend_url=(frontend_url or "http://localhost:5173").rstrip("/"),
             mail_from=mail_from or "DentHub <no-reply@localhost>",
             resend_api_key=resend_api_key,
+            storage_endpoint=storage_endpoint,
+            storage_access_key_id=storage_access_key_id,
+            storage_secret_access_key=storage_secret_access_key,
+            storage_public_bucket=storage_public_bucket,
+            storage_private_bucket=storage_private_bucket,
+            storage_public_base_url=storage_public_base_url,
         )

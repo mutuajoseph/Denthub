@@ -19,6 +19,7 @@ const wireSpecialist = {
   slug: "dr-wanjiku-kamau",
   bio: "Preventive dentistry.",
   avatar_key: null,
+  avatar_url: null,
   country_code: "KE",
   subdivision_code: "NAIROBI",
   currency: "KES",

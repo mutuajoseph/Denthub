@@ -28,6 +28,7 @@ from app.logic.v1.country import (
     CountryConfigurationMissingException,
     SpecialtyResponse,
 )
+from app.logic.v1.uploads import public_avatar_url
 from app.repositories.country import Country, CountryRepository, Specialty
 from app.repositories.listing import (
     Branch,
@@ -138,6 +139,7 @@ class SpecialistDetail(BaseModel):
     slug: str
     bio: str | None
     avatar_key: str | None
+    avatar_url: str | None
     specialties: list[SpecialtyResponse]
     branches: list[BranchResponse]
 
@@ -492,6 +494,7 @@ async def get_specialist(state: AppState, *, specialist_id: str) -> SpecialistDe
         slug=specialist.slug,
         bio=specialist.bio,
         avatar_key=specialist.avatar_key,
+        avatar_url=public_avatar_url(state, specialist.avatar_key),
         specialties=specialties,
         branches=branches,
     )

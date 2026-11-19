@@ -9,6 +9,7 @@ import {
   useCreateMySpecialist,
   useMySpecialist,
   useUpdateMySpecialist,
+  useUploadAvatar,
 } from "../../hooks/useDentistMe";
 import { useListingDetail } from "../../hooks/useListingDetail";
 import { useListingSearch } from "../../hooks/useListingSearch";
@@ -25,6 +26,7 @@ vi.mock("../../hooks/useDentistMe", () => ({
   useMySpecialist: vi.fn(),
   useCreateMySpecialist: vi.fn(),
   useUpdateMySpecialist: vi.fn(),
+  useUploadAvatar: vi.fn(),
 }));
 vi.mock("../../hooks/useListingDetail", () => ({ useListingDetail: vi.fn() }));
 vi.mock("../../hooks/useListingSearch", () => ({ useListingSearch: vi.fn() }));
@@ -36,12 +38,14 @@ const useCountrySubdivisionsMock = vi.mocked(useCountrySubdivisions);
 const useMySpecialistMock = vi.mocked(useMySpecialist);
 const useCreateMySpecialistMock = vi.mocked(useCreateMySpecialist);
 const useUpdateMySpecialistMock = vi.mocked(useUpdateMySpecialist);
+const useUploadAvatarMock = vi.mocked(useUploadAvatar);
 const useListingDetailMock = vi.mocked(useListingDetail);
 const useListingSearchMock = vi.mocked(useListingSearch);
 const useSpecialtiesMock = vi.mocked(useSpecialties);
 
 const createMock = vi.fn();
 const updateMock = vi.fn();
+const uploadAvatarMock = vi.fn();
 const refetchMock = vi.fn();
 
 const user: AuthUser = {
@@ -64,6 +68,7 @@ const listing: MySpecialist = {
   slug: "dr-amina-yusuf",
   bio: "Preventive dentistry.",
   avatarKey: null,
+  avatarUrl: null,
   countryCode: "KE",
   subdivisionCode: "NAIROBI",
   currency: "KES",
@@ -151,6 +156,12 @@ describe("SpecialistListingSection", () => {
       isSuccess: false,
       error: null,
     } as never);
+    useUploadAvatarMock.mockReturnValue({
+      mutate: uploadAvatarMock,
+      isPending: false,
+      isError: false,
+      error: null,
+    } as never);
   });
 
   it("renders nothing without a Specialist Profile", () => {
@@ -213,6 +224,40 @@ describe("SpecialistListingSection", () => {
       specialty_codes: [],
       branch_ids: [],
     });
+  });
+
+  it("uploads a chosen file as the Specialist Avatar", async () => {
+    const events = userEvent.setup();
+    useMySpecialistMock.mockReturnValue({
+      data: listing,
+      isPending: false,
+      error: null,
+      refetch: refetchMock,
+    } as never);
+
+    renderSection();
+
+    const photo = new File(["png"], "avatar.png", { type: "image/png" });
+    await events.upload(screen.getByLabelText("Profile photo"), photo);
+
+    expect(uploadAvatarMock).toHaveBeenCalledWith(photo);
+    expect(screen.getByText("No photo")).toBeInTheDocument();
+  });
+
+  it("shows the current avatar from its public URL", async () => {
+    useMySpecialistMock.mockReturnValue({
+      data: { ...listing, avatarUrl: "https://images.example.com/avatar.png" },
+      isPending: false,
+      error: null,
+      refetch: refetchMock,
+    } as never);
+
+    renderSection();
+
+    expect(await screen.findByAltText("Dr. Amina Yusuf's avatar")).toHaveAttribute(
+      "src",
+      "https://images.example.com/avatar.png",
+    );
   });
 
   it("surfaces a load failure with a retry", async () => {

@@ -91,6 +91,22 @@ to verified; approving a Supplier's or Training Provider's marks it verified,
 which it needs before its products or Courses go live.
 _Avoid_: Approval, KYC, account status
 
+**Upload**:
+A client's transfer of one file straight to object storage with a presigned
+URL. Its purpose decides the bucket, the type and size limits, and who may ask
+for it; DentHub stores only the object key.
+_Avoid_: Attachment, file record
+
+**Object key**:
+The server-issued address of an uploaded object, and the only thing DentHub
+keeps for a file. A public key has a public URL; a private one is read only
+through a short-lived signed URL in its owning resource's response.
+_Avoid_: File path, filename, upload URL
+
+**Avatar**:
+A Specialist's public profile image, shown on their Listing.
+_Avoid_: Profile picture, photo
+
 **Verified Medic**:
 A Specialist or Facility whose Verification tier is verified or featured.
 Browsing CPD and Suppliers is public; enrolling, ordering, and messaging a

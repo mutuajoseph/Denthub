@@ -13,6 +13,7 @@ export interface MySpecialistWire {
   slug: string;
   bio: string | null;
   avatar_key: string | null;
+  avatar_url: string | null;
   country_code: string;
   subdivision_code: string;
   currency: string;
@@ -27,6 +28,7 @@ export interface MySpecialist {
   slug: string;
   bio: string | null;
   avatarKey: string | null;
+  avatarUrl: string | null;
   countryCode: string;
   subdivisionCode: string;
   currency: string;
@@ -62,6 +64,7 @@ export function mapMySpecialist(wire: MySpecialistWire): MySpecialist {
     slug: wire.slug,
     bio: wire.bio,
     avatarKey: wire.avatar_key,
+    avatarUrl: wire.avatar_url,
     countryCode: wire.country_code,
     subdivisionCode: wire.subdivision_code,
     currency: wire.currency,

@@ -83,3 +83,20 @@ services:
         sync: false
       - key: FRONTEND_URL
         sync: false
+      # Object storage for uploads (ADR-0007, #123). The public bucket serves
+      # images such as Avatars; the private bucket holds documents reachable
+      # only through short-lived signed URLs. All six are required in
+      # production: the app refuses to start without them (app/config.py).
+      # The public base URL is the bucket's public origin, with no trailing /.
+      - key: STORAGE_ENDPOINT
+        sync: false
+      - key: STORAGE_ACCESS_KEY_ID
+        sync: false
+      - key: STORAGE_SECRET_ACCESS_KEY
+        sync: false
+      - key: STORAGE_PUBLIC_BUCKET
+        sync: false
+      - key: STORAGE_PRIVATE_BUCKET
+        sync: false
+      - key: STORAGE_PUBLIC_BASE_URL
+        sync: false

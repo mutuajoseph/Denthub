@@ -6,6 +6,7 @@ import {
   useCreateMySpecialist,
   useMySpecialist,
   useUpdateMySpecialist,
+  useUploadAvatar,
 } from "../../hooks/useDentistMe";
 import { useListingDetail } from "../../hooks/useListingDetail";
 import { useListingSearch } from "../../hooks/useListingSearch";
@@ -234,6 +235,7 @@ function CreateListingForm({ user }: { user: AuthUser }) {
 function EditListingForm({ user, listing }: { user: AuthUser; listing: MySpecialist }) {
   const activeCountry = useActiveCountryCode();
   const updateListing = useUpdateMySpecialist(user.id);
+  const uploadAvatar = useUploadAvatar(user.id);
 
   const [name, setName] = useState(listing.name);
   const [countryCode, setCountryCode] = useState(listing.countryCode);
@@ -323,6 +325,43 @@ function EditListingForm({ user, listing }: { user: AuthUser; listing: MySpecial
         specialtyCodes={specialtyCodes}
         onToggleSpecialty={toggleSpecialty}
       />
+
+      <div>
+        <span className={labelClass}>Profile photo</span>
+        <div className="mt-2 flex items-center gap-4">
+          {listing.avatarUrl ? (
+            <img
+              src={listing.avatarUrl}
+              alt={`${listing.name}'s avatar`}
+              className="h-16 w-16 shrink-0 rounded-card border border-steel bg-paper object-cover"
+            />
+          ) : (
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-card border border-steel bg-cloud text-xs text-slate">
+              No photo
+            </div>
+          )}
+          <div className="min-w-0">
+            <input
+              id="specialist-avatar"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              aria-label="Profile photo"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) uploadAvatar.mutate(file);
+              }}
+              className="block w-full text-xs text-slate file:mr-3 file:rounded-button file:border-0 file:bg-cloud file:px-3 file:py-2 file:text-ink"
+            />
+            <p className="mt-1 text-xs text-slate">JPEG, PNG or WebP, up to 5 MB.</p>
+            {uploadAvatar.isPending && <p className="mt-1 text-xs text-slate">Uploading…</p>}
+            {uploadAvatar.isError && (
+              <p role="alert" className="mt-1 text-xs text-red-700">
+                {describeError(uploadAvatar.error)}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
 
       <fieldset>
         <legend className={labelClass}>Workplaces</legend>
