@@ -5,8 +5,10 @@ import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
 import Modal from "../components/ui/Modal";
 import { useDeleteAccount, useExportAccountData } from "../hooks/useAccount";
+import { useMyVerifications, useSubmitVerification } from "../hooks/useVerification";
 import type { AccountExportWire } from "../lib/accountApi";
 import type { AuthUser } from "../lib/auth";
+import type { VerificationSubjectKind } from "../lib/verificationApi";
 
 type SettingsProps = {
   user: AuthUser | null;
@@ -29,6 +31,168 @@ function downloadExport(data: AccountExportWire): void {
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+}
+
+function eligibleSubjects(user: AuthUser): VerificationSubjectKind[] {
+  const kinds: VerificationSubjectKind[] = [];
+  if (user.profiles.some((profile) => profile.kind === "specialist")) kinds.push("specialist");
+  if (user.memberships.some((membership) => membership.permissions.includes("owner"))) {
+    kinds.push("facility");
+  }
+  if (user.profiles.some((profile) => profile.kind === "supplier")) kinds.push("supplier");
+  if (user.profiles.some((profile) => profile.kind === "training_provider")) {
+    kinds.push("training_provider");
+  }
+  return kinds;
+}
+
+const SUBJECT_LABELS: Record<VerificationSubjectKind, string> = {
+  specialist: "Specialist",
+  facility: "Facility",
+  supplier: "Supplier",
+  training_provider: "Training Provider",
+};
+
+function VerificationSection({ user }: { user: AuthUser }) {
+  const kinds = eligibleSubjects(user);
+  const [subjectKind, setSubjectKind] = useState<VerificationSubjectKind>(kinds[0] ?? "specialist");
+  const [licence, setLicence] = useState("");
+  const [issuingBody, setIssuingBody] = useState("");
+  const [documentKeys, setDocumentKeys] = useState("");
+  const [error, setError] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const status = useMyVerifications(user.id);
+  const submit = useSubmitVerification();
+
+  if (kinds.length === 0) {
+    return null;
+  }
+
+  const onSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError("");
+    setSubmitted(false);
+    const keys = documentKeys
+      .split(/[\n,]/)
+      .map((key) => key.trim())
+      .filter(Boolean);
+    submit.mutate(
+      {
+        subject_kind: subjectKind,
+        licence_number: licence.trim(),
+        issuing_body: issuingBody.trim(),
+        document_keys: keys,
+      },
+      {
+        onSuccess: () => {
+          setSubmitted(true);
+          setLicence("");
+          setIssuingBody("");
+          setDocumentKeys("");
+        },
+        onError: (cause) => setError(describeError(cause, "Your application could not be sent.")),
+      },
+    );
+  };
+
+  const latest = status.data?.[0];
+
+  return (
+    <Card tone="white" hover={false}>
+      <h2 className="font-display text-lg font-semibold tracking-[-0.02em] text-ink">
+        Verification
+      </h2>
+      <p className="mt-1 text-sm text-charcoal">
+        Apply to have your credentials checked. An approval verifies the public listing; a rejection
+        or revocation carries a reason you can read here.
+      </p>
+
+      {status.isPending ? (
+        <output className="mt-3 block text-sm text-slate">Loading your application…</output>
+      ) : status.error ? (
+        <p role="alert" className="mt-3 text-sm text-red-700">
+          {describeError(status.error, "Your application could not be loaded.")}
+        </p>
+      ) : latest ? (
+        <div className="mt-3 rounded-button border border-steel bg-cloud px-4 py-3">
+          <p className="text-sm font-semibold text-ink">
+            {SUBJECT_LABELS[latest.subject_kind]} · {latest.status}
+          </p>
+          <p className="mt-1 text-xs text-slate">Licence {latest.licence_number}</p>
+          {latest.rejection_reason && (
+            <p className="mt-1 text-xs text-red-700">{latest.rejection_reason}</p>
+          )}
+        </div>
+      ) : null}
+
+      <form onSubmit={onSubmit} className="mt-4 grid gap-3">
+        <label htmlFor="verification-subject" className="text-xs font-medium text-slate">
+          What should be verified
+        </label>
+        <select
+          id="verification-subject"
+          value={subjectKind}
+          onChange={(event) => setSubjectKind(event.target.value as VerificationSubjectKind)}
+          className="min-h-11 rounded-button border border-steel bg-paper px-3 text-sm text-ink"
+        >
+          {kinds.map((kind) => (
+            <option key={kind} value={kind}>
+              {SUBJECT_LABELS[kind]}
+            </option>
+          ))}
+        </select>
+        <label htmlFor="verification-licence" className="text-xs font-medium text-slate">
+          Licence or registration number
+        </label>
+        <input
+          id="verification-licence"
+          type="text"
+          required
+          maxLength={100}
+          value={licence}
+          onChange={(event) => setLicence(event.target.value)}
+          className="min-h-11 rounded-button border border-steel bg-paper px-3 text-sm text-ink"
+        />
+        <label htmlFor="verification-issuer" className="text-xs font-medium text-slate">
+          Issuing body
+        </label>
+        <input
+          id="verification-issuer"
+          type="text"
+          required
+          maxLength={200}
+          value={issuingBody}
+          onChange={(event) => setIssuingBody(event.target.value)}
+          className="min-h-11 rounded-button border border-steel bg-paper px-3 text-sm text-ink"
+        />
+        <label htmlFor="verification-documents" className="text-xs font-medium text-slate">
+          Private document keys (comma or newline separated)
+        </label>
+        <textarea
+          id="verification-documents"
+          required
+          rows={2}
+          value={documentKeys}
+          onChange={(event) => setDocumentKeys(event.target.value)}
+          className="rounded-button border border-steel bg-paper px-3 py-2 text-sm text-ink"
+        />
+        <Button
+          type="submit"
+          disabled={
+            submit.isPending || !licence.trim() || !issuingBody.trim() || !documentKeys.trim()
+          }
+        >
+          {submit.isPending ? "Sending…" : "Submit application"}
+        </Button>
+        {submitted && <p className="text-sm text-ink">Your application was sent.</p>}
+        {error && (
+          <p role="alert" className="text-sm text-red-700">
+            {error}
+          </p>
+        )}
+      </form>
+    </Card>
+  );
 }
 
 /**
@@ -75,6 +239,7 @@ export function Settings({ user, onAccountDeleted }: SettingsProps) {
       </header>
 
       <div className="grid gap-4">
+        <VerificationSection user={user} />
         <Card tone="white" hover={false}>
           <h2 className="font-display text-lg font-semibold tracking-[-0.02em] text-ink">
             Your data

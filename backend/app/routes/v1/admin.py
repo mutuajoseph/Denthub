@@ -92,6 +92,13 @@ from app.logic.v1.users import (
     reactivate_user,
     suspend_user,
 )
+from app.logic.v1.verification import (
+    DecisionRequest,
+    VerificationApplicationList,
+    VerificationApplicationView,
+    admin_verification_queue,
+    decide_verification,
+)
 from app.repositories.user import User
 from app.utils.openapi_helpers import standard_error_responses
 from app.utils.state import AppState
@@ -222,6 +229,82 @@ async def read_verifications(
 ) -> VerificationList:
     """Every Facility and Specialist with its verification tier."""
     return await list_verifications(state, actor=actor)
+
+
+@router.get(
+    "/verifications/applications",
+    response_model=VerificationApplicationList,
+    responses=standard_error_responses(401, 403),
+)
+async def read_verification_applications(
+    actor: User = Depends(current_admin),
+    state: AppState = Depends(get_app_state),
+) -> VerificationApplicationList:
+    """Every Verification application, newest first."""
+    return await admin_verification_queue(state)
+
+
+@router.post(
+    "/verifications/{application_id}/approve",
+    response_model=VerificationApplicationView,
+    responses=standard_error_responses(401, 403),
+)
+async def approve_verification_application(
+    application_id: str,
+    request: DecisionRequest,
+    actor: User = Depends(current_admin),
+    state: AppState = Depends(get_app_state),
+) -> VerificationApplicationView:
+    """Approve a pending application and verify its subject."""
+    return await decide_verification(
+        state,
+        actor=actor,
+        application_id=application_id,
+        decision="approve",
+        reason=request.reason,
+    )
+
+
+@router.post(
+    "/verifications/{application_id}/reject",
+    response_model=VerificationApplicationView,
+    responses=standard_error_responses(401, 403),
+)
+async def reject_verification_application(
+    application_id: str,
+    request: DecisionRequest,
+    actor: User = Depends(current_admin),
+    state: AppState = Depends(get_app_state),
+) -> VerificationApplicationView:
+    """Reject a pending application, with a reason."""
+    return await decide_verification(
+        state,
+        actor=actor,
+        application_id=application_id,
+        decision="reject",
+        reason=request.reason,
+    )
+
+
+@router.post(
+    "/verifications/{application_id}/revoke",
+    response_model=VerificationApplicationView,
+    responses=standard_error_responses(401, 403),
+)
+async def revoke_verification_application(
+    application_id: str,
+    request: DecisionRequest,
+    actor: User = Depends(current_admin),
+    state: AppState = Depends(get_app_state),
+) -> VerificationApplicationView:
+    """Revoke a verified application, with a reason, and drop verification."""
+    return await decide_verification(
+        state,
+        actor=actor,
+        application_id=application_id,
+        decision="revoke",
+        reason=request.reason,
+    )
 
 
 @router.patch(
