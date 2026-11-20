@@ -3,6 +3,7 @@ import { type FormEvent, useState } from "react";
 import Badge from "../components/ui/Badge";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
+import { VerificationQueue } from "../components/verification/VerificationQueue";
 import {
   useAdminAudit,
   useAdminCountries,
@@ -19,6 +20,10 @@ import {
   useUpdateCountryFeature,
   useUpdatePlatformStaff,
 } from "../hooks/useAdmin";
+import {
+  useAdminVerificationDecision,
+  useVerificationApplications,
+} from "../hooks/useVerification";
 import type {
   AdminAuditEntryWire,
   AdminUserWire,
@@ -455,6 +460,52 @@ function UsersSection({ userId }: { userId: string | null }) {
       {actionError && (
         <p role="alert" className="mt-3 text-sm text-red-700">
           {describeError(actionError, "The User could not be updated.")}
+        </p>
+      )}
+    </Card>
+  );
+}
+
+function VerificationApplicationsSection({ userId }: { userId: string | null }) {
+  const query = useVerificationApplications(userId);
+  const decision = useAdminVerificationDecision();
+  const [error, setError] = useState("");
+
+  return (
+    <Card hover={false}>
+      <h2 className="font-display text-lg font-semibold tracking-[-0.02em] text-ink">
+        Verification applications
+      </h2>
+      <p className="mt-1 text-sm text-charcoal">
+        Evidence submitted by Specialists, Facility owners, Suppliers and Training Providers.
+        Approval verifies the subject; rejection and revocation require a reason and email it to the
+        applicant.
+      </p>
+      {query.isPending ? (
+        <output className="mt-3 block text-sm text-slate">Loading applications…</output>
+      ) : query.error || !query.data ? (
+        <SectionError error={query.error} onRetry={() => void query.refetch()} />
+      ) : (
+        <VerificationQueue
+          applications={query.data}
+          canWrite
+          isSaving={decision.isPending}
+          emptyLabel="No applications yet."
+          onDecide={(applicationId, next, reason) => {
+            setError("");
+            decision.mutate(
+              { applicationId, decision: next, request: { reason } },
+              {
+                onError: (cause) =>
+                  setError(describeError(cause, "The decision could not be saved.")),
+              },
+            );
+          }}
+        />
+      )}
+      {error && (
+        <p role="alert" className="mt-3 text-sm text-red-700">
+          {error}
         </p>
       )}
     </Card>
@@ -912,6 +963,7 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
       <div className="space-y-4">
         <CountriesSection userId={user.id} />
         <VerificationSection userId={user.id} />
+        <VerificationApplicationsSection userId={user.id} />
         <ModerationSection userId={user.id} />
         <UsersSection userId={user.id} />
         {user.role === "super_admin" && <StaffSection userId={user.id} />}

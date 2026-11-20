@@ -13,6 +13,21 @@ import {
 } from "../lib/operationsApi";
 import { OperationsDashboard } from "./OperationsDashboard";
 
+import {
+  useDivisionVerificationApplications,
+  useDivisionVerificationDecision,
+} from "../hooks/useVerification";
+import type { VerificationApplicationWire } from "../lib/verificationApi";
+
+vi.mock("../hooks/useVerification", () => ({
+  useDivisionVerificationApplications: vi.fn(),
+  useDivisionVerificationDecision: vi.fn(),
+}));
+
+const useDivisionApplicationsMock = vi.mocked(useDivisionVerificationApplications);
+const useDivisionDecisionMock = vi.mocked(useDivisionVerificationDecision);
+const decideDivisionMock = vi.fn();
+
 vi.mock("../lib/operationsApi", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../lib/operationsApi")>();
   return {
@@ -73,6 +88,11 @@ function renderOperations(user: AuthUser | null) {
 describe("OperationsDashboard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useDivisionApplicationsMock.mockReturnValue({ data: [], isPending: false } as never);
+    useDivisionDecisionMock.mockReturnValue({
+      mutate: decideDivisionMock,
+      isPending: false,
+    } as never);
     fetchOverviewMock.mockResolvedValue(overview());
     fetchJobsMock.mockResolvedValue({ items: [job()] });
     setJobStatusMock.mockResolvedValue(job({ status: "hidden" }));
@@ -120,6 +140,49 @@ describe("OperationsDashboard", () => {
 
     expect(await screen.findByRole("heading", { name: "Shop workspace" })).toBeInTheDocument();
     expect(fetchJobsMock).not.toHaveBeenCalled();
+  });
+
+  it("lets a Dentist Lead decide an application, but not an Assistant", async () => {
+    const application: VerificationApplicationWire = {
+      id: "v-1",
+      subject_kind: "specialist",
+      subject_id: "sp-1",
+      applicant_email: "specialist@example.com",
+      licence_number: "LIC-1",
+      issuing_body: "Dental Board",
+      document_keys: ["private/doc.pdf"],
+      status: "pending",
+      rejection_reason: null,
+      created_at: "2030-01-01T10:00:00Z",
+      decided_at: null,
+    };
+    useDivisionApplicationsMock.mockReturnValue({
+      data: [application],
+      isPending: false,
+    } as never);
+    fetchOverviewMock.mockResolvedValue(
+      overview({ division: "dentist", tier: "assistant", can_write: false }),
+    );
+    const user = userEvent.setup();
+    renderOperations(operator);
+
+    expect(await screen.findByText("specialist@example.com · Dental Board")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /approve/i })).not.toBeInTheDocument();
+
+    fetchOverviewMock.mockResolvedValue(
+      overview({ division: "dentist", tier: "lead", can_write: true }),
+    );
+    renderOperations(operator);
+    await user.click(await screen.findByRole("button", { name: "Approve specialist@example.com" }));
+
+    expect(decideDivisionMock).toHaveBeenCalledWith(
+      {
+        applicationId: "v-1",
+        decision: "approve",
+        request: { reason: null },
+      },
+      expect.anything(),
+    );
   });
 
   it("surfaces a load failure with a retry", async () => {

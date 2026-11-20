@@ -136,7 +136,8 @@ Health Records are live, so that point has passed.
 |---|---|---|---|---|
 | POST | `/verifications` | New | Specialist · FM:owner · Supplier · TP | Licence or registration number, issuing body, document keys → PENDING |
 | GET | `/me/verifications` | New | User | Status per subject, with rejection reason |
-| GET | `/admin/verifications` | Change | Admin | Today lists tiers; add the application queue for all four subject kinds |
+| GET | `/admin/verifications` | Keep | Admin | Existing tier grades; its v1 shape is unchanged |
+| GET | `/admin/verifications/applications` | New | Admin | Application queue for all four subject kinds, newest first |
 | POST | `/admin/verifications/{id}/approve` · `/reject` · `/revoke` | New | Admin | Approve sets the tier to `verified`; reject and revoke need a reason; audited and emailed |
 | GET | `/operations/verifications` | New | Op:Dentist · Op:Suppliers · Op:Training | Division-scoped queue (Specialist and Facility → Dentist, Supplier → Suppliers, TP → Training) |
 | POST | `/operations/verifications/{id}/approve` · `/reject` · `/revoke` | New | Op (L) | Same decisions, Division-scoped |

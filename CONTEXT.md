@@ -97,6 +97,12 @@ until reactivation. It is not a judgement about the User's credentials, which
 is what Verification records.
 _Avoid_: ban, deactivation, account status
 
+**Verification application**:
+A professional's request to have one subject they act for checked, carrying
+evidence and the reason for a decision. It is distinct from the Verification
+tier that approval grants.
+_Avoid_: verification request, approval form
+
 **Verified Medic**:
 A Specialist or Facility whose Verification tier is verified or featured.
 Browsing CPD and Suppliers is public; enrolling, ordering, and messaging a

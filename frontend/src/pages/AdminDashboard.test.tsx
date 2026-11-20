@@ -30,6 +30,21 @@ import {
 import type { AuthUser } from "../lib/auth";
 import { AdminDashboard } from "./AdminDashboard";
 
+import {
+  useAdminVerificationDecision,
+  useVerificationApplications,
+} from "../hooks/useVerification";
+import type { VerificationApplicationWire } from "../lib/verificationApi";
+
+vi.mock("../hooks/useVerification", () => ({
+  useVerificationApplications: vi.fn(),
+  useAdminVerificationDecision: vi.fn(),
+}));
+
+const useVerificationApplicationsMock = vi.mocked(useVerificationApplications);
+const useAdminVerificationDecisionMock = vi.mocked(useAdminVerificationDecision);
+const decideMock = vi.fn();
+
 vi.mock("../lib/adminApi", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../lib/adminApi")>();
   return {
@@ -189,6 +204,11 @@ function renderAdmin(user: AuthUser | null) {
 describe("AdminDashboard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useVerificationApplicationsMock.mockReturnValue({ data: [], isPending: false } as never);
+    useAdminVerificationDecisionMock.mockReturnValue({
+      mutate: decideMock,
+      isPending: false,
+    } as never);
     fetchAdminCountriesMock.mockResolvedValue({ items: [country()] });
     fetchAdminVerificationsMock.mockResolvedValue({
       items: [verification()],
@@ -256,6 +276,39 @@ describe("AdminDashboard", () => {
     await events.click(await screen.findByRole("button", { name: "Reactivate Amina Yusuf" }));
 
     expect(reactivateAdminUserMock).toHaveBeenCalledWith("user-1");
+  });
+
+  it("decides a Verification application from the queue", async () => {
+    const application: VerificationApplicationWire = {
+      id: "v-1",
+      subject_kind: "specialist",
+      subject_id: "sp-1",
+      applicant_email: "applicant@example.com",
+      licence_number: "LIC-1",
+      issuing_body: "Dental Board",
+      document_keys: ["private/doc.pdf"],
+      status: "pending",
+      rejection_reason: null,
+      created_at: "2030-01-01T10:00:00Z",
+      decided_at: null,
+    };
+    useVerificationApplicationsMock.mockReturnValue({
+      data: [application],
+      isPending: false,
+    } as never);
+    const user = userEvent.setup();
+    renderAdmin(admin);
+
+    await user.click(await screen.findByRole("button", { name: "Approve applicant@example.com" }));
+
+    expect(decideMock).toHaveBeenCalledWith(
+      {
+        applicationId: "v-1",
+        decision: "approve",
+        request: { reason: null },
+      },
+      expect.anything(),
+    );
   });
 
   it("toggles a feature flag", async () => {

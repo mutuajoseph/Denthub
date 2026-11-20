@@ -8,6 +8,18 @@ import { deleteAccount, fetchAccountExport } from "../lib/accountApi";
 import type { AuthUser } from "../lib/auth";
 import { Settings } from "./Settings";
 
+import { useMyVerifications, useSubmitVerification } from "../hooks/useVerification";
+import type { VerificationApplicationWire } from "../lib/verificationApi";
+
+vi.mock("../hooks/useVerification", () => ({
+  useMyVerifications: vi.fn(),
+  useSubmitVerification: vi.fn(),
+}));
+
+const useMyVerificationsMock = vi.mocked(useMyVerifications);
+const useSubmitVerificationMock = vi.mocked(useSubmitVerification);
+const submitVerificationMock = vi.fn();
+
 vi.mock("../lib/accountApi", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../lib/accountApi")>();
   return { ...actual, fetchAccountExport: vi.fn(), deleteAccount: vi.fn() };
@@ -60,7 +72,7 @@ const exportedAccount: AccountExportWire = {
   specialist: null,
 };
 
-function renderSettings(onAccountDeleted = vi.fn()) {
+function renderSettings(onAccountDeleted = vi.fn(), user: AuthUser = patient) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -69,7 +81,7 @@ function renderSettings(onAccountDeleted = vi.fn()) {
     onAccountDeleted,
     ...render(
       <QueryClientProvider client={client}>
-        <Settings user={patient} onAccountDeleted={onAccountDeleted} />
+        <Settings user={user} onAccountDeleted={onAccountDeleted} />
       </QueryClientProvider>,
     ),
   };
@@ -81,6 +93,15 @@ describe("Settings", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    useMyVerificationsMock.mockReturnValue({
+      data: [],
+      isPending: false,
+      error: null,
+    } as never);
+    useSubmitVerificationMock.mockReturnValue({
+      mutate: submitVerificationMock,
+      isPending: false,
+    } as never);
     fetchAccountExportMock.mockResolvedValue(exportedAccount);
     deleteAccountMock.mockResolvedValue(null);
     Object.defineProperty(URL, "createObjectURL", {
@@ -169,6 +190,52 @@ describe("Settings", () => {
     await waitFor(() => expect(onAccountDeleted).toHaveBeenCalledTimes(1));
     expect(deleteAccountMock).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("submits a Verification application for a professional account", async () => {
+    const user = userEvent.setup();
+    const specialist: AuthUser = { ...patient, profiles: [{ kind: "specialist" }] };
+    renderSettings(vi.fn(), specialist);
+
+    await user.type(await screen.findByLabelText("Licence or registration number"), "LIC-9");
+    await user.type(screen.getByLabelText("Issuing body"), "Dental Board");
+    await user.type(screen.getByLabelText(/Private document keys/), "key-1.pdf, key-2.pdf");
+    await user.click(screen.getByRole("button", { name: "Submit application" }));
+
+    expect(submitVerificationMock).toHaveBeenCalledWith(
+      {
+        subject_kind: "specialist",
+        licence_number: "LIC-9",
+        issuing_body: "Dental Board",
+        document_keys: ["key-1.pdf", "key-2.pdf"],
+      },
+      expect.anything(),
+    );
+  });
+
+  it("shows a rejection reason on the latest application", async () => {
+    const application: VerificationApplicationWire = {
+      id: "v-1",
+      subject_kind: "specialist",
+      subject_id: "sp-1",
+      applicant_email: "patient@example.com",
+      licence_number: "LIC-9",
+      issuing_body: "Dental Board",
+      document_keys: ["key-1.pdf"],
+      status: "rejected",
+      rejection_reason: "Unreadable licence",
+      created_at: "2030-01-01T10:00:00Z",
+      decided_at: "2030-01-02T10:00:00Z",
+    };
+    useMyVerificationsMock.mockReturnValue({
+      data: [application],
+      isPending: false,
+      error: null,
+    } as never);
+    const specialist: AuthUser = { ...patient, profiles: [{ kind: "specialist" }] };
+    renderSettings(vi.fn(), specialist);
+
+    expect(await screen.findByText("Unreadable licence")).toBeInTheDocument();
   });
 
   it("keeps the confirmation open when deletion fails", async () => {

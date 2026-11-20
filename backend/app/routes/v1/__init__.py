@@ -29,6 +29,7 @@ from app.routes.v1 import (
     training,
     training_provider,
     users,
+    verification,
 )
 
 v1_router = APIRouter()
@@ -53,3 +54,4 @@ v1_router.include_router(facility.router)
 v1_router.include_router(health_records.router)
 v1_router.include_router(me.router)
 v1_router.include_router(training_provider.router)
+v1_router.include_router(verification.router)
