@@ -4,6 +4,7 @@ import {
   type AdminAuditListWire,
   type AdminCountryFeatureWire,
   type AdminCountryWire,
+  type AdminUserWire,
   type CreatePlatformStaffRequest,
   type ModerationItemWire,
   type ModerationStatus,
@@ -16,11 +17,14 @@ import {
   fetchAdminCountries,
   fetchAdminModeration,
   fetchAdminStaff,
+  fetchAdminUsers,
   fetchAdminVerifications,
   moderateJob,
   moderateMagazine,
+  reactivateAdminUser,
   setFacilityVerificationTier,
   setSpecialistVerificationTier,
+  suspendAdminUser,
   updateCountry,
   updateCountryFeature,
   updatePlatformStaff,
@@ -173,6 +177,38 @@ export function useAdminAudit(userId: string | null) {
     queryFn: async ({ signal }) => (await fetchAdminAudit({ signal })).items,
     enabled: userId !== null,
     staleTime: 15_000,
+  });
+}
+
+export function useAdminUsers(query: string, userId: string | null) {
+  return useQuery<AdminUserWire[]>({
+    queryKey: [...adminQueryKey("users", userId), query],
+    queryFn: async ({ signal }) => (await fetchAdminUsers(query, { signal })).items,
+    enabled: userId !== null,
+    staleTime: 15_000,
+  });
+}
+
+function invalidateUsers(queryClient: ReturnType<typeof useQueryClient>) {
+  void queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+  void queryClient.invalidateQueries({ queryKey: ["admin", "audit"] });
+}
+
+export function useSuspendUser() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: string) => suspendAdminUser(userId),
+    onSuccess: () => invalidateUsers(queryClient),
+  });
+}
+
+export function useReactivateUser() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: string) => reactivateAdminUser(userId),
+    onSuccess: () => invalidateUsers(queryClient),
   });
 }
 

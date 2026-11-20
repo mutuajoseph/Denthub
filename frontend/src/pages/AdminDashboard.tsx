@@ -8,16 +8,20 @@ import {
   useAdminCountries,
   useAdminModeration,
   useAdminStaff,
+  useAdminUsers,
   useAdminVerifications,
   useCreatePlatformStaff,
   useModerateContent,
+  useReactivateUser,
   useSetVerificationTier,
+  useSuspendUser,
   useUpdateCountry,
   useUpdateCountryFeature,
   useUpdatePlatformStaff,
 } from "../hooks/useAdmin";
 import type {
   AdminAuditEntryWire,
+  AdminUserWire,
   ModerationItemWire,
   OperatorDivision,
   OperatorTier,
@@ -43,6 +47,7 @@ const ENTITY_LABELS: Record<string, string> = {
   magazine: "Magazine item",
   job: "Job posting",
   staff: "Platform Staff",
+  user: "User",
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -52,6 +57,8 @@ const ACTION_LABELS: Record<string, string> = {
   "moderation.status": "Moderation status changed",
   "staff.create": "Platform Staff created",
   "staff.update": "Platform Staff updated",
+  "user.suspend": "User suspended",
+  "user.reactivate": "User reactivated",
 };
 
 const STAFF_ROLES: PlatformStaffRole[] = ["admin", "super_admin", "platform_operator"];
@@ -345,6 +352,109 @@ function ModerationSection({ userId }: { userId: string | null }) {
       {moderate.error && (
         <p role="alert" className="mt-3 text-sm text-red-700">
           {describeError(moderate.error, "The moderation status could not be changed.")}
+        </p>
+      )}
+    </Card>
+  );
+}
+
+function UsersSection({ userId }: { userId: string | null }) {
+  const [search, setSearch] = useState("");
+  const [query, setQuery] = useState("");
+  const users = useAdminUsers(query, userId);
+  const suspend = useSuspendUser();
+  const reactivate = useReactivateUser();
+  const actionError = suspend.error ?? reactivate.error;
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setQuery(search.trim());
+  };
+
+  return (
+    <Card hover={false}>
+      <h2 className="font-display text-lg font-semibold tracking-[-0.02em] text-ink">Users</h2>
+      <p className="mt-1 text-sm text-charcoal">
+        Find a User by name or email. Suspension ends every session and blocks sign-in; reactivation
+        restores access on the next sign-in.
+      </p>
+
+      <form onSubmit={submit} className="mt-3 flex flex-wrap items-center gap-2">
+        <label htmlFor="admin-user-search" className="sr-only">
+          Search Users by name or email
+        </label>
+        <input
+          id="admin-user-search"
+          type="search"
+          value={search}
+          maxLength={100}
+          placeholder="Name or email"
+          onChange={(event) => setSearch(event.target.value)}
+          className="min-h-9 min-w-0 flex-1 rounded-button border border-steel bg-paper px-3 text-sm text-ink"
+        />
+        <Button type="submit" variant="secondary" size="sm">
+          Search
+        </Button>
+      </form>
+
+      {users.isPending ? (
+        <output className="mt-3 block text-sm text-slate">Loading Users…</output>
+      ) : users.error || !users.data ? (
+        <SectionError error={users.error} onRetry={() => void users.refetch()} />
+      ) : users.data.length === 0 ? (
+        <p className="mt-3 text-sm text-charcoal">No Users found.</p>
+      ) : (
+        <ul className="mt-4 space-y-2">
+          {users.data.map((user: AdminUserWire) => (
+            <li key={user.id} className="rounded-button border border-steel bg-paper px-4 py-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-ink">{user.full_name}</p>
+                  <p className="mt-0.5 text-xs text-slate">{user.email}</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="neutral">{user.role}</Badge>
+                  <Badge
+                    variant={
+                      user.account_status === "suspended"
+                        ? "danger"
+                        : user.account_status === "active"
+                          ? "success"
+                          : "neutral"
+                    }
+                  >
+                    {user.account_status}
+                  </Badge>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    aria-label={`${user.is_active ? "Suspend" : "Reactivate"} ${user.full_name}`}
+                    disabled={suspend.isPending || reactivate.isPending}
+                    onClick={() =>
+                      user.is_active ? suspend.mutate(user.id) : reactivate.mutate(user.id)
+                    }
+                  >
+                    {user.is_active ? "Suspend" : "Reactivate"}
+                  </Button>
+                </div>
+              </div>
+              <p className="mt-2 text-xs text-slate">
+                {user.profiles.length > 0
+                  ? `Profiles: ${user.profiles.map((profile) => profile.kind).join(", ")}`
+                  : "No Profiles"}
+                {" · "}
+                {user.memberships.length > 0
+                  ? `Facilities: ${user.memberships.map((membership) => membership.facility_name).join(", ")}`
+                  : "No Facility Memberships"}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {actionError && (
+        <p role="alert" className="mt-3 text-sm text-red-700">
+          {describeError(actionError, "The User could not be updated.")}
         </p>
       )}
     </Card>
@@ -803,6 +913,7 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
         <CountriesSection userId={user.id} />
         <VerificationSection userId={user.id} />
         <ModerationSection userId={user.id} />
+        <UsersSection userId={user.id} />
         {user.role === "super_admin" && <StaffSection userId={user.id} />}
         <AuditSection userId={user.id} />
       </div>

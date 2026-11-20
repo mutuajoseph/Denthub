@@ -10,11 +10,10 @@ from collections.abc import Collection
 from datetime import datetime
 from typing import Any, Literal, get_args
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, select
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, func, or_, select
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy.sql import func
 
 from app.repositories.database import Base
 
@@ -115,6 +114,30 @@ class UserRepository:
         stmt = select(User).where(User.email == email)
         result = await session.execute(stmt)
         return result.scalar_one_or_none()
+
+    @staticmethod
+    async def active_super_admin_count(session: AsyncSession) -> int:
+        """How many Super Admins can still act; the last one may not be suspended.
+
+        The rows are locked so two concurrent suspensions cannot both read the
+        same count and leave the platform with no acting Super Admin.
+        """
+        result = await session.execute(
+            select(User.id)
+            .where(User.role == "super_admin", User.is_active.is_(True))
+            .with_for_update()
+        )
+        return len(result.scalars().all())
+
+    @staticmethod
+    async def search(session: AsyncSession, *, query: str | None, limit: int) -> list[User]:
+        """Users whose name or email contains ``query``, newest activity first."""
+        stmt = select(User)
+        if query and query.strip():
+            pattern = f"%{query.strip()}%"
+            stmt = stmt.where(or_(User.full_name.ilike(pattern), User.email.ilike(pattern)))
+        stmt = stmt.order_by(User.full_name, User.email).limit(limit)
+        return list((await session.execute(stmt)).scalars().all())
 
     @staticmethod
     async def get_by_id(session: AsyncSession, user_id: str) -> User | None:
