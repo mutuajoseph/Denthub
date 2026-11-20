@@ -9,7 +9,7 @@ application so a later reader can see why a decision was made.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Literal
 
 from sqlalchemy import JSON, DateTime, ForeignKey, String, func, select
@@ -80,6 +80,9 @@ class VerificationRepository:
             issuing_body=issuing_body,
             document_keys=document_keys,
             status="pending",
+            # Microsecond precision: SQLite's CURRENT_TIMESTAMP has only
+            # seconds, and two applications in one second must still order.
+            created_at=datetime.now(UTC).replace(tzinfo=None),
         )
         session.add(application)
         await session.flush()

@@ -362,6 +362,7 @@ async def test_a_terminal_application_can_be_reapplied_but_not_redecided(
     )
     assert reapplied.status_code == 201, reapplied.text
     mine = await client.get("/api/v1/me/verifications", headers=public)
+    assert mine.json()["items"][0]["id"] == reapplied.json()["id"]
     assert mine.json()["items"][0]["status"] == "pending"
 
 
