@@ -121,7 +121,7 @@ Health Records are live, so that point has passed.
 | GET, POST | `/admin/staff` | New | Super | List and create staff (sets `platform_role`, and Division and tier for Operators). Today this needs a database write (ADR-0005) |
 | PATCH | `/admin/staff/{id}` | New | Super | Change role, Division, tier, active |
 | GET | `/admin/users[/{id}]` | New | Admin | Search Users with Profiles and memberships |
-| POST | `/admin/users/{id}/suspend` · `/reactivate` | New | Admin | `account_status` becomes `active \| suspended`; suspension revokes refresh tokens |
+| POST | `/admin/users/{id}/suspend` · `/reactivate` | New | Admin | `account_status` gains `suspended` and `is_active` is cleared; suspension revokes every refresh family. `pending` stays until #126 retires it |
 | POST | `/users/{id}/approve` | Retire | — | Retired once Verification lands; professional "pending" is read from Verification instead |
 
 ### Uploads

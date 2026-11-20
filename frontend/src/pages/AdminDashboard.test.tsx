@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   AdminAuditEntryWire,
   AdminCountryWire,
+  AdminUserWire,
   ModerationItemWire,
   PlatformStaffMemberWire,
   VerificationItemWire,
@@ -17,9 +18,12 @@ import {
   fetchAdminCountries,
   fetchAdminModeration,
   fetchAdminStaff,
+  fetchAdminUsers,
   fetchAdminVerifications,
   moderateMagazine,
+  reactivateAdminUser,
   setFacilityVerificationTier,
+  suspendAdminUser,
   updateCountryFeature,
   updatePlatformStaff,
 } from "../lib/adminApi";
@@ -35,6 +39,9 @@ vi.mock("../lib/adminApi", async (importOriginal) => {
     fetchAdminModeration: vi.fn(),
     fetchAdminAudit: vi.fn(),
     fetchAdminStaff: vi.fn(),
+    fetchAdminUsers: vi.fn(),
+    suspendAdminUser: vi.fn(),
+    reactivateAdminUser: vi.fn(),
     updateCountry: vi.fn(),
     updateCountryFeature: vi.fn(),
     setFacilityVerificationTier: vi.fn(),
@@ -51,6 +58,9 @@ const fetchAdminVerificationsMock = vi.mocked(fetchAdminVerifications);
 const fetchAdminModerationMock = vi.mocked(fetchAdminModeration);
 const fetchAdminAuditMock = vi.mocked(fetchAdminAudit);
 const fetchAdminStaffMock = vi.mocked(fetchAdminStaff);
+const fetchAdminUsersMock = vi.mocked(fetchAdminUsers);
+const suspendAdminUserMock = vi.mocked(suspendAdminUser);
+const reactivateAdminUserMock = vi.mocked(reactivateAdminUser);
 const updateCountryFeatureMock = vi.mocked(updateCountryFeature);
 const setFacilityVerificationTierMock = vi.mocked(setFacilityVerificationTier);
 const moderateMagazineMock = vi.mocked(moderateMagazine);
@@ -87,6 +97,24 @@ function staffMember(overrides: Partial<PlatformStaffMemberWire> = {}): Platform
     role: "admin",
     operator_division: null,
     operator_tier: null,
+    is_active: true,
+    ...overrides,
+  };
+}
+
+function adminUser(overrides: Partial<AdminUserWire> = {}): AdminUserWire {
+  return {
+    id: "user-1",
+    full_name: "Amina Yusuf",
+    email: "amina@example.com",
+    role: "specialist",
+    phone: null,
+    home_country_code: "KE",
+    is_staff: false,
+    account_status: "active",
+    email_verified: true,
+    profiles: [{ kind: "specialist" }],
+    memberships: [],
     is_active: true,
     ...overrides,
   };
@@ -169,6 +197,11 @@ describe("AdminDashboard", () => {
     fetchAdminModerationMock.mockResolvedValue({ items: [moderationItem()] });
     fetchAdminAuditMock.mockResolvedValue({ items: [auditEntry()] });
     fetchAdminStaffMock.mockResolvedValue({ items: [staffMember()] });
+    fetchAdminUsersMock.mockResolvedValue({ items: [adminUser()] });
+    suspendAdminUserMock.mockResolvedValue(
+      adminUser({ account_status: "suspended", is_active: false }),
+    );
+    reactivateAdminUserMock.mockResolvedValue(adminUser());
     updateCountryFeatureMock.mockResolvedValue({
       feature: "CPD_TRAINING",
       is_enabled: true,
@@ -197,6 +230,32 @@ describe("AdminDashboard", () => {
     expect(await screen.findByText("Nyali Coastal Dental")).toBeInTheDocument();
     expect(await screen.findByText("Brushing basics")).toBeInTheDocument();
     expect(await screen.findByText("Feature flag changed")).toBeInTheDocument();
+  });
+
+  it("searches Users and suspends an abusive account", async () => {
+    const events = userEvent.setup();
+    renderAdmin(admin);
+
+    await events.type(await screen.findByLabelText("Search Users by name or email"), "amina");
+    await events.click(screen.getByRole("button", { name: "Search" }));
+
+    expect(fetchAdminUsersMock).toHaveBeenCalledWith("amina", expect.anything());
+    expect(await screen.findByText("amina@example.com")).toBeInTheDocument();
+    await events.click(await screen.findByRole("button", { name: "Suspend Amina Yusuf" }));
+
+    expect(suspendAdminUserMock).toHaveBeenCalledWith("user-1");
+  });
+
+  it("reactivates a suspended User", async () => {
+    fetchAdminUsersMock.mockResolvedValue({
+      items: [adminUser({ account_status: "suspended", is_active: false })],
+    });
+    const events = userEvent.setup();
+    renderAdmin(admin);
+
+    await events.click(await screen.findByRole("button", { name: "Reactivate Amina Yusuf" }));
+
+    expect(reactivateAdminUserMock).toHaveBeenCalledWith("user-1");
   });
 
   it("toggles a feature flag", async () => {

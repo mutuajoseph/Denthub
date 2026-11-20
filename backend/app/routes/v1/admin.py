@@ -17,6 +17,7 @@ from fastapi import APIRouter, Depends, Query
 from app.dependencies import current_admin, current_super_admin, get_app_state
 from app.logic.v1.admin import (
     ADMIN_LIST_LIMIT,
+    MAX_LIST_LIMIT,
     AdminAuditList,
     AdminCountry,
     AdminCountryFeature,
@@ -83,11 +84,76 @@ from app.logic.v1.reference import (
     update_subdivision,
     update_treatment,
 )
+from app.logic.v1.users import (
+    AdminUser,
+    AdminUserList,
+    get_admin_user,
+    list_admin_users,
+    reactivate_user,
+    suspend_user,
+)
 from app.repositories.user import User
 from app.utils.openapi_helpers import standard_error_responses
 from app.utils.state import AppState
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+@router.get(
+    "/users",
+    response_model=AdminUserList,
+    responses=standard_error_responses(401, 403),
+)
+async def read_users(
+    q: str | None = Query(default=None, max_length=100, description="Name or email contains"),
+    limit: int = Query(default=ADMIN_LIST_LIMIT, ge=1, le=MAX_LIST_LIMIT),
+    actor: User = Depends(current_admin),
+    state: AppState = Depends(get_app_state),
+) -> AdminUserList:
+    """Search Users with the Profiles and Memberships they hold (#125)."""
+    return await list_admin_users(state, query=q, limit=limit)
+
+
+@router.get(
+    "/users/{user_id}",
+    response_model=AdminUser,
+    responses=standard_error_responses(401, 403),
+)
+async def read_user(
+    user_id: str,
+    actor: User = Depends(current_admin),
+    state: AppState = Depends(get_app_state),
+) -> AdminUser:
+    """One User with the Profiles and Memberships they hold (#125)."""
+    return await get_admin_user(state, user_id=user_id)
+
+
+@router.post(
+    "/users/{user_id}/suspend",
+    response_model=AdminUser,
+    responses=standard_error_responses(401, 403),
+)
+async def post_suspend_user(
+    user_id: str,
+    actor: User = Depends(current_admin),
+    state: AppState = Depends(get_app_state),
+) -> AdminUser:
+    """End every session the User has and refuse new sign-ins (#125)."""
+    return await suspend_user(state, actor=actor, user_id=user_id)
+
+
+@router.post(
+    "/users/{user_id}/reactivate",
+    response_model=AdminUser,
+    responses=standard_error_responses(401, 403),
+)
+async def post_reactivate_user(
+    user_id: str,
+    actor: User = Depends(current_admin),
+    state: AppState = Depends(get_app_state),
+) -> AdminUser:
+    """Restore access to a suspended User (#125)."""
+    return await reactivate_user(state, actor=actor, user_id=user_id)
 
 
 @router.get(

@@ -91,6 +91,12 @@ to verified; approving a Supplier's or Training Provider's marks it verified,
 which it needs before its products or Courses go live.
 _Avoid_: Approval, KYC, account status
 
+**Suspension**:
+An Admin's temporary stop on a User: every session ends and sign-in is refused
+until reactivation. It is not a judgement about the User's credentials, which
+is what Verification records.
+_Avoid_: ban, deactivation, account status
+
 **Verified Medic**:
 A Specialist or Facility whose Verification tier is verified or featured.
 Browsing CPD and Suppliers is public; enrolling, ordering, and messaging a
