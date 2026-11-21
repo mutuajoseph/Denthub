@@ -110,6 +110,7 @@ const specialistDetail: SpecialistDetail = {
   slug: "dr-wanjiku-kamau",
   bio: "Preventive dentistry and clear aligners.",
   avatar_key: null,
+  avatar_url: null,
   specialties: [
     {
       id: "sp1",
@@ -269,6 +270,20 @@ describe("DentistProfile", () => {
     ).toBeInTheDocument();
     // The specialist card has no fee of its own; no price block renders.
     expect(screen.queryByText(/consultation from/i)).not.toBeInTheDocument();
+  });
+
+  it("shows a Specialist's uploaded avatar on the public profile", async () => {
+    fetchSpecialistDetailMock.mockResolvedValue({
+      ...specialistDetail,
+      avatar_key: "specialist_avatar/sp-1/photo.png",
+      avatar_url: "https://images.example.com/specialist_avatar/sp-1/photo.png",
+    });
+    renderProfile("/dentists/specialist/sp-1");
+
+    expect(await screen.findByAltText("Dr. Wanjiku Kamau's avatar")).toHaveAttribute(
+      "src",
+      "https://images.example.com/specialist_avatar/sp-1/photo.png",
+    );
   });
 
   it("resolves a legacy typeless id by trying a facility, then a specialist", async () => {

@@ -8,6 +8,8 @@ import {
   fetchMySpecialist,
   updateMySpecialist,
 } from "../lib/dentistMeApi";
+import { requestUpload } from "../lib/uploadApi";
+import { putObject } from "../uploads/putObject";
 
 export const mySpecialistQueryKey = (userId: string | null) => ["my-specialist", userId] as const;
 
@@ -51,6 +53,24 @@ export function useUpdateMySpecialist(userId: string | null) {
 
   return useMutation({
     mutationFn: (data: MySpecialistUpdate) => updateMySpecialist(data),
+    onSuccess,
+  });
+}
+
+/** Upload an avatar to object storage, then attach its key to the listing. */
+export function useUploadAvatar(userId: string | null) {
+  const onSuccess = useListingInvalidation(userId);
+
+  return useMutation({
+    mutationFn: async (file: File) => {
+      const upload = await requestUpload({
+        purpose: "specialist_avatar",
+        content_type: file.type,
+        size: file.size,
+      });
+      await putObject(upload, file);
+      return updateMySpecialist({ avatar_key: upload.object_key });
+    },
     onSuccess,
   });
 }

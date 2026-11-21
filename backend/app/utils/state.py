@@ -16,6 +16,7 @@ from structlog.typing import FilteringBoundLogger
 
 from app.config import Settings
 from app.utils.mailer import ConsoleMailer, Mailer
+from app.utils.storage import LocalStorage, Storage
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -29,3 +30,5 @@ class AppState:
     #: The lifespan passes Resend when ``RESEND_API_KEY`` is set; seed scripts and
     #: tests, which send nothing real, get the console mailer.
     mailer: Mailer = field(default_factory=lambda: ConsoleMailer(logger=structlog.get_logger()))
+    #: An in-process stand-in locally and in tests; production gets S3 presigning.
+    storage: Storage = field(default_factory=LocalStorage)

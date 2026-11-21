@@ -11,6 +11,7 @@ from __future__ import annotations
 import re
 import uuid
 from datetime import UTC, datetime
+from typing import cast
 
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,6 +32,7 @@ from app.logic.v1.listing import (
     serialize_branch,
     serialize_specialties,
 )
+from app.logic.v1.uploads import public_avatar_url, validate_avatar_key
 from app.repositories.country import (
     Country,
     CountryRepository,
@@ -59,6 +61,7 @@ class MySpecialist(BaseModel):
     slug: str
     bio: str | None
     avatar_key: str | None
+    avatar_url: str | None
     country_code: str
     subdivision_code: str
     currency: str
@@ -172,7 +175,9 @@ async def _validated_branch_ids(
     return list(dict.fromkeys(branch_ids))
 
 
-def _serialize_my_specialist(specialist: Specialist, country: Country) -> MySpecialist:
+def _serialize_my_specialist(
+    specialist: Specialist, country: Country, *, avatar_url: str | None
+) -> MySpecialist:
     now = datetime.now(UTC)
     branches = sorted(
         specialist.branches,
@@ -185,6 +190,7 @@ def _serialize_my_specialist(specialist: Specialist, country: Country) -> MySpec
         slug=specialist.slug,
         bio=specialist.bio,
         avatar_key=specialist.avatar_key,
+        avatar_url=avatar_url,
         country_code=specialist.country_code,
         subdivision_code=specialist.subdivision_code,
         currency=specialist.currency,
@@ -212,7 +218,9 @@ async def get_my_specialist(state: AppState, *, actor: User) -> MySpecialist:
             raise NotFoundException(message="Specialist listing not found")
 
         country = await _listing_country(session, specialist.country_code)
-        return _serialize_my_specialist(specialist, country)
+        return _serialize_my_specialist(
+            specialist, country, avatar_url=public_avatar_url(state, specialist.avatar_key)
+        )
 
 
 async def create_my_specialist(
@@ -239,6 +247,8 @@ async def create_my_specialist(
         name = (data.name or actor.full_name).strip()
         if not name:
             raise InvalidRequestError(message="Name cannot be empty")
+        if data.avatar_key is not None:
+            await validate_avatar_key(session, data.avatar_key, actor.id)
 
         specialist = await SpecialistRepository.create(
             session,
@@ -269,7 +279,9 @@ async def create_my_specialist(
         if created is None:
             raise NotFoundException(message="Specialist listing not found")
 
-        return _serialize_my_specialist(created, country)
+        return _serialize_my_specialist(
+            created, country, avatar_url=public_avatar_url(state, created.avatar_key)
+        )
 
 
 async def update_my_specialist(
@@ -324,7 +336,10 @@ async def update_my_specialist(
             specialist.bio = fields["bio"]
 
         if "avatar_key" in fields:
-            specialist.avatar_key = fields["avatar_key"]
+            key = cast(str | None, fields["avatar_key"])
+            if key is not None:
+                await validate_avatar_key(session, key, actor.id)
+            specialist.avatar_key = key
 
         if "specialty_codes" in fields:
             codes = fields["specialty_codes"]
@@ -362,4 +377,6 @@ async def update_my_specialist(
         if updated is None:
             raise NotFoundException(message="Specialist listing not found")
 
-        return _serialize_my_specialist(updated, country)
+        return _serialize_my_specialist(
+            updated, country, avatar_url=public_avatar_url(state, updated.avatar_key)
+        )

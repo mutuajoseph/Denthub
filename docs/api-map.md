@@ -94,7 +94,7 @@ backfills them from `users.role` / `users.facility_id`, keeping both columns.
 | GET | `/auth/me` | Change | User | Adds `profiles` and `memberships`; keeps a derived `role` until the frontend migrates |
 | GET, PATCH | `/me` | New | User | Name, phone, home Country |
 | POST | `/me/profiles` | New | User | Add a Profile kind the User lacks |
-| GET, POST, PATCH | `/dentists/me` | New | Specialist | Own Specialist Listing: bio, Specialties, Workplaces, avatar key |
+| GET, POST, PATCH | `/dentists/me` | New | Specialist | Own Specialist Listing: bio, Specialties, Workplaces, Avatar key and public URL |
 | POST | `/dentists/me/practice` | New | Specialist | Solo onboarding: one-Branch Facility plus owner and clinical membership (ADR-0008) |
 | GET | `/me/memberships` | New | User | Facilities and permission sets |
 | GET | `/me/export` | New | User | JSON export (Profiles, Health Record, Appointments, messages), built in the request |
@@ -128,7 +128,7 @@ Health Records are live, so that point has passed.
 
 | Method | Path | Status | Who | Logic |
 |---|---|---|---|---|
-| POST | `/uploads` | New | User | `{ purpose, content_type, size }` returns a presigned PUT and key. Purpose picks the bucket and the permission check |
+| POST | `/uploads` | New | User | `{ purpose, content_type, size }` returns a presigned PUT and object key. `specialist_avatar` (public) and `verification_document` (private) pick the bucket, limits and permission check; only a public object gets a public URL |
 
 ### Verification (applications behind the existing tier)
 
