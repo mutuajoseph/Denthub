@@ -1,8 +1,8 @@
 """HTTP-level tests for the public signup and login endpoints.
 
 Public signup creates public account types only (PRD §2); staff roles are
-granted by staff, never requested by the caller. Professional accounts start
-life pending staff review; patient accounts are active immediately.
+granted by staff, never requested by the caller. Every signup is active;
+a professional awaiting review is tracked by a Verification application.
 """
 
 from __future__ import annotations
@@ -71,7 +71,7 @@ async def test_specialist_signup_is_honoured(client: AsyncClient) -> None:
     assert body["user"]["is_staff"] is False
 
 
-async def test_professional_signup_starts_pending(client: AsyncClient) -> None:
+async def test_professional_signup_is_active(client: AsyncClient) -> None:
     response = await client.post(
         "/api/v1/auth/register",
         json=signup_payload(email="dentist@example.com", account_type="dentist"),
@@ -80,7 +80,7 @@ async def test_professional_signup_starts_pending(client: AsyncClient) -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["user"]["role"] == "dentist"
-    assert body["user"]["account_status"] == "pending"
+    assert body["user"]["account_status"] == "active"
 
 
 async def test_patient_signup_is_active(client: AsyncClient) -> None:
@@ -105,7 +105,7 @@ async def test_login_carries_the_account_status(client: AsyncClient) -> None:
     )
 
     assert response.status_code == 200
-    assert response.json()["user"]["account_status"] == "pending"
+    assert response.json()["user"]["account_status"] == "active"
 
 
 async def test_staff_account_type_is_rejected(client: AsyncClient) -> None:
@@ -143,4 +143,4 @@ async def test_me_carries_the_account_status(client: AsyncClient) -> None:
     )
 
     assert response.status_code == 200
-    assert response.json()["account_status"] == "pending"
+    assert response.json()["account_status"] == "active"

@@ -115,7 +115,7 @@ async def test_a_facility_signup_creates_the_facility_its_branch_and_an_owner(
     me = await client.get("/api/v1/auth/me", headers=_bearer(body))
     assert me.json()["memberships"] == expected
     assert me.json()["role"] == "facility_owner"
-    assert me.json()["account_status"] == "pending"
+    assert me.json()["account_status"] == "active"
 
 
 async def test_the_country_and_its_currency_come_from_accept_country(
@@ -211,9 +211,22 @@ async def test_a_new_facility_stays_out_of_the_directory_until_its_owner_is_appr
     assert "Smile Line Dental" not in names(search)
     assert profile.status_code == 404
 
+    application = await client.post(
+        "/api/v1/verifications",
+        headers=_bearer(body),
+        json={
+            "subject_kind": "facility",
+            "licence_number": "LIC-123",
+            "issuing_body": "Dental Board",
+            "document_keys": ["verification_document/private/licence.pdf"],
+        },
+    )
+    assert application.status_code == 201, application.text
+
     approve = await client.post(
-        f"/api/v1/users/{body['user']['id']}/approve",
+        f"/api/v1/admin/verifications/{application.json()['id']}/approve",
         headers=await _staff_headers(client, state),
+        json={},
     )
 
     assert approve.status_code == 200

@@ -406,3 +406,63 @@ async def test_an_admin_sees_every_application(client: AsyncClient, state: AppSt
         "specialist",
         "supplier",
     }
+
+
+async def test_only_admin_staff_may_decide_an_application(
+    client: AsyncClient, state: AppState
+) -> None:
+    from tests.factories import build_operator
+
+    _, _, application_id = await _submit(client, state, "specialist")
+    patient = await _make_user(state, role="patient", kind="patient")
+    admin = await _make_user(state, role="admin")
+    super_admin = await _make_user(state, role="super_admin")
+    operator = build_operator(division="dentist", tier="lead")
+    async with state.db_session_maker() as session:
+        session.add(operator)
+        await session.commit()
+
+    path = f"/api/v1/admin/verifications/{application_id}/approve"
+    for headers in (
+        {},
+        _public_headers(state, admin),
+        _public_headers(state, patient),
+        _staff_headers(state, patient),
+        _staff_headers(state, operator),
+    ):
+        refused = await client.post(path, headers=headers, json={})
+        assert refused.status_code in (401, 403)
+
+    allowed = await client.post(path, headers=_staff_headers(state, super_admin), json={})
+    assert allowed.status_code == 200, allowed.text
+
+
+async def test_an_unknown_application_is_404(client: AsyncClient, state: AppState) -> None:
+    admin = await _make_user(state, role="admin")
+
+    response = await client.post(
+        "/api/v1/admin/verifications/unknown-id/approve",
+        headers=_staff_headers(state, admin),
+        json={},
+    )
+
+    assert response.status_code == 404
+
+
+async def test_an_audit_entry_names_the_deciding_admin(
+    client: AsyncClient, state: AppState
+) -> None:
+    _, _, application_id = await _submit(client, state, "specialist")
+    admin = await _make_user(state, role="admin")
+
+    await client.post(
+        f"/api/v1/admin/verifications/{application_id}/approve",
+        headers=_staff_headers(state, admin),
+        json={},
+    )
+
+    audit = await client.get("/api/v1/admin/audit", headers=_staff_headers(state, admin))
+    entry = audit.json()["items"][0]
+    assert entry["actor_email"] == admin.email
+    assert entry["before"] == {"status": "pending"}
+    assert entry["after"]["status"] == "verified"

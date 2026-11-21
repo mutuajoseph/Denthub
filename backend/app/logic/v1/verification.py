@@ -10,7 +10,7 @@ audited and emailed to the applicant.
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Literal
+from typing import Literal, cast
 
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -225,8 +225,8 @@ async def decide_verification_as_operator(
 
 async def _set_subject_verification(
     session: AsyncSession, *, kind: SubjectKind, subject_id: str, verified: bool
-) -> None:
-    """Approval verifies the subject; revocation drops verification entirely."""
+) -> list[str]:
+    """Verify (or drop verification for) the subject; list a newly approved Facility."""
     model = {
         "specialist": Specialist,
         "facility": Facility,
@@ -240,7 +240,16 @@ async def _set_subject_verification(
     field = "verification_tier" if kind in ("specialist", "facility") else "is_verified"
     value = ("verified" if verified else "unverified") if field == "verification_tier" else verified
     setattr(subject, field, value)
+
+    listed: list[str] = []
+    if kind == "facility" and verified:
+        facility = cast(Facility, subject)
+        # The retired /users/{id}/approve route used to list signup Facilities.
+        if not facility.listed:
+            facility.listed = True
+            listed.append(facility.id)
     await session.flush()
+    return listed
 
 
 async def decide_verification(
@@ -284,8 +293,9 @@ async def decide_verification(
             application.status = "revoked"
             application.rejection_reason = reason
 
+        listed_facility_ids: list[str] = []
         if decision in ("approve", "revoke"):
-            await _set_subject_verification(
+            listed_facility_ids = await _set_subject_verification(
                 session,
                 kind=application.subject_kind,
                 subject_id=application.subject_id,
@@ -306,6 +316,7 @@ async def decide_verification(
                 "subject_kind": application.subject_kind,
                 "subject_id": application.subject_id,
                 **({"reason": reason} if reason else {}),
+                **({"listed_facility_ids": listed_facility_ids} if listed_facility_ids else {}),
             },
         )
         await session.commit()

@@ -208,15 +208,3 @@ async def test_the_last_active_super_admin_can_not_be_suspended(
 
     assert response.status_code == 400
     assert "last active Super Admin" in response.json()["message"]
-
-
-async def test_approval_refuses_a_suspended_user(client: AsyncClient, state: AppState) -> None:
-    admin = await _make_user(state, role="admin")
-    target = await _make_user(state, account_status="pending")
-    headers = _staff_headers(state, admin)
-
-    assert (await client.post(f"{BASE}/{target.id}/suspend", headers=headers)).status_code == 200
-
-    approved = await client.post(f"/api/v1/users/{target.id}/approve", headers=headers)
-
-    assert approved.status_code == 400

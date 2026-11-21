@@ -1,7 +1,7 @@
 import { type Role, isPublicRole, normalizeRole } from "../auth/roles";
 import { ApiError, apiRequest, postJson } from "./apiClient";
 
-export type AccountStatus = "active" | "pending" | "suspended";
+export type AccountStatus = "active" | "suspended";
 
 /** One Profile a User holds (`CONTEXT.md` "Profile"; ADR-0006). */
 export type ProfileKind = "patient" | "specialist" | "supplier" | "training_provider";
@@ -18,7 +18,7 @@ export interface MembershipSummary {
   permissions: FacilityPermission[];
 }
 
-const ACCOUNT_STATUSES: readonly AccountStatus[] = ["active", "pending", "suspended"];
+const ACCOUNT_STATUSES: readonly AccountStatus[] = ["active", "suspended"];
 const PROFILE_KINDS: readonly ProfileKind[] = [
   "patient",
   "specialist",
@@ -335,7 +335,13 @@ export function getStoredUser(): AuthUser | null {
     // is { user, surface }. Read either, so a deploy does not sign everyone out.
     const candidate = isRecord(parsed) && "user" in parsed ? parsed.user : parsed;
 
-    return parseAuthUser(candidate);
+    // #126 retired the pending status; the migration makes those Users active,
+    // so a session cached before the deploy must still parse.
+    return parseAuthUser(
+      isRecord(candidate) && candidate.account_status === "pending"
+        ? { ...candidate, account_status: "active" }
+        : candidate,
+    );
   } catch {
     clearStoredAuth();
     return null;

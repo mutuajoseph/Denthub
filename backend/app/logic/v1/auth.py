@@ -50,16 +50,9 @@ AccountType = Literal[
     "training_provider",
 ]
 
-#: Whether a user record has been reviewed by staff. Professional accounts
-#: (PRD §2) start life "pending"; a staff approval flips them to "active".
-#: "suspended" is an Admin's stop on a User (#125), separate from review.
-AccountStatus = Literal["active", "pending", "suspended"]
-
-#: Account types whose signup is held for staff review. Patient accounts are
-#: active immediately: nothing about a patient profile is gated behind review.
-PROFESSIONAL_ACCOUNT_TYPES: frozenset[str] = frozenset(
-    {"dentist", "specialist", "intern", "facility_owner", "supplier", "training_provider"}
-)
+#: Whether an account may sign in. Professional "awaiting approval" is a
+#: Verification application's status, not a separate account status (#126).
+AccountStatus = Literal["active", "suspended"]
 
 #: Roles a human granted, as opposed to roles a signup could ever ask for.
 STAFF_ROLES: frozenset[str] = frozenset({"staff", "admin", "super_admin", "platform_operator"})
@@ -506,9 +499,8 @@ async def signup_user(
         if existing:
             raise ConflictError(message="A user with this email already exists")
 
-        # Hash password and save user. Professional accounts start life pending
-        # (staff review); patient accounts are active immediately.
-        account_status = "pending" if data.account_type in PROFESSIONAL_ACCOUNT_TYPES else "active"
+        # Every signup is active; a professional awaiting staff review is shown
+        # by their Verification application, not by account_status (#126).
         password_hash = hash_password(data.password)
 
         user = await UserRepository.create(
@@ -518,7 +510,6 @@ async def signup_user(
             password_hash=password_hash,
             role=data.account_type,
             phone=data.phone,
-            account_status=account_status,
         )
 
         # Write the new shape beside users.role from the expand release on

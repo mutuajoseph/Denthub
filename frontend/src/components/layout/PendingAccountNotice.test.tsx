@@ -1,36 +1,70 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { useMyVerifications } from "../../hooks/useVerification";
 import type { AuthUser } from "../../lib/auth";
+import type { VerificationApplicationWire } from "../../lib/verificationApi";
 import { PendingAccountNotice } from "./PendingAccountNotice";
 
-function makeUser(accountStatus: AuthUser["account_status"]): AuthUser {
+vi.mock("../../hooks/useVerification", () => ({ useMyVerifications: vi.fn() }));
+const useMyVerificationsMock = vi.mocked(useMyVerifications);
+
+const user: AuthUser = {
+  id: "user-1",
+  email: "dentist@example.com",
+  full_name: "Dentist User",
+  phone: null,
+  home_country_code: null,
+  role: "dentist",
+  is_staff: false,
+  account_status: "active",
+  email_verified: true,
+  profiles: [],
+  memberships: [],
+};
+
+function application(status: VerificationApplicationWire["status"]): VerificationApplicationWire {
   return {
-    id: "user-1",
-    email: "dentist@example.com",
-    full_name: "Dentist User",
-    phone: null,
-    home_country_code: null,
-    role: "dentist",
-    is_staff: false,
-    account_status: accountStatus,
-    email_verified: true,
-    profiles: [],
-    memberships: [],
+    id: "v-1",
+    subject_kind: "specialist",
+    subject_id: "sp-1",
+    applicant_email: user.email,
+    licence_number: "LIC-1",
+    issuing_body: "Dental Board",
+    document_keys: ["private/doc.pdf"],
+    status,
+    rejection_reason: null,
+    created_at: "2030-01-01T10:00:00Z",
+    decided_at: status === "pending" ? null : "2030-01-02T10:00:00Z",
   };
 }
 
 describe("PendingAccountNotice", () => {
-  it("explains the pending state to a professional awaiting approval", () => {
-    render(<PendingAccountNotice user={makeUser("pending")} />);
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useMyVerificationsMock.mockReturnValue({ data: [], isPending: false } as never);
+  });
+
+  it("shows the notice while the latest Verification application is pending", () => {
+    useMyVerificationsMock.mockReturnValue({ data: [application("pending")] } as never);
+    render(<PendingAccountNotice user={user} />);
 
     expect(
       screen.getByRole("complementary", { name: "Account awaiting approval" }),
-    ).toHaveTextContent(/awaiting staff approval/i);
+    ).toHaveTextContent(/awaiting Verification/i);
   });
 
-  it("renders nothing for an active account", () => {
-    render(<PendingAccountNotice user={makeUser("active")} />);
+  it("renders nothing for an active account with no pending application", () => {
+    render(<PendingAccountNotice user={user} />);
+
+    expect(
+      screen.queryByRole("complementary", { name: "Account awaiting approval" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("renders nothing for a decided application", () => {
+    useMyVerificationsMock.mockReturnValue({ data: [application("verified")] } as never);
+    render(<PendingAccountNotice user={user} />);
 
     expect(
       screen.queryByRole("complementary", { name: "Account awaiting approval" }),
