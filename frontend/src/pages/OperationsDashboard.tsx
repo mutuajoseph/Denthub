@@ -1,7 +1,14 @@
+import { useState } from "react";
+
 import Badge from "../components/ui/Badge";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
+import { VerificationQueue } from "../components/verification/VerificationQueue";
 import { useDivisionJobs, useOperationsOverview, useSetJobStatus } from "../hooks/useOperations";
+import {
+  useDivisionVerificationApplications,
+  useDivisionVerificationDecision,
+} from "../hooks/useVerification";
 import type { AuthUser } from "../lib/auth";
 import type {
   DivisionJobWire,
@@ -126,6 +133,59 @@ function JobsSection({ userId, canWrite }: { userId: string; canWrite: boolean }
   );
 }
 
+function DivisionVerificationSection({
+  userId,
+  canWrite,
+}: {
+  userId: string;
+  canWrite: boolean;
+}) {
+  const query = useDivisionVerificationApplications(userId);
+  const decision = useDivisionVerificationDecision();
+  const [error, setError] = useState("");
+
+  return (
+    <Card hover={false}>
+      <h2 className="font-display text-lg font-semibold tracking-[-0.02em] text-ink">
+        Verification applications
+      </h2>
+      <p className="mt-1 text-sm text-charcoal">
+        Applications in your Division.
+        {!canWrite && " Your Assistant tier can review them but not decide."}
+      </p>
+      {query.isPending ? (
+        <output className="mt-3 block text-sm text-slate">Loading applications…</output>
+      ) : query.error || !query.data ? (
+        <SectionError error={query.error} onRetry={() => void query.refetch()} />
+      ) : (
+        <VerificationQueue
+          applications={query.data}
+          canWrite={canWrite}
+          isSaving={decision.isPending}
+          emptyLabel="No applications in this Division yet."
+          onDecide={(applicationId, next, reason) => {
+            setError("");
+            decision.mutate(
+              { applicationId, decision: next, request: { reason } },
+              {
+                onError: (cause) =>
+                  setError(describeError(cause, "The decision could not be saved.")),
+              },
+            );
+          }}
+        />
+      )}
+      {error && (
+        <p role="alert" className="mt-3 text-sm text-red-700">
+          {error}
+        </p>
+      )}
+    </Card>
+  );
+}
+
+const VERIFICATION_DIVISIONS: OperatorDivision[] = ["dentist", "suppliers", "training"];
+
 /**
  * The operations console (#83): a Platform Operator's work inside their one
  * Division, at a Lead or Assistant tier. The route is role-gated to
@@ -176,6 +236,8 @@ export function OperationsDashboard({ user }: OperationsDashboardProps) {
 
         {overview.data?.division === "jobs" ? (
           <JobsSection userId={user.id} canWrite={overview.data.can_write} />
+        ) : overview.data && VERIFICATION_DIVISIONS.includes(overview.data.division) ? (
+          <DivisionVerificationSection userId={user.id} canWrite={overview.data.can_write} />
         ) : overview.data ? (
           <Card hover={false}>
             <h2 className="font-display text-lg font-semibold tracking-[-0.02em] text-ink">

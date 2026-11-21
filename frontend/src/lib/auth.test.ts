@@ -8,6 +8,7 @@ import {
   getStoredSurface,
   getStoredToken,
   getStoredUser,
+  parseAuthUser,
   refreshSession,
   setSession,
   subscribeToAuthChanges,
@@ -145,6 +146,12 @@ describe("session storage (#121)", () => {
       memberships: [],
     },
   };
+
+  it("parses a suspended status returned by the API", () => {
+    expect(parseAuthUser({ ...session.user, account_status: "suspended" }).account_status).toBe(
+      "suspended",
+    );
+  });
 
   it("keeps the access token in memory, out of localStorage", () => {
     setSession(session);

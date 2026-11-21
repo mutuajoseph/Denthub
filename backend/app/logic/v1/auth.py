@@ -52,7 +52,8 @@ AccountType = Literal[
 
 #: Whether a user record has been reviewed by staff. Professional accounts
 #: (PRD §2) start life "pending"; a staff approval flips them to "active".
-AccountStatus = Literal["active", "pending"]
+#: "suspended" is an Admin's stop on a User (#125), separate from review.
+AccountStatus = Literal["active", "pending", "suspended"]
 
 #: Account types whose signup is held for staff review. Patient accounts are
 #: active immediately: nothing about a patient profile is gated behind review.

@@ -121,7 +121,7 @@ Health Records are live, so that point has passed.
 | GET, POST | `/admin/staff` | New | Super | List and create staff (sets `platform_role`, and Division and tier for Operators). Today this needs a database write (ADR-0005) |
 | PATCH | `/admin/staff/{id}` | New | Super | Change role, Division, tier, active |
 | GET | `/admin/users[/{id}]` | New | Admin | Search Users with Profiles and memberships |
-| POST | `/admin/users/{id}/suspend` · `/reactivate` | New | Admin | `account_status` becomes `active \| suspended`; suspension revokes refresh tokens |
+| POST | `/admin/users/{id}/suspend` · `/reactivate` | New | Admin | `account_status` gains `suspended` and `is_active` is cleared; suspension revokes every refresh family. `pending` stays until #126 retires it |
 | POST | `/users/{id}/approve` | Retire | — | Retired once Verification lands; professional "pending" is read from Verification instead |
 
 ### Uploads
@@ -136,7 +136,8 @@ Health Records are live, so that point has passed.
 |---|---|---|---|---|
 | POST | `/verifications` | New | Specialist · FM:owner · Supplier · TP | Licence or registration number, issuing body, document keys → PENDING |
 | GET | `/me/verifications` | New | User | Status per subject, with rejection reason |
-| GET | `/admin/verifications` | Change | Admin | Today lists tiers; add the application queue for all four subject kinds |
+| GET | `/admin/verifications` | Keep | Admin | Existing tier grades; its v1 shape is unchanged |
+| GET | `/admin/verifications/applications` | New | Admin | Application queue for all four subject kinds, newest first |
 | POST | `/admin/verifications/{id}/approve` · `/reject` · `/revoke` | New | Admin | Approve sets the tier to `verified`; reject and revoke need a reason; audited and emailed |
 | GET | `/operations/verifications` | New | Op:Dentist · Op:Suppliers · Op:Training | Division-scoped queue (Specialist and Facility → Dentist, Supplier → Suppliers, TP → Training) |
 | POST | `/operations/verifications/{id}/approve` · `/reject` · `/revoke` | New | Op (L) | Same decisions, Division-scoped |

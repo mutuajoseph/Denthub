@@ -21,6 +21,13 @@ from app.logic.v1.operations import (
     list_division_jobs,
     set_job_status,
 )
+from app.logic.v1.verification import (
+    DecisionRequest,
+    VerificationApplicationList,
+    VerificationApplicationView,
+    decide_verification_as_operator,
+    operations_verification_queue,
+)
 from app.repositories.user import User
 from app.utils.openapi_helpers import standard_error_responses
 from app.utils.state import AppState
@@ -52,6 +59,82 @@ async def read_division_jobs(
 ) -> DivisionJobList:
     """Job postings in the caller's Division, whatever their status."""
     return await list_division_jobs(state, actor=actor)
+
+
+@router.get(
+    "/verifications",
+    response_model=VerificationApplicationList,
+    responses=standard_error_responses(401, 403),
+)
+async def read_division_verifications(
+    actor: User = Depends(current_staff),
+    state: AppState = Depends(get_app_state),
+) -> VerificationApplicationList:
+    """Applications in the Operator's own Division; Assistants may read."""
+    return await operations_verification_queue(state, actor=actor)
+
+
+@router.post(
+    "/verifications/{application_id}/approve",
+    response_model=VerificationApplicationView,
+    responses=standard_error_responses(401, 403),
+)
+async def approve_division_verification(
+    application_id: str,
+    request: DecisionRequest,
+    actor: User = Depends(current_staff),
+    state: AppState = Depends(get_app_state),
+) -> VerificationApplicationView:
+    """Approve a pending application in the Operator's Division; Lead only."""
+    return await decide_verification_as_operator(
+        state,
+        actor=actor,
+        application_id=application_id,
+        decision="approve",
+        reason=request.reason,
+    )
+
+
+@router.post(
+    "/verifications/{application_id}/reject",
+    response_model=VerificationApplicationView,
+    responses=standard_error_responses(401, 403),
+)
+async def reject_division_verification(
+    application_id: str,
+    request: DecisionRequest,
+    actor: User = Depends(current_staff),
+    state: AppState = Depends(get_app_state),
+) -> VerificationApplicationView:
+    """Reject a pending application in the Operator's Division; Lead only."""
+    return await decide_verification_as_operator(
+        state,
+        actor=actor,
+        application_id=application_id,
+        decision="reject",
+        reason=request.reason,
+    )
+
+
+@router.post(
+    "/verifications/{application_id}/revoke",
+    response_model=VerificationApplicationView,
+    responses=standard_error_responses(401, 403),
+)
+async def revoke_division_verification(
+    application_id: str,
+    request: DecisionRequest,
+    actor: User = Depends(current_staff),
+    state: AppState = Depends(get_app_state),
+) -> VerificationApplicationView:
+    """Revoke a verified application in the Operator's Division; Lead only."""
+    return await decide_verification_as_operator(
+        state,
+        actor=actor,
+        application_id=application_id,
+        decision="revoke",
+        reason=request.reason,
+    )
 
 
 @router.patch(

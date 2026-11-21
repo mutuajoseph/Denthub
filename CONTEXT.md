@@ -91,6 +91,18 @@ to verified; approving a Supplier's or Training Provider's marks it verified,
 which it needs before its products or Courses go live.
 _Avoid_: Approval, KYC, account status
 
+**Suspension**:
+An Admin's temporary stop on a User: every session ends and sign-in is refused
+until reactivation. It is not a judgement about the User's credentials, which
+is what Verification records.
+_Avoid_: ban, deactivation, account status
+
+**Verification application**:
+A professional's request to have one subject they act for checked, carrying
+evidence and the reason for a decision. It is distinct from the Verification
+tier that approval grants.
+_Avoid_: verification request, approval form
+
 **Upload**:
 A client's transfer of one file straight to object storage with a presigned
 URL. Its purpose decides the bucket, the type and size limits, and who may ask

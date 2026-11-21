@@ -11,6 +11,7 @@
  */
 
 import { getJson, patchJson, postJson } from "./apiClient";
+import type { AccountStatus, MembershipSummary, ProfileSummary } from "./auth";
 
 /** The graded value one Facility or Specialist profile is verified at. */
 export type VerificationTier = "unverified" | "basic" | "verified" | "featured";
@@ -61,6 +62,26 @@ export interface ModerationItemWire {
 
 export interface ModerationListWire {
   items: ModerationItemWire[];
+}
+
+/** A User as the admin console reads them (#125), mirroring AdminUser. */
+export interface AdminUserWire {
+  id: string;
+  email: string;
+  role: string;
+  full_name: string;
+  phone: string | null;
+  home_country_code: string | null;
+  is_staff: boolean;
+  account_status: AccountStatus;
+  email_verified: boolean;
+  profiles: ProfileSummary[];
+  memberships: MembershipSummary[];
+  is_active: boolean;
+}
+
+export interface AdminUserListWire {
+  items: AdminUserWire[];
 }
 
 export interface AdminAuditEntryWire {
@@ -195,6 +216,35 @@ export function moderateJob(postingId: string, status: ModerationStatus) {
   return patchJson<ModerationItemWire>(
     `/admin/moderation/jobs/${encodeURIComponent(postingId)}`,
     { status },
+    { auth: true },
+  );
+}
+
+export function fetchAdminUsers(query: string, options: { signal?: AbortSignal } = {}) {
+  return getJson<AdminUserListWire>("/admin/users", {
+    query: query ? { q: query } : undefined,
+    auth: true,
+    signal: options.signal,
+  });
+}
+
+export function fetchAdminUser(userId: string, options: { signal?: AbortSignal } = {}) {
+  return getJson<AdminUserWire>(`/admin/users/${encodeURIComponent(userId)}`, {
+    auth: true,
+    signal: options.signal,
+  });
+}
+
+export function suspendAdminUser(userId: string) {
+  return postJson<AdminUserWire>(`/admin/users/${encodeURIComponent(userId)}/suspend`, undefined, {
+    auth: true,
+  });
+}
+
+export function reactivateAdminUser(userId: string) {
+  return postJson<AdminUserWire>(
+    `/admin/users/${encodeURIComponent(userId)}/reactivate`,
+    undefined,
     { auth: true },
   );
 }

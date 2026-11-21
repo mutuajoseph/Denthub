@@ -1,7 +1,7 @@
 """add uploaded objects
 
 Revision ID: e5fb31186988
-Revises: 09ac3f801860
+Revises: 6a921743ef9e
 Create Date: 2026-11-19 17:35:26.978826
 
 The object keys ``POST /uploads`` issues (#123). No existing rows need a
@@ -18,7 +18,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = 'e5fb31186988'
-down_revision: Union[str, Sequence[str], None] = '09ac3f801860'
+down_revision: Union[str, Sequence[str], None] = '6a921743ef9e'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
