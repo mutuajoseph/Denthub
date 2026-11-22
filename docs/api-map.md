@@ -65,9 +65,9 @@ routes are role-gated and the roles are the user's call).
    `PATCH /facility/appointments/{id}` now lets the account linked to the booked
    Specialist listing (`specialists.user_id`) advance it; anyone else gets a
    404. The structural fix is ADR-0008 (P1).
-2. **`POST /users/{id}/approve` accepts a public-scope token and writes no
-   audit row** (#114) ([`users.py`](../backend/app/logic/v1/users.py)), unlike every
-   `/admin` route. Require a staff token, and audit it.
+2. ~~**`POST /users/{id}/approve` accepts a public-scope token and writes no
+   audit row** (#114).~~ **Retired in #126**: the route is gone; Verification
+   decisions are staff-gated and audited in `verification.*` entries.
 
 ---
 
@@ -121,8 +121,8 @@ Health Records are live, so that point has passed.
 | GET, POST | `/admin/staff` | New | Super | List and create staff (sets `platform_role`, and Division and tier for Operators). Today this needs a database write (ADR-0005) |
 | PATCH | `/admin/staff/{id}` | New | Super | Change role, Division, tier, active |
 | GET | `/admin/users[/{id}]` | New | Admin | Search Users with Profiles and memberships |
-| POST | `/admin/users/{id}/suspend` · `/reactivate` | New | Admin | `account_status` gains `suspended` and `is_active` is cleared; suspension revokes every refresh family. `pending` stays until #126 retires it |
-| POST | `/users/{id}/approve` | Retire | — | Retired once Verification lands; professional "pending" is read from Verification instead |
+| POST | `/admin/users/{id}/suspend` · `/reactivate` | New | Admin | `account_status` is `active \| suspended` and `is_active` is cleared on suspension; every refresh family is revoked |
+| POST | `/users/{id}/approve` | Retired (#126) | — | Removed; Verification decisions replace it, and 'awaiting approval' comes from a pending Verification application |
 
 ### Uploads
 

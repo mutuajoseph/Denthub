@@ -1,4 +1,5 @@
 import { CircleAlert } from "lucide-react";
+import { useMyVerifications } from "../../hooks/useVerification";
 import type { AuthUser } from "../../lib/auth";
 
 export type PendingAccountNoticeProps = {
@@ -6,11 +7,14 @@ export type PendingAccountNoticeProps = {
 };
 
 export function PendingAccountNotice({ user }: PendingAccountNoticeProps) {
-  if (user?.account_status !== "pending") return null;
+  const verifications = useMyVerifications(user?.id ?? null);
+  const awaitingVerification = verifications.data?.some((item) => item.status === "pending");
+
+  if (!user || !awaitingVerification) return null;
 
   return (
     <aside
-      aria-label="Account awaiting approval"
+      aria-label="Account awaiting Verification"
       className="border-b border-graphite/10 bg-cloud px-4 py-3"
     >
       <div className="mx-auto flex max-w-5xl items-start gap-2.5">
@@ -20,8 +24,8 @@ export function PendingAccountNotice({ user }: PendingAccountNoticeProps) {
           aria-hidden="true"
         />
         <p className="text-sm leading-relaxed text-ink/80">
-          Your professional account is awaiting staff approval. You can keep browsing while a staff
-          member reviews your signup.
+          Your professional account is awaiting Verification. You can keep browsing while a staff
+          member reviews the evidence you submitted.
         </p>
       </div>
     </aside>

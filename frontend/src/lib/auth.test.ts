@@ -153,6 +153,24 @@ describe("session storage (#121)", () => {
     );
   });
 
+  it("reads a pending status from a lagging backend as active (#126)", () => {
+    expect(parseAuthUser({ ...session.user, account_status: "pending" }).account_status).toBe(
+      "active",
+    );
+  });
+
+  it("rejects an unknown account status", () => {
+    expect(() => parseAuthUser({ ...session.user, account_status: "wizard" })).toThrow(
+      "Invalid authentication response",
+    );
+  });
+
+  it("keeps a session cached before #126 with the retired pending status", () => {
+    store({ ...session.user, account_status: "pending" });
+
+    expect(getStoredAuth()?.user.account_status).toBe("active");
+  });
+
   it("keeps the access token in memory, out of localStorage", () => {
     setSession(session);
 

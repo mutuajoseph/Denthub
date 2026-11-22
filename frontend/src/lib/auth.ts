@@ -1,7 +1,7 @@
 import { type Role, isPublicRole, normalizeRole } from "../auth/roles";
 import { ApiError, apiRequest, postJson } from "./apiClient";
 
-export type AccountStatus = "active" | "pending" | "suspended";
+export type AccountStatus = "active" | "suspended";
 
 /** One Profile a User holds (`CONTEXT.md` "Profile"; ADR-0006). */
 export type ProfileKind = "patient" | "specialist" | "supplier" | "training_provider";
@@ -18,7 +18,7 @@ export interface MembershipSummary {
   permissions: FacilityPermission[];
 }
 
-const ACCOUNT_STATUSES: readonly AccountStatus[] = ["active", "pending", "suspended"];
+const ACCOUNT_STATUSES: readonly AccountStatus[] = ["active", "suspended"];
 const PROFILE_KINDS: readonly ProfileKind[] = [
   "patient",
   "specialist",
@@ -170,12 +170,15 @@ export function parseAuthUser(value: unknown): AuthUser {
   }
 
   const role = normalizeRole(value.role);
+  // #126 retired pending. A lagging backend can still return it during the
+  // deploy window; those Users are active now, so read the old value as active.
+  const accountStatus = value.account_status === "pending" ? "active" : value.account_status;
 
   if (
     typeof value.id !== "string" ||
     typeof value.email !== "string" ||
     typeof value.full_name !== "string" ||
-    !ACCOUNT_STATUSES.includes(value.account_status as AccountStatus) ||
+    !ACCOUNT_STATUSES.includes(accountStatus as AccountStatus) ||
     !role
   ) {
     throw new Error("Invalid authentication response");
@@ -189,7 +192,7 @@ export function parseAuthUser(value: unknown): AuthUser {
     home_country_code: typeof value.home_country_code === "string" ? value.home_country_code : null,
     role,
     is_staff: value.is_staff === true,
-    account_status: value.account_status as AccountStatus,
+    account_status: accountStatus as AccountStatus,
     email_verified: value.email_verified === true,
     // A session stored before #117 has neither field; it reads as none held.
     profiles: parseProfiles(value.profiles),
