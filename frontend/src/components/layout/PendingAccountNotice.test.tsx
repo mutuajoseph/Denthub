@@ -45,12 +45,12 @@ describe("PendingAccountNotice", () => {
     useMyVerificationsMock.mockReturnValue({ data: [], isPending: false } as never);
   });
 
-  it("shows the notice while the latest Verification application is pending", () => {
+  it("shows the notice while a Verification application is pending", () => {
     useMyVerificationsMock.mockReturnValue({ data: [application("pending")] } as never);
     render(<PendingAccountNotice user={user} />);
 
     expect(
-      screen.getByRole("complementary", { name: "Account awaiting approval" }),
+      screen.getByRole("complementary", { name: "Account awaiting Verification" }),
     ).toHaveTextContent(/awaiting Verification/i);
   });
 
@@ -58,7 +58,7 @@ describe("PendingAccountNotice", () => {
     render(<PendingAccountNotice user={user} />);
 
     expect(
-      screen.queryByRole("complementary", { name: "Account awaiting approval" }),
+      screen.queryByRole("complementary", { name: "Account awaiting Verification" }),
     ).not.toBeInTheDocument();
   });
 
@@ -67,7 +67,7 @@ describe("PendingAccountNotice", () => {
     render(<PendingAccountNotice user={user} />);
 
     expect(
-      screen.queryByRole("complementary", { name: "Account awaiting approval" }),
+      screen.queryByRole("complementary", { name: "Account awaiting Verification" }),
     ).not.toBeInTheDocument();
   });
 
@@ -75,7 +75,7 @@ describe("PendingAccountNotice", () => {
     render(<PendingAccountNotice user={null} />);
 
     expect(
-      screen.queryByRole("complementary", { name: "Account awaiting approval" }),
+      screen.queryByRole("complementary", { name: "Account awaiting Verification" }),
     ).not.toBeInTheDocument();
   });
 });

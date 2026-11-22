@@ -124,15 +124,17 @@ def upgrade() -> None:
         subject_id = _subject_id(bind, kind, user['id'])
         if subject_id is None:
             continue
-        already_pending = bind.execute(
+        # A decided application means this User's review already happened —
+        # often under the old signup status, since Verification never cleared
+        # it. Reopening it here would hide their decision from /me/verifications.
+        existing_application = bind.execute(
             sa.select(applications.c.id).where(
                 applications.c.user_id == user['id'],
                 applications.c.subject_kind == kind,
                 applications.c.subject_id == subject_id,
-                applications.c.status == 'pending',
             )
         ).scalar_one_or_none()
-        if already_pending is not None:
+        if existing_application is not None:
             continue
         rows.append(
             {

@@ -28,6 +28,7 @@ def migrated(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> sqlite3.Connect
     conn = sqlite3.connect(db)
     users = [
         ("specialist", "specialist"),
+        ("verified-professional", "specialist"),
         ("facility_owner", "facility_owner"),
         ("supplier", "supplier"),
         ("training_provider", "training_provider"),
@@ -54,6 +55,17 @@ def migrated(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> sqlite3.Connect
             "Specialist",
             "specialist",
             "specialist",
+        ),
+    )
+    conn.execute(
+        "INSERT INTO specialists (id, name, slug, user_id, country_code, subdivision_code,"
+        " currency, review_count, created_at, updated_at)"
+        " VALUES (?, ?, ?, ?, 'KE', 'NAIROBI', 'KES', 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+        (
+            "sp-verified",
+            "Verified Specialist",
+            "verified-specialist",
+            "verified-professional",
         ),
     )
     conn.execute(
@@ -93,6 +105,20 @@ def migrated(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> sqlite3.Connect
             "Dental Board",
         ),
     )
+    conn.execute(
+        "INSERT INTO verification_applications (id, user_id, subject_kind, subject_id,"
+        " applicant_email, licence_number, issuing_body, document_keys, status, created_at)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, '[]', 'verified', CURRENT_TIMESTAMP)",
+        (
+            "existing-verified-application",
+            "verified-professional",
+            "specialist",
+            "sp-verified",
+            "verified-professional@example.com",
+            "Already verified",
+            "Dental Board",
+        ),
+    )
     conn.commit()
     command.upgrade(config, "head")
     return conn
@@ -111,7 +137,20 @@ def test_pending_professionals_with_a_subject_get_a_pending_application(
     assert by_user["specialist"][1:] == ("specialist", "sp-1", "pending")
     assert by_user["supplier"][1:] == ("supplier", "sup-1", "pending")
     assert by_user["training_provider"][1:] == ("training_provider", "tp-1", "pending")
-    assert len(rows) == 4
+    assert by_user["verified-professional"][1:] == ("specialist", "sp-verified", "verified")
+    assert len(rows) == 5
+
+
+def test_an_already_verified_professional_stays_verified(migrated: sqlite3.Connection) -> None:
+    statuses = dict(migrated.execute("SELECT id, account_status FROM users").fetchall())
+    assert statuses["verified-professional"] == "active"
+
+    applications = migrated.execute(
+        "SELECT id, status FROM verification_applications WHERE user_id = ?",
+        ("verified-professional",),
+    ).fetchall()
+
+    assert applications == [("existing-verified-application", "verified")]
 
 
 def test_subjectless_pending_users_get_no_placeholder_subject(

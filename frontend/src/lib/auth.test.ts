@@ -153,8 +153,14 @@ describe("session storage (#121)", () => {
     );
   });
 
-  it("rejects the retired pending account status (#126)", () => {
-    expect(() => parseAuthUser({ ...session.user, account_status: "pending" })).toThrow(
+  it("reads a pending status from a lagging backend as active (#126)", () => {
+    expect(parseAuthUser({ ...session.user, account_status: "pending" }).account_status).toBe(
+      "active",
+    );
+  });
+
+  it("rejects an unknown account status", () => {
+    expect(() => parseAuthUser({ ...session.user, account_status: "wizard" })).toThrow(
       "Invalid authentication response",
     );
   });

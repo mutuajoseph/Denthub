@@ -14,7 +14,7 @@ export function PendingAccountNotice({ user }: PendingAccountNoticeProps) {
 
   return (
     <aside
-      aria-label="Account awaiting approval"
+      aria-label="Account awaiting Verification"
       className="border-b border-graphite/10 bg-cloud px-4 py-3"
     >
       <div className="mx-auto flex max-w-5xl items-start gap-2.5">

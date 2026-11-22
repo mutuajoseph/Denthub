@@ -196,7 +196,7 @@ async def test_an_unknown_country_is_refused(client: AsyncClient) -> None:
     assert response.status_code == 422
 
 
-async def test_a_new_facility_stays_out_of_the_directory_until_its_owner_is_approved(
+async def test_a_new_facility_stays_out_of_the_directory_until_verified(
     client: AsyncClient, state: AppState
 ) -> None:
     body = (await _sign_up_facility(client)).json()

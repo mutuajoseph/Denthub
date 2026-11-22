@@ -226,7 +226,7 @@ async def decide_verification_as_operator(
 async def _set_subject_verification(
     session: AsyncSession, *, kind: SubjectKind, subject_id: str, verified: bool
 ) -> list[str]:
-    """Verify (or drop verification for) the subject; list a newly approved Facility."""
+    """Verify (or drop verification for) the subject; list a newly verified Facility."""
     model = {
         "specialist": Specialist,
         "facility": Facility,
