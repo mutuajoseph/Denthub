@@ -5,11 +5,12 @@ Revises: 6a921743ef9e
 Create Date: 2026-11-20 11:00:00.000000
 
 Verification applications replaced the old account_status='pending' review
-state (#126). A pending professional who already has a subject gets a pending
-application for it, so the awaiting-verification state survives; account_status
-is then folded into active. A pending User with no subject has nothing a reviewer
-can decide on, so they simply become active (unverified) and no placeholder
-listing is invented for them.
+state (#126). A pending professional who already has a subject and no
+application for it gets a pending application, so the awaiting-verification
+state survives; an existing application, even a decided one, is left alone.
+account_status is then folded into active. A pending User with no subject has
+nothing a reviewer can decide on, so they simply become active (unverified) and
+no placeholder listing is invented for them.
 """
 
 from __future__ import annotations
@@ -128,11 +129,13 @@ def upgrade() -> None:
         # often under the old signup status, since Verification never cleared
         # it. Reopening it here would hide their decision from /me/verifications.
         existing_application = bind.execute(
-            sa.select(applications.c.id).where(
+            sa.select(applications.c.id)
+            .where(
                 applications.c.user_id == user['id'],
                 applications.c.subject_kind == kind,
                 applications.c.subject_id == subject_id,
             )
+            .limit(1)
         ).scalar_one_or_none()
         if existing_application is not None:
             continue

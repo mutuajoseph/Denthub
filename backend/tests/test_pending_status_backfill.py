@@ -119,6 +119,20 @@ def migrated(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> sqlite3.Connect
             "Dental Board",
         ),
     )
+    conn.execute(
+        "INSERT INTO verification_applications (id, user_id, subject_kind, subject_id,"
+        " applicant_email, licence_number, issuing_body, document_keys, status, created_at)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, '[]', 'rejected', '2020-01-01 00:00:00')",
+        (
+            "older-rejected-application",
+            "verified-professional",
+            "specialist",
+            "sp-verified",
+            "verified-professional@example.com",
+            "Rejected before",
+            "Dental Board",
+        ),
+    )
     conn.commit()
     command.upgrade(config, "head")
     return conn
@@ -137,8 +151,8 @@ def test_pending_professionals_with_a_subject_get_a_pending_application(
     assert by_user["specialist"][1:] == ("specialist", "sp-1", "pending")
     assert by_user["supplier"][1:] == ("supplier", "sup-1", "pending")
     assert by_user["training_provider"][1:] == ("training_provider", "tp-1", "pending")
-    assert by_user["verified-professional"][1:] == ("specialist", "sp-verified", "verified")
-    assert len(rows) == 5
+    assert {row[3] for row in rows if row[0] == "verified-professional"} == {"verified", "rejected"}
+    assert len(rows) == 6
 
 
 def test_an_already_verified_professional_stays_verified(migrated: sqlite3.Connection) -> None:
@@ -150,7 +164,10 @@ def test_an_already_verified_professional_stays_verified(migrated: sqlite3.Conne
         ("verified-professional",),
     ).fetchall()
 
-    assert applications == [("existing-verified-application", "verified")]
+    assert sorted(applications) == [
+        ("existing-verified-application", "verified"),
+        ("older-rejected-application", "rejected"),
+    ]
 
 
 def test_subjectless_pending_users_get_no_placeholder_subject(
