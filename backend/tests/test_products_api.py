@@ -5,6 +5,12 @@ from __future__ import annotations
 from decimal import Decimal
 
 from httpx import AsyncClient
+from sqlalchemy import select
+
+from app.repositories.product import Supplier
+from app.repositories.user import User
+from app.utils.state import AppState
+from tests.factories import SEEDED_PASSWORD_HASH
 
 KE = {"Accept-Country": "KE", "Accept-Currency": "KES"}
 
@@ -122,6 +128,29 @@ async def test_product_includes_supplier_summary(client: AsyncClient) -> None:
     assert supplier["slug"] == "nairobi-dental-supplies"
     assert supplier["scope"] == "local"
     assert supplier["is_verified"] is True
+
+
+async def test_product_exposes_supplier_owner_for_shop_conversations(
+    client: AsyncClient, state: AppState
+) -> None:
+    async with state.db_session_maker() as session:
+        owner = User(
+            full_name="Shop Owner",
+            email="shop.owner@example.com",
+            role="supplier",
+            password_hash=SEEDED_PASSWORD_HASH,
+        )
+        session.add(owner)
+        await session.flush()
+        supplier = (
+            await session.execute(select(Supplier).where(Supplier.slug == "nairobi-dental-supplies"))
+        ).scalar_one()
+        supplier.owner_user_id = owner.id
+        await session.commit()
+
+    response = await client.get("/api/v1/products", params={"q": "Adult Medium"}, headers=KE)
+
+    assert response.json()["items"][0]["supplier"]["owner_user_id"] == owner.id
 
 
 async def test_categories_lists_distinct_values(client: AsyncClient) -> None:

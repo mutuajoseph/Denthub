@@ -1,10 +1,39 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { MemoryRouter, useLocation } from "react-router-dom";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ROLE } from "../../auth/roles";
+import type { AuthUser } from "../../lib/auth";
+import { startConversation } from "../../lib/messagesApi";
 import { type AddCartItemInput, useCartStore } from "../../store/cartStore";
 import { useCartUiStore } from "../../store/cartUiStore";
 import CartDrawer from "./CartDrawer";
+
+vi.mock("../../lib/messagesApi", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/messagesApi")>();
+  return { ...actual, startConversation: vi.fn() };
+});
+
+const signedInUser = {
+  id: "user-1",
+  email: "test@example.com",
+  full_name: "Test User",
+  phone: null,
+  home_country_code: null,
+  role: ROLE.PATIENT,
+  is_staff: false,
+  account_status: "active",
+  email_verified: true,
+  profiles: [],
+  memberships: [],
+} as AuthUser;
+
+function LocationProbe() {
+  const { pathname } = useLocation();
+  return <div data-testid="pathname">{pathname}</div>;
+}
 
 function addLine(overrides: Partial<AddCartItemInput> = {}) {
   useCartStore.getState().addItem({
@@ -13,20 +42,37 @@ function addLine(overrides: Partial<AddCartItemInput> = {}) {
     unitPrice: "350.00",
     purchaseMode: "retail",
     currency: "KES",
+    supplierId: "s1",
+    supplierName: "Nairobi Dental Supplies",
+    supplierUserId: "user-s1",
     ...overrides,
   });
 }
 
 /** Render the drawer in its open state, as `AppShell` leaves it. */
-function renderOpenDrawer() {
+function renderOpenDrawer(user: AuthUser | null = null, onSignIn = vi.fn()) {
   act(() => useCartUiStore.getState().openCartDrawer());
-  return render(<CartDrawer />);
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={["/shop"]}>
+        <CartDrawer user={user} onSignIn={onSignIn} />
+        <LocationProbe />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
 }
 
 describe("CartDrawer", () => {
   beforeEach(() => {
     useCartStore.getState().clearCart();
     useCartUiStore.setState({ isDrawerOpen: true });
+    vi.mocked(startConversation).mockReset();
+    vi.mocked(startConversation).mockResolvedValue(
+      {} as Awaited<ReturnType<typeof startConversation>>,
+    );
   });
 
   it("is fully removed from the DOM when closed, so nothing can linger or trap tabs", async () => {
@@ -219,5 +265,71 @@ describe("CartDrawer", () => {
 
     // 0.1 * 3 === 0.30000000000000004 in IEEE754; the cart never touches a float.
     expect(screen.getAllByText("KES 0.30")).toHaveLength(2);
+  });
+
+  it("checks out by starting one shop conversation per supplier", async () => {
+    const user = userEvent.setup();
+    addLine();
+    addLine({
+      productId: "p2",
+      name: "Dental Floss",
+      supplierId: "s2",
+      supplierName: "Global Smile Imports",
+      supplierUserId: "user-s2",
+      unitPrice: "262.50",
+      quantity: 2,
+    });
+    renderOpenDrawer(signedInUser);
+
+    await user.click(screen.getByRole("button", { name: /checkout/i }));
+
+    await waitFor(() => expect(startConversation).toHaveBeenCalledTimes(2));
+    expect(startConversation).toHaveBeenCalledWith(
+      "user-s1",
+      expect.stringContaining("Adult Medium Toothbrush — 1 × KES"),
+    );
+    expect(startConversation).toHaveBeenCalledWith(
+      "user-s2",
+      expect.stringContaining("Dental Floss"),
+    );
+    expect(useCartStore.getState().items).toHaveLength(0);
+    expect(screen.getByTestId("pathname")).toHaveTextContent("/messages");
+  });
+
+  it("keeps the cart and reports a failed conversation request", async () => {
+    const user = userEvent.setup();
+    vi.mocked(startConversation).mockRejectedValueOnce(new Error("offline"));
+    addLine();
+    renderOpenDrawer(signedInUser);
+
+    await user.click(screen.getByRole("button", { name: /checkout/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/cart is unchanged/i);
+    expect(useCartStore.getState().items).toHaveLength(1);
+  });
+
+  it("opens the sign-in modal for a signed-out visitor without losing the cart", async () => {
+    const user = userEvent.setup();
+    const onSignIn = vi.fn();
+    addLine();
+    renderOpenDrawer(null, onSignIn);
+
+    await user.click(screen.getByRole("button", { name: /checkout/i }));
+
+    expect(onSignIn).toHaveBeenCalledOnce();
+    expect(screen.getByTestId("pathname")).toHaveTextContent("/shop");
+    expect(useCartStore.getState().items).toHaveLength(1);
+    expect(startConversation).not.toHaveBeenCalled();
+  });
+
+  it("asks for a re-add when a line has no shop", async () => {
+    const user = userEvent.setup();
+    addLine({ supplierUserId: "" });
+    renderOpenDrawer(signedInUser);
+
+    await user.click(screen.getByRole("button", { name: /checkout/i }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent(/no shop attached/i);
+    expect(startConversation).not.toHaveBeenCalled();
   });
 });

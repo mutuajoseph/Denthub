@@ -41,6 +41,7 @@ function buildProduct(overrides: Partial<ProductPage["items"][number]> = {}) {
       slug: "nairobi-dental-supplies",
       scope: "local",
       isVerified: true,
+      ownerUserId: "user-s1",
     },
     pricing: {
       currency: "KES",

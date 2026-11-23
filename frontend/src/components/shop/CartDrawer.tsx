@@ -1,8 +1,11 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { useRegion } from "../../hooks/useRegion";
+import { useStartConversation } from "../../hooks/useStartConversation";
+import type { AuthUser } from "../../lib/auth";
 import {
   type CartItem,
   selectCartCurrency,
@@ -13,7 +16,7 @@ import {
 import { useCartUiStore } from "../../store/cartUiStore";
 import { cn } from "../../utils/cn";
 import { formatPriceString } from "../../utils/formatCurrency";
-import { multiplyMoney } from "../../utils/money";
+import { multiplyMoney, sumMoney } from "../../utils/money";
 import { ProductThumbnail } from "./ProductImage";
 
 function CartLine({
@@ -101,14 +104,41 @@ function CartLine({
  * both open it. Wholesale minimums are surfaced as an advisory note; the API
  * re-prices and can reject the order, so the client does not enforce them.
  */
-export default function CartDrawer() {
+function shopRequestBody(lines: CartItem[], currency: string): string {
+  const rows = lines.map((line, index) => {
+    const lineTotal = multiplyMoney(line.unitPrice, line.quantity);
+    return `${index + 1}. ${line.name} — ${line.quantity} × ${formatPriceString(line.unitPrice, currency)} (${line.purchaseMode}) = ${formatPriceString(lineTotal, currency)}`;
+  });
+
+  return [
+    "DentHub order request",
+    "",
+    ...rows,
+    "",
+    `Total: ${formatPriceString(sumMoney(lines.map((line) => multiplyMoney(line.unitPrice, line.quantity))), currency)}`,
+    "",
+    "Please confirm availability and final pricing.",
+  ].join("\n");
+}
+
+export default function CartDrawer({
+  user,
+  onSignIn,
+}: {
+  user?: AuthUser | null;
+  onSignIn?: () => void;
+}) {
   const items = useCartStore((state) => state.items);
   const clearCart = useCartStore((state) => state.clearCart);
+  const removeLines = useCartStore((state) => state.removeLines);
   const subtotal = selectCartSubtotal(items);
   const hasWholesale = selectHasWholesaleLine(items);
 
   const isDrawerOpen = useCartUiStore((state) => state.isDrawerOpen);
   const closeCartDrawer = useCartUiStore((state) => state.closeCartDrawer);
+  const navigate = useNavigate();
+  const { mutateAsync: startConversation, isPending } = useStartConversation();
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   // The API prices each line in its own currency; fall back to the active
   // region for lines persisted before `currency` was recorded.
@@ -137,6 +167,41 @@ export default function CartDrawer() {
       document.body.style.overflow = previousOverflow;
     };
   }, [isDrawerOpen, closeCartDrawer]);
+
+  const handleCheckout = async () => {
+    setCheckoutError(null);
+
+    if (!user) {
+      closeCartDrawer();
+      onSignIn?.();
+      return;
+    }
+
+    if (items.some((item) => !item.supplierUserId)) {
+      setCheckoutError("Some items have no shop attached. Remove and re-add them to order.");
+      return;
+    }
+
+    const shops = new Map<string, CartItem[]>();
+    for (const item of items) {
+      const lines = shops.get(item.supplierUserId) ?? [];
+      lines.push(item);
+      shops.set(item.supplierUserId, lines);
+    }
+
+    try {
+      await Promise.all(
+        [...shops].map(([recipientId, lines]) =>
+          startConversation({ recipientId, body: shopRequestBody(lines, currency) }),
+        ),
+      );
+      removeLines(items.map((item) => item.cartLineId));
+      closeCartDrawer();
+      navigate("/messages");
+    } catch {
+      setCheckoutError("Could not send your order request. Your cart is unchanged.");
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -232,11 +297,19 @@ export default function CartDrawer() {
                       Taxes and delivery are calculated at checkout.
                     </p>
 
+                    {checkoutError && (
+                      <p role="alert" className="text-[11px] text-red-700">
+                        {checkoutError}
+                      </p>
+                    )}
+
                     <button
                       type="button"
-                      className="w-full rounded-card bg-aqua-relay py-3 text-sm font-semibold text-ink transition-colors hover:bg-aqua-relay-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                      onClick={handleCheckout}
+                      disabled={isPending}
+                      className="w-full rounded-card bg-aqua-relay py-3 text-sm font-semibold text-ink transition-colors hover:bg-aqua-relay-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50"
                     >
-                      Checkout
+                      {isPending ? "Sending order request…" : "Checkout"}
                     </button>
 
                     <button
