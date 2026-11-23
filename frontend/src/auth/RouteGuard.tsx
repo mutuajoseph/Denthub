@@ -1,7 +1,8 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 
 import { type AuthUser, getStoredUser } from "../lib/auth";
+import { useAuthUiStore } from "../store/authUiStore";
 import {
   ADMIN_ROLES,
   FACILITY_ROLES,
@@ -34,7 +35,6 @@ export type RouteGuardProps = {
   scope?: GuardScope;
   allowedRoles?: readonly Role[];
   requiredRoles?: readonly Role[];
-  signInPath?: string;
   staffAccessPath?: string;
   /**
    * Where to send a signed-in user who is missing the required role. Defaults to
@@ -84,24 +84,29 @@ export default function RouteGuard({
   scope = "public",
   allowedRoles,
   requiredRoles,
-  signInPath = "/sign-in",
   staffAccessPath = "/staff/access",
   unauthorizedPath,
 }: RouteGuardProps) {
   const location = useLocation();
+  const openAuthModal = useAuthUiStore((state) => state.openAuthModal);
   const currentUser = user === undefined ? getStoredUser() : user;
   const requestedRoles = allowedRoles ?? requiredRoles ?? [];
   const roles = canonicalRoles(requestedRoles, scope);
   const attempted = attemptedUrl(location.pathname, location.search, location.hash);
+  const needsStaffAccess = usesStaffAccess(roles);
+  const unauthenticated = !currentUser;
 
-  if (!currentUser) {
-    const target = usesStaffAccess(roles)
-      ? safeInternalPath(staffAccessPath, "/staff/access")
-      : safeInternalPath(signInPath, "/sign-in");
+  // A public visitor who hits a guarded screen goes home; the modal opens with
+  // the attempted URL so sign-in can take them back there. Staff keep their own
+  // entry point and never see the public modal.
+  useEffect(() => {
+    if (unauthenticated && !needsStaffAccess) openAuthModal(attempted);
+  }, [unauthenticated, needsStaffAccess, attempted, openAuthModal]);
 
+  if (unauthenticated) {
     return (
       <Navigate
-        to={target}
+        to={needsStaffAccess ? safeInternalPath(staffAccessPath, "/staff/access") : "/"}
         replace
         state={{
           from: location,

@@ -15,8 +15,8 @@ export type AuthPanelProps = {
 
 /**
  * The sign-in / register / forgot / phone flow, without any surface chrome.
- * `AuthModal` and the routed `/sign-in` page both own the surrounding layout and
- * the current `view`, so the two stay in step.
+ * `AuthModal` owns the surrounding layout and the current `view` for every
+ * caller, so there is only one sign-in surface in the app.
  */
 export function AuthPanel({ view, onViewChange, onSuccess, onClose }: AuthPanelProps) {
   return (

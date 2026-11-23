@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 
 import Button from "../components/ui/Button";
 import { useResetPassword } from "../hooks/useAccount";
+import { useAuthUiStore } from "../store/authUiStore";
 
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -14,6 +15,7 @@ export function ResetPassword() {
   const [params] = useSearchParams();
   const token = params.get("token") ?? "";
   const reset = useResetPassword();
+  const openAuthModal = useAuthUiStore((state) => state.openAuthModal);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [mismatch, setMismatch] = useState(false);
@@ -43,7 +45,7 @@ export function ResetPassword() {
             <p className="text-sm text-charcoal">
               Your password is changed, and you've been signed out everywhere else.
             </p>
-            <Button to="/sign-in">Sign in</Button>
+            <Button onClick={() => openAuthModal("/")}>Sign in</Button>
           </output>
         ) : (
           <form className="flex flex-col gap-2" onSubmit={handleSubmit}>

@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from "react";
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, useNavigate } from "react-router-dom";
 
 import { AuthModal } from "./auth/AuthModal";
 import RouteGuard from "./auth/RouteGuard";
@@ -18,6 +18,7 @@ import LoadingSpinner from "./components/ui/LoadingSpinner";
 import { usePageMeta } from "./hooks/usePageMeta";
 import { getStoredUser, logoutSession, restoreSession, subscribeToAuthChanges } from "./lib/auth";
 import type { AuthResponse, AuthUser } from "./lib/auth";
+import { useAuthUiStore } from "./store/authUiStore";
 
 /*
  * Route screens are code-split (issue #66) so the entry chunk ships only the
@@ -71,9 +72,6 @@ const OralCareShopPage = lazy(() => import("./pages/OralCareShopPage"));
 const Settings = lazy(() =>
   import("./pages/Settings").then((module) => ({ default: module.Settings })),
 );
-const SignInPage = lazy(() =>
-  import("./pages/SignInPage").then((module) => ({ default: module.SignInPage })),
-);
 const ResetPassword = lazy(() =>
   import("./pages/ResetPassword").then((module) => ({ default: module.ResetPassword })),
 );
@@ -104,7 +102,10 @@ const routeFallback = (
 const App = () => {
   usePageMeta();
 
-  const [authOpen, setAuthOpen] = useState(false);
+  const navigate = useNavigate();
+  const isAuthOpen = useAuthUiStore((state) => state.isOpen);
+  const openAuthModal = useAuthUiStore((state) => state.openAuthModal);
+  const closeAuthModal = useAuthUiStore((state) => state.closeAuthModal);
   const [user, setUser] = useState<AuthUser | null>(() => getStoredUser());
 
   // A reload starts with no in-memory access token. The httpOnly refresh
@@ -130,8 +131,10 @@ const App = () => {
   const handleLoginSuccess = (authResponse: AuthResponse) => {
     // The auth client already persisted this response (token in memory, profile
     // and surface in storage), so the App only mirrors the user in state.
+    const returnTo = useAuthUiStore.getState().returnTo;
     setUser(authResponse.user);
-    setAuthOpen(false);
+    closeAuthModal();
+    if (returnTo) navigate(returnTo, { replace: true });
   };
 
   const handleLogout = () => {
@@ -141,7 +144,7 @@ const App = () => {
 
   return (
     <ErrorBoundary>
-      <AppShell onSignIn={() => setAuthOpen(true)} user={user} onLogout={handleLogout}>
+      <AppShell onSignIn={openAuthModal} user={user} onLogout={handleLogout}>
         <Suspense fallback={routeFallback}>
           <Routes>
             <Route path="/" element={<Home />} />
@@ -159,7 +162,6 @@ const App = () => {
             <Route path="/shop" element={<OralCareShopPage />} />
             <Route path="/suppliers" element={<Suppliers />} />
             <Route path="/suppliers/:slug" element={<Suppliers />} />
-            <Route path="/sign-in" element={<SignInPage onSuccess={handleLoginSuccess} />} />
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route
@@ -243,9 +245,7 @@ const App = () => {
         </Suspense>
       </AppShell>
 
-      {authOpen && (
-        <AuthModal onClose={() => setAuthOpen(false)} onLoginSuccess={handleLoginSuccess} />
-      )}
+      {isAuthOpen && <AuthModal onClose={closeAuthModal} onLoginSuccess={handleLoginSuccess} />}
     </ErrorBoundary>
   );
 };
