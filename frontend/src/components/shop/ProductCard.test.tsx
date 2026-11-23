@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import toast from "react-hot-toast";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { mapProduct } from "../../lib/productApi";
@@ -26,6 +27,7 @@ const wholesaleProduct = mapProduct({
     slug: "nairobi-dental-supplies",
     scope: "local",
     is_verified: true,
+    owner_user_id: "user-s1",
   },
   // 350 * 0.75 = 262.50 — the server already applied the 25% default.
   pricing: {
@@ -56,6 +58,7 @@ const retailOnlyProduct = mapProduct({
 describe("ProductCard", () => {
   beforeEach(() => {
     useCartStore.getState().clearCart();
+    vi.mocked(toast.success).mockClear();
   });
 
   it("shows the dentist-recommended flag, brand and supplier", () => {
@@ -107,7 +110,7 @@ describe("ProductCard", () => {
     });
   });
 
-  it("freezes the wholesale price into the cart line", async () => {
+  it("adds wholesale at the minimum and says so", async () => {
     const user = userEvent.setup();
     render(<ProductCard product={wholesaleProduct} />);
 
@@ -115,10 +118,17 @@ describe("ProductCard", () => {
     await user.click(screen.getByRole("button", { name: /add wholesale/i }));
 
     const [line] = useCartStore.getState().items;
-    expect(line).toMatchObject({ purchaseMode: "wholesale", unitPrice: "262.50" });
+    expect(line).toMatchObject({
+      purchaseMode: "wholesale",
+      unitPrice: "262.50",
+      retailUnitPrice: "350.00",
+      wholesaleUnitPrice: "262.50",
+      quantity: 12,
+    });
+    expect(toast.success).toHaveBeenCalledWith("Added 12 units — wholesale minimum");
   });
 
-  it("keeps retail and wholesale as separate cart lines", async () => {
+  it("merges the two modes into one cart line", async () => {
     const user = userEvent.setup();
     render(<ProductCard product={wholesaleProduct} />);
 
@@ -127,8 +137,13 @@ describe("ProductCard", () => {
     await user.click(screen.getByRole("button", { name: /add wholesale/i }));
 
     const items = useCartStore.getState().items;
-    expect(items).toHaveLength(2);
-    expect(items.map((i) => i.cartLineId)).toEqual(["p-wholesale-retail", "p-wholesale-wholesale"]);
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      cartLineId: "p-wholesale",
+      purchaseMode: "wholesale",
+      quantity: 12,
+      unitPrice: "262.50",
+    });
   });
 
   it("omits the mode toggle for a retail-only product", () => {

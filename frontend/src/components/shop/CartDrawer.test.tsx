@@ -76,23 +76,49 @@ describe("CartDrawer", () => {
     expect(screen.getByText("KES 1,750")).toBeInTheDocument();
   });
 
-  it("warns when a wholesale line is under the server's minimum quantity", () => {
-    addLine({ purchaseMode: "wholesale", unitPrice: "262.50", quantity: 2, wholesaleMinQty: 12 });
+  it("switches a wholesale line to retail when quantity drops below the minimum", async () => {
+    const user = userEvent.setup();
+    addLine({
+      purchaseMode: "wholesale",
+      unitPrice: "262.50",
+      retailUnitPrice: "350.00",
+      wholesaleUnitPrice: "262.50",
+      quantity: 12,
+      wholesaleMinQty: 12,
+    });
     renderOpenDrawer();
 
-    expect(screen.getByText(/wholesale starts at 12 units — add 10 more/i)).toBeInTheDocument();
+    expect(screen.getByText("Wholesale")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /decrease .* quantity/i }));
+
+    expect(useCartStore.getState().items[0]).toMatchObject({
+      purchaseMode: "retail",
+      unitPrice: "350.00",
+      quantity: 11,
+    });
+    expect(screen.queryByText(/wholesale starts at/i)).not.toBeInTheDocument();
   });
 
-  it("drops the minimum warning once the quantity reaches it", async () => {
+  it("switches back to wholesale when quantity reaches the threshold", async () => {
     const user = userEvent.setup();
-    addLine({ purchaseMode: "wholesale", unitPrice: "262.50", quantity: 11, wholesaleMinQty: 12 });
+    addLine({
+      purchaseMode: "wholesale",
+      unitPrice: "262.50",
+      retailUnitPrice: "350.00",
+      wholesaleUnitPrice: "262.50",
+      quantity: 11,
+      wholesaleMinQty: 12,
+    });
     renderOpenDrawer();
-
-    expect(screen.getByText(/add 1 more/i)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /increase .* quantity/i }));
 
-    expect(screen.queryByText(/wholesale starts at/i)).not.toBeInTheDocument();
+    expect(useCartStore.getState().items[0]).toMatchObject({
+      purchaseMode: "wholesale",
+      unitPrice: "262.50",
+      quantity: 12,
+    });
   });
 
   it("does not warn about minimums for a retail line", () => {

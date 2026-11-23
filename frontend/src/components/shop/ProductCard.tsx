@@ -40,8 +40,14 @@ export default function ProductCard({ product }: ProductCardProps) {
     addItem({
       productId: product.id,
       name: product.name,
+      supplierId: product.supplier.id,
+      supplierName: product.supplier.name,
+      supplierUserId: product.supplier.ownerUserId ?? "",
       unitPrice: activePrice,
+      retailUnitPrice: product.pricing.retailPrice,
+      wholesaleUnitPrice: product.pricing.wholesalePrice,
       purchaseMode: mode,
+      quantity: mode === "wholesale" ? minQty : 1,
       // Freeze the API's currency on the line so the global drawer can label
       // the cart even when it is opened from a page with no catalog response.
       currency,
@@ -50,7 +56,9 @@ export default function ProductCard({ product }: ProductCardProps) {
       ...(wholesaleAvailable ? { wholesaleMinQty: minQty } : {}),
     });
 
-    toast.success(mode === "wholesale" ? "Wholesale added to cart" : "Added to cart");
+    toast.success(
+      mode === "wholesale" ? `Added ${minQty} units — wholesale minimum` : "Added to cart",
+    );
   };
 
   return (

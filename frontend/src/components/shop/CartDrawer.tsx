@@ -26,9 +26,6 @@ function CartLine({
   const updateQuantity = useCartStore((state) => state.updateQuantity);
   const removeItem = useCartStore((state) => state.removeItem);
 
-  const minQty = item.purchaseMode === "wholesale" ? (item.wholesaleMinQty ?? 1) : 1;
-  const belowMinimum = item.quantity < minQty;
-
   return (
     <li className="flex gap-3 py-3">
       <ProductThumbnail src={item.image ?? null} alt={item.name} category="specialty" />
@@ -91,12 +88,6 @@ function CartLine({
             {formatPriceString(multiplyMoney(item.unitPrice, item.quantity), currency)}
           </p>
         </div>
-
-        {belowMinimum && (
-          <output className="mt-1 block text-[11px] text-charcoal" aria-live="polite">
-            Wholesale starts at {minQty} units — add {minQty - item.quantity} more.
-          </output>
-        )}
       </div>
     </li>
   );
