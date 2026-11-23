@@ -1,5 +1,13 @@
 import type { LucideIcon } from "lucide-react";
-import { BookOpen, Briefcase, GraduationCap, Home, ShoppingBag, Stethoscope } from "lucide-react";
+import {
+  BookOpen,
+  Briefcase,
+  GraduationCap,
+  Home,
+  Newspaper,
+  ShoppingBag,
+  Stethoscope,
+} from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useTrainingEnabled } from "../../hooks/useTraining";
 import { cn } from "../../utils/cn";
@@ -17,6 +25,7 @@ const mobileNavItems: MobileNavItem[] = [
   { label: "Shop", to: "/shop", icon: ShoppingBag },
   { label: "Jobs", to: "/jobs", icon: Briefcase },
   { label: "Training", to: "/training", icon: GraduationCap },
+  { label: "Magazine", to: "/magazine", icon: Newspaper },
 ];
 
 export function MobileNav() {
@@ -28,7 +37,7 @@ export function MobileNav() {
   return (
     <nav
       aria-label="Mobile navigation"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-steel bg-paper pb-safe-bottom md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-steel bg-paper pb-safe-bottom lg:hidden"
     >
       <ul className="flex min-h-[4.25rem] items-stretch justify-around px-1 py-1">
         {items.map(({ label, to, icon: Icon }) => (
