@@ -61,6 +61,9 @@ describe("AppShell cart", () => {
     useCartStore.getState().addItem({
       productId: "p1",
       name: "Adult Medium Toothbrush",
+      supplierId: "s1",
+      supplierName: "Nairobi Dental Supplies",
+      supplierUserId: "user-s1",
       unitPrice: "350.00",
       purchaseMode: "retail",
       currency: "KES",
@@ -117,6 +120,9 @@ describe("AppShell cart", () => {
       useCartStore.getState().addItem({
         productId: "p1",
         name: "Adult Medium Toothbrush",
+        supplierId: "s1",
+        supplierName: "Nairobi Dental Supplies",
+        supplierUserId: "user-s1",
         unitPrice: "350.00",
         purchaseMode: "retail",
         currency: "KES",

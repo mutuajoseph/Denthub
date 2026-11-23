@@ -6,6 +6,9 @@ function addLine(overrides: Partial<AddCartItemInput> = {}) {
   useCartStore.getState().addItem({
     productId: "p1",
     name: "Adult Medium Toothbrush",
+    supplierId: "s1",
+    supplierName: "Nairobi Dental Supplies",
+    supplierUserId: "user-s1",
     unitPrice: "350.00",
     purchaseMode: "retail",
     currency: "KES",
@@ -32,5 +35,53 @@ describe("selectCartSubtotal", () => {
 
   it("is exactly zero for an empty cart", () => {
     expect(selectCartSubtotal(useCartStore.getState().items)).toBe("0.00");
+  });
+
+  it("keeps one line per product when it is added in both modes", () => {
+    addLine({
+      retailUnitPrice: "350.00",
+      wholesaleUnitPrice: "262.50",
+      wholesaleMinQty: 12,
+    });
+    addLine({
+      purchaseMode: "wholesale",
+      unitPrice: "262.50",
+      retailUnitPrice: "350.00",
+      wholesaleUnitPrice: "262.50",
+      quantity: 12,
+      wholesaleMinQty: 12,
+    });
+
+    const items = useCartStore.getState().items;
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      cartLineId: "p1",
+      purchaseMode: "wholesale",
+      quantity: 12,
+      unitPrice: "262.50",
+    });
+  });
+
+  it("reprices from the API strings when quantity crosses the threshold", () => {
+    addLine({
+      purchaseMode: "wholesale",
+      unitPrice: "262.50",
+      retailUnitPrice: "350.00",
+      wholesaleUnitPrice: "262.50",
+      quantity: 12,
+      wholesaleMinQty: 12,
+    });
+
+    useCartStore.getState().updateQuantity("p1", 11);
+    expect(useCartStore.getState().items[0]).toMatchObject({
+      purchaseMode: "retail",
+      unitPrice: "350.00",
+    });
+
+    useCartStore.getState().updateQuantity("p1", 12);
+    expect(useCartStore.getState().items[0]).toMatchObject({
+      purchaseMode: "wholesale",
+      unitPrice: "262.50",
+    });
   });
 });

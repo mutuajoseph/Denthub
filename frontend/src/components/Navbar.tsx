@@ -6,12 +6,10 @@ import {
   GraduationCap,
   Home,
   LogOut,
-  Menu,
   Newspaper,
   ShoppingBag,
   ShoppingCart,
   Stethoscope,
-  X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
@@ -108,7 +106,6 @@ function Avatar({ name }: { name: string }) {
 }
 
 export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
-  const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
@@ -134,14 +131,10 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
 
   const handleLogout = () => {
     setUserMenuOpen(false);
-    setMobileOpen(false);
     onLogout();
   };
 
-  const closeMenus = () => {
-    setMobileOpen(false);
-    setUserMenuOpen(false);
-  };
+  const closeMenus = () => setUserMenuOpen(false);
 
   return (
     <header className="relative z-50 w-full border-b border-steel bg-paper text-ink">
@@ -170,16 +163,16 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
           )}
         </a>
 
-        <div className="hidden min-w-0 items-center justify-center xl:flex">
-          <ul className="flex max-w-full items-center gap-6">
-            {NAV_LINKS.map(({ label, href }) => (
+        <div className="hidden min-w-0 items-center justify-center lg:flex">
+          <ul className="flex max-w-full items-center gap-1.5 xl:gap-3">
+            {NAV_LINKS.map(({ label, href, icon: Icon }) => (
               <li key={label}>
                 <NavLink
                   to={href}
                   end={href === "/"}
                   className={({ isActive }) =>
                     cn(
-                      "flex items-center gap-2 whitespace-nowrap rounded-link py-2 text-sm font-medium leading-none transition-colors",
+                      "flex items-center gap-1.5 whitespace-nowrap rounded-link px-2.5 py-2.5 text-[15px] font-medium leading-none transition-colors xl:gap-2",
                       isActive ? "text-ink" : "text-slate hover:text-ink",
                     )
                   }
@@ -188,10 +181,15 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
                     <>
                       {isActive && (
                         <span
-                          className="h-1.5 w-1.5 rounded-[1px] bg-aqua-relay ring-1 ring-ink/20"
+                          className="h-1.5 w-1.5 shrink-0 rounded-[1px] bg-aqua-relay ring-1 ring-ink/20"
                           aria-hidden="true"
                         />
                       )}
+                      <Icon
+                        className="hidden h-4 w-4 shrink-0 xl:block xl:h-[18px] xl:w-[18px]"
+                        strokeWidth={1.7}
+                        aria-hidden="true"
+                      />
                       {label}
                     </>
                   )}
@@ -281,99 +279,13 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
               variant="graphite"
               trailingIcon={ArrowRight}
               onClick={onSignIn}
-              className="hidden sm:inline-flex"
+              className="min-h-10 px-2.5 sm:px-4"
             >
               Sign in
             </Button>
           )}
-
-          <button
-            type="button"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-button text-ink transition-colors hover:bg-cloud xl:hidden"
-            onClick={() => setMobileOpen((open) => !open)}
-            aria-expanded={mobileOpen}
-            aria-controls="mobile-navigation"
-            aria-label={mobileOpen ? "Close menu" : "Open menu"}
-          >
-            {mobileOpen ? (
-              <X className="h-5 w-5" aria-hidden="true" />
-            ) : (
-              <Menu className="h-5 w-5" aria-hidden="true" />
-            )}
-          </button>
         </div>
       </nav>
-
-      {mobileOpen && (
-        <div id="mobile-navigation" className="border-t border-steel bg-paper px-4 py-3 xl:hidden">
-          <ul className="space-y-0.5">
-            {NAV_LINKS.map(({ label, href, icon: Icon }) => (
-              <li key={label}>
-                <NavLink
-                  to={href}
-                  end={href === "/"}
-                  onClick={closeMenus}
-                  className={({ isActive }) =>
-                    cn(
-                      "flex min-h-11 items-center gap-3 rounded-button px-3 text-[15px] font-medium transition-colors",
-                      isActive
-                        ? "bg-cloud text-ink"
-                        : "text-charcoal hover:bg-cloud hover:text-ink",
-                    )
-                  }
-                >
-                  <Icon className="h-[18px] w-[18px]" strokeWidth={1.7} aria-hidden="true" />
-                  {label}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-
-          <div className="mt-3 border-t border-steel pt-3">
-            {user ? (
-              <div className="space-y-0.5">
-                <div className="mb-2 flex items-center gap-3 rounded-button bg-cloud px-3 py-2.5">
-                  <Avatar name={user.full_name ?? ""} />
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium text-charcoal">Signed in as</p>
-                    <p className="truncate text-sm font-medium text-ink">{user.full_name}</p>
-                  </div>
-                </div>
-                {accountLinks.map(({ label, href }) => (
-                  <Link
-                    key={label}
-                    to={href}
-                    onClick={closeMenus}
-                    className="flex min-h-11 w-full items-center gap-3 rounded-button px-3 text-sm font-medium text-charcoal transition-colors hover:bg-cloud hover:text-ink"
-                  >
-                    {label}
-                  </Link>
-                ))}
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="flex min-h-11 w-full items-center gap-3 rounded-button px-3 text-left text-sm font-medium text-red-700 transition-colors hover:bg-red-50"
-                >
-                  <LogOut className="h-[18px] w-[18px]" strokeWidth={1.7} aria-hidden="true" />
-                  Log out
-                </button>
-              </div>
-            ) : (
-              <Button
-                variant="graphite"
-                trailingIcon={ArrowRight}
-                className="min-h-11 w-full"
-                onClick={() => {
-                  setMobileOpen(false);
-                  onSignIn();
-                }}
-              >
-                Sign in
-              </Button>
-            )}
-          </div>
-        </div>
-      )}
     </header>
   );
 }

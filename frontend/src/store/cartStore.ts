@@ -6,10 +6,14 @@ import { multiplyMoney, sumMoney } from "../utils/money";
 export type PurchaseMode = "retail" | "wholesale";
 
 export interface CartItem {
-  /** Stable identity for a product+purchase-mode pair, e.g. `abc-retail`. */
+  /** One line per product: the product id doubles as the line id. */
   cartLineId: string;
   productId: string;
   name: string;
+  supplierId: string;
+  supplierName: string;
+  /** The Supplier account's User id, the recipient for a shop conversation. */
+  supplierUserId: string;
   brand?: string;
   image?: string;
   purchaseMode: PurchaseMode;
@@ -20,6 +24,9 @@ export interface CartItem {
    * derived in the browser, and the cart sums it without a float round-trip.
    */
   unitPrice: string;
+  /** Both API prices, kept so switching mode never derives a price in the browser. */
+  retailUnitPrice: string;
+  wholesaleUnitPrice?: string;
   /** Quantity at which this product's wholesale tier starts, when it has one. */
   wholesaleMinQty?: number;
   /**
@@ -34,7 +41,12 @@ export interface CartItem {
 export interface AddCartItemInput {
   productId: string;
   name: string;
+  supplierId: string;
+  supplierName: string;
+  supplierUserId: string;
   unitPrice: string;
+  retailUnitPrice?: string;
+  wholesaleUnitPrice?: string | null;
   purchaseMode: PurchaseMode;
   quantity?: number;
   brand?: string;
@@ -49,14 +61,15 @@ interface CartState {
   addItem: (input: AddCartItemInput) => void;
   removeItem: (lineId: string) => void;
   updateQuantity: (lineId: string, quantity: number) => void;
+  removeLines: (lineIds: string[]) => void;
   clearCart: () => void;
 }
 
 /** The subset of the store that is persisted, and the migrate() return type. */
 type PersistedCart = Pick<CartState, "items">;
 
-export function cartLineId(productId: string, purchaseMode: PurchaseMode): string {
-  return `${productId}-${purchaseMode}`;
+export function cartLineId(productId: string): string {
+  return productId;
 }
 
 export const selectCartCount = (items: CartItem[]): number =>
@@ -83,17 +96,36 @@ export const useCartStore = create<CartState>()(
       addItem: (input) =>
         set((state) => {
           const quantity = input.quantity ?? 1;
-          const lineId = cartLineId(input.productId, input.purchaseMode);
+          const lineId = cartLineId(input.productId);
           const existing = state.items.find((item) => item.cartLineId === lineId);
+          const retailUnitPrice = input.retailUnitPrice ?? input.unitPrice;
+          const wholesaleUnitPrice =
+            input.wholesaleUnitPrice ??
+            (input.purchaseMode === "wholesale" ? input.unitPrice : undefined);
+          const unitPrice =
+            input.purchaseMode === "wholesale"
+              ? (wholesaleUnitPrice ?? input.unitPrice)
+              : retailUnitPrice;
 
           if (existing) {
+            const sameMode = existing.purchaseMode === input.purchaseMode;
+
             return {
               items: state.items.map((item) =>
                 item.cartLineId === lineId
                   ? {
                       ...item,
-                      quantity: item.quantity + quantity,
-                      unitPrice: input.unitPrice,
+                      purchaseMode: input.purchaseMode,
+                      quantity: sameMode ? item.quantity + quantity : quantity,
+                      unitPrice,
+                      retailUnitPrice,
+                      wholesaleUnitPrice,
+                      supplierId: input.supplierId,
+                      supplierName: input.supplierName,
+                      supplierUserId: input.supplierUserId,
+                      ...(input.wholesaleMinQty === undefined
+                        ? {}
+                        : { wholesaleMinQty: input.wholesaleMinQty }),
                       ...(input.currency === undefined ? {} : { currency: input.currency }),
                     }
                   : item,
@@ -105,9 +137,14 @@ export const useCartStore = create<CartState>()(
             cartLineId: lineId,
             productId: input.productId,
             name: input.name,
+            supplierId: input.supplierId,
+            supplierName: input.supplierName,
+            supplierUserId: input.supplierUserId,
             purchaseMode: input.purchaseMode,
             quantity,
-            unitPrice: input.unitPrice,
+            unitPrice,
+            retailUnitPrice,
+            ...(wholesaleUnitPrice === undefined ? {} : { wholesaleUnitPrice }),
             ...(input.brand === undefined ? {} : { brand: input.brand }),
             ...(input.image === undefined ? {} : { image: input.image }),
             ...(input.wholesaleMinQty === undefined
@@ -131,11 +168,27 @@ export const useCartStore = create<CartState>()(
           }
 
           return {
-            items: state.items.map((item) =>
-              item.cartLineId === lineId ? { ...item, quantity } : item,
-            ),
+            items: state.items.map((item) => {
+              if (item.cartLineId !== lineId) return item;
+
+              // Crossing the threshold re-prices from the API's own strings.
+              const wholesalePrice = item.wholesaleUnitPrice;
+              const wholesale =
+                wholesalePrice !== undefined &&
+                item.wholesaleMinQty !== undefined &&
+                quantity >= item.wholesaleMinQty;
+              const mode: PurchaseMode = wholesale ? "wholesale" : "retail";
+              const unitPrice = wholesale && wholesalePrice ? wholesalePrice : item.retailUnitPrice;
+
+              return { ...item, quantity, purchaseMode: mode, unitPrice };
+            }),
           };
         }),
+
+      removeLines: (lineIds) =>
+        set((state) => ({
+          items: state.items.filter((item) => !lineIds.includes(item.cartLineId)),
+        })),
 
       clearCart: () => set({ items: [] }),
     }),
@@ -145,23 +198,56 @@ export const useCartStore = create<CartState>()(
       // than migrating it, because the shapes are not compatible.
       name: "denthub-cart-v2",
       // v1 stored `unitPrice` as a number; v2 keeps it as the exact decimal
-      // string the API returned, so a persisted cart must be converted on load.
-      version: 2,
+      // string the API returned. v3 adds the supplier fields checkout needs.
+      // v4 keys a line by product alone and merges the old retail/wholesale pair.
+      version: 4,
       partialize: (state) => ({ items: state.items }),
-      migrate: (persisted, version) => {
-        if (version >= 2) return persisted as PersistedCart;
-
+      migrate: (persisted, _version) => {
         const previous = (persisted ?? {}) as {
-          items?: Array<Omit<CartItem, "unitPrice"> & { unitPrice: string | number }>;
+          items?: Array<
+            Omit<
+              CartItem,
+              "unitPrice" | "retailUnitPrice" | "supplierId" | "supplierName" | "supplierUserId"
+            > & {
+              unitPrice: string | number;
+              retailUnitPrice?: string;
+              wholesaleUnitPrice?: string;
+              supplierId?: string;
+              supplierName?: string;
+              supplierUserId?: string;
+            }
+          >;
         };
 
-        return {
-          items: (previous.items ?? []).map((item) => ({
+        const byProduct = new Map<string, CartItem>();
+        for (const item of previous.items ?? []) {
+          const previousLine = byProduct.get(item.productId);
+          // Keep whichever mode the visitor chose last, preferring wholesale
+          // when both modes were persisted for the same product.
+          if (
+            previousLine &&
+            !(previousLine.purchaseMode !== "wholesale" && item.purchaseMode === "wholesale")
+          ) {
+            continue;
+          }
+
+          const unitPrice =
+            typeof item.unitPrice === "number" ? item.unitPrice.toFixed(2) : item.unitPrice;
+          byProduct.set(item.productId, {
             ...item,
-            unitPrice:
-              typeof item.unitPrice === "number" ? item.unitPrice.toFixed(2) : item.unitPrice,
-          })),
-        };
+            cartLineId: item.productId,
+            unitPrice,
+            retailUnitPrice: item.retailUnitPrice ?? unitPrice,
+            ...(item.wholesaleUnitPrice === undefined
+              ? {}
+              : { wholesaleUnitPrice: item.wholesaleUnitPrice }),
+            supplierId: item.supplierId ?? "",
+            supplierName: item.supplierName ?? "",
+            supplierUserId: item.supplierUserId ?? "",
+          });
+        }
+
+        return { items: [...byProduct.values()] } satisfies PersistedCart;
       },
     },
   ),

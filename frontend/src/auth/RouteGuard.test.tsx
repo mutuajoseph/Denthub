@@ -1,9 +1,10 @@
 import { render, screen } from "@testing-library/react";
 import { useLocation } from "react-router-dom";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import type { AuthUser } from "../lib/auth";
+import { useAuthUiStore } from "../store/authUiStore";
 import RouteGuard, { type GuardScope } from "./RouteGuard";
 import { PUBLIC_ROLES, ROLE, type Role } from "./roles";
 
@@ -56,7 +57,7 @@ function renderGuard({
             </RouteGuard>
           }
         />
-        <Route path="/sign-in" element={<LocationView />} />
+        <Route path="/" element={<LocationView />} />
         <Route path="/staff/access" element={<LocationView />} />
         <Route path="/dashboard" element={<LocationView />} />
         <Route path="/dashboard/facility" element={<LocationView />} />
@@ -70,13 +71,17 @@ function renderGuard({
 }
 
 describe("RouteGuard", () => {
-  it("sends an unauthenticated public user to sign-in and preserves the attempted URL", () => {
+  beforeEach(() => useAuthUiStore.getState().closeAuthModal());
+
+  it("sends an unauthenticated public user home with the auth modal open", () => {
     renderGuard({ initialEntry: "/private?tab=records#history" });
 
-    expect(screen.getByTestId("location-path")).toHaveTextContent("/sign-in");
+    expect(screen.getByTestId("location-path")).toHaveTextContent("/");
     expect(screen.getByTestId("location-search")).toHaveTextContent("");
     expect(screen.getByTestId("return-to")).toHaveTextContent("/private?tab=records#history");
     expect(screen.queryByText("Private content")).not.toBeInTheDocument();
+    expect(useAuthUiStore.getState().isOpen).toBe(true);
+    expect(useAuthUiStore.getState().returnTo).toBe("/private?tab=records#history");
   });
 
   it("renders content for an allowed facility role", () => {

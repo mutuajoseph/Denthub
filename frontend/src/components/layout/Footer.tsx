@@ -32,7 +32,7 @@ export function Footer() {
   const RegionIcon = region.code === "GLOBAL" ? Globe : Flag;
 
   return (
-    <footer className="mt-auto border-t border-white/10 bg-ink pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))] text-paper md:pb-0">
+    <footer className="mt-auto border-t border-white/10 bg-ink pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))] text-paper lg:pb-0">
       <div className="mx-auto grid w-full max-w-7xl gap-10 px-4 pb-12 pt-14 sm:grid-cols-2 sm:px-6 lg:grid-cols-[1.4fr_1fr_1fr_1fr] lg:px-8">
         <section aria-labelledby="footer-about-heading" className="max-w-sm">
           <Link

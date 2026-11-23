@@ -89,6 +89,9 @@ class SupplierSummary(BaseModel):
     slug: str
     scope: str
     is_verified: bool
+    #: The Supplier account's User id, used to open a shop conversation from a
+    #: cart line. ``None`` for a Supplier whose account has been erased.
+    owner_user_id: str | None
 
 
 class ProductPricing(BaseModel):
@@ -167,6 +170,7 @@ def _serialize(product: Product, quantity: int) -> ProductResponse:
             slug=product.supplier.slug,
             scope=product.supplier.scope,
             is_verified=product.supplier.is_verified,
+            owner_user_id=product.supplier.owner_user_id,
         ),
         pricing=ProductPricing(
             currency=product.currency,

@@ -25,6 +25,7 @@ import {
 } from "./lib/listingApi";
 import { fetchMyStore } from "./lib/supplierApi";
 import { fetchMyProviderDashboard } from "./lib/trainingProviderApi";
+import { useAuthUiStore } from "./store/authUiStore";
 
 vi.mock("./lib/listingApi", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./lib/listingApi")>();
@@ -202,6 +203,7 @@ describe("App routes", () => {
     fetchFacilityDashboardMock.mockResolvedValue(facilityDashboard);
     fetchMyStoreMock.mockResolvedValue(null);
     fetchMyProviderDashboardMock.mockResolvedValue(null);
+    useAuthUiStore.getState().closeAuthModal();
   });
 
   // Route screens are lazily imported (issue #66), so the first render commits
@@ -309,21 +311,19 @@ describe("App routes", () => {
     }
   });
 
-  it("sends a guest from /dashboard to the routed sign-in page", async () => {
-    renderApp("/dashboard");
+  it("opens the auth modal for a guest from /dashboard", async () => {
+    const { container } = renderApp("/dashboard");
 
-    expect(
-      await screen.findByRole("heading", { name: /sign in to your account/i }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    expect(container.querySelector("#hero-heading")).not.toBeNull();
     expect(screen.queryByRole("heading", { name: /page not found/i })).toBeNull();
   });
 
-  it("sends a guest from /settings to the routed sign-in page", async () => {
+  it("opens the auth modal for a guest from /settings", async () => {
     renderApp("/settings");
 
-    expect(
-      await screen.findByRole("heading", { name: /sign in to your account/i }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /page not found/i })).toBeNull();
   });
 
   it("renders the settings page for a signed-in public account", async () => {
@@ -340,8 +340,8 @@ describe("App routes", () => {
     renderApp("/staff/access");
 
     expect(await screen.findByRole("heading", { name: /staff sign in/i })).toBeInTheDocument();
-    // The public login must not leak into the staff surface.
-    expect(screen.queryByRole("heading", { name: /sign in to your account/i })).toBeNull();
+    // The public auth modal must not leak into the staff surface.
+    expect(screen.queryByRole("dialog")).toBeNull();
     expect(screen.queryByRole("heading", { name: /page not found/i })).toBeNull();
   });
 
@@ -364,24 +364,24 @@ describe("App routes", () => {
     expect(screen.queryByRole("heading", { name: /page not found/i })).toBeNull();
   });
 
-  it("sends a guest from /dashboard/facility to the routed sign-in page", () => {
+  it("opens the auth modal for a guest from /dashboard/facility", async () => {
     renderApp("/dashboard/facility");
 
-    expect(screen.getByRole("heading", { name: /sign in to your account/i })).toBeInTheDocument();
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: /page not found/i })).toBeNull();
   });
 
-  it("sends a guest from /dashboard/training to the routed sign-in page", () => {
+  it("opens the auth modal for a guest from /dashboard/training", async () => {
     renderApp("/dashboard/training");
 
-    expect(screen.getByRole("heading", { name: /sign in to your account/i })).toBeInTheDocument();
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: /page not found/i })).toBeNull();
   });
 
-  it("sends a guest from /dashboard/supplier to the routed sign-in page", () => {
+  it("opens the auth modal for a guest from /dashboard/supplier", async () => {
     renderApp("/dashboard/supplier");
 
-    expect(screen.getByRole("heading", { name: /sign in to your account/i })).toBeInTheDocument();
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: /page not found/i })).toBeNull();
   });
 

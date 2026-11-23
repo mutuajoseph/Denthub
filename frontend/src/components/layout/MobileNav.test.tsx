@@ -56,6 +56,25 @@ describe("MobileNav", () => {
     });
   });
 
+  it("lists every public destination, including Magazine", () => {
+    renderNav();
+
+    for (const [name, href] of [
+      ["Home", "/"],
+      ["About", "/about"],
+      ["Dentists", "/dentists"],
+      ["Shop", "/shop"],
+      ["Jobs", "/jobs"],
+      ["Training", "/training"],
+      ["Magazine", "/magazine"],
+    ] as const) {
+      expect(screen.getByRole("link", { name: new RegExp(`^${name}`, "i") })).toHaveAttribute(
+        "href",
+        href,
+      );
+    }
+  });
+
   it("lists Training when the market's flag is on", () => {
     renderNav();
 

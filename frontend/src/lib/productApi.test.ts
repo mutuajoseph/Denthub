@@ -32,6 +32,7 @@ const wireProduct = {
     slug: "nairobi-dental-supplies",
     scope: "local",
     is_verified: true,
+    owner_user_id: "user-66a8af20",
   },
   pricing: {
     currency: "KES",
@@ -74,6 +75,7 @@ describe("mapProduct", () => {
     expect(product.dentistRecommended).toBe(true);
     expect(product.imageUrl).toBeNull();
     expect(product.supplier.name).toBe("Nairobi Dental Supplies");
+    expect(product.supplier.ownerUserId).toBe("user-66a8af20");
     expect(product.pricing.unitPrice).toBe("260.00");
     expect(product.pricing.lineTotal).toBe("6240.00");
     expect(product.pricing.retailPrice).toBe("350.00");

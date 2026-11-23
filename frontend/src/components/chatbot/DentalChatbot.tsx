@@ -208,7 +208,7 @@ export function DentalChatbot() {
         aria-label={isOpen ? "Close dental assistant" : "Open dental assistant"}
         aria-expanded={isOpen}
         aria-controls="dental-chatbot-panel"
-        className="fixed bottom-[calc(9rem+env(safe-area-inset-bottom,0px))] right-3 z-[70] flex h-14 w-14 items-center justify-center rounded-full bg-ink text-paper shadow-card-graphite transition-transform hover:scale-105 hover:bg-graphite motion-reduce:transform-none motion-reduce:transition-none sm:right-4 md:bottom-24"
+        className="fixed bottom-[calc(9rem+env(safe-area-inset-bottom,0px))] right-3 z-[70] flex h-14 w-14 items-center justify-center rounded-full bg-ink text-paper shadow-card-graphite transition-transform hover:scale-105 hover:bg-graphite motion-reduce:transform-none motion-reduce:transition-none sm:right-4 lg:bottom-24"
       >
         {isOpen ? (
           <X className="h-6 w-6" aria-hidden="true" />
@@ -230,7 +230,7 @@ export function DentalChatbot() {
           open
           id="dental-chatbot-panel"
           aria-labelledby="dental-chatbot-title"
-          className="fixed bottom-[calc(9rem+env(safe-area-inset-bottom,0px))] left-2 right-2 z-[70] m-0 flex max-w-none h-[min(70vh,32rem)] flex-col overflow-hidden rounded-card border border-steel bg-paper shadow-card-graphite sm:left-auto sm:right-4 sm:w-96 md:bottom-24"
+          className="fixed bottom-[calc(9rem+env(safe-area-inset-bottom,0px))] left-2 right-2 z-[70] m-0 flex max-w-none h-[min(70vh,32rem)] flex-col overflow-hidden rounded-card border border-steel bg-paper shadow-card-graphite sm:left-auto sm:right-4 sm:w-96 lg:bottom-24"
         >
           <header className="flex items-center gap-3 border-b border-steel bg-cloud px-4 py-3">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-paper text-ink">

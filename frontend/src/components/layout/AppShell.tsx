@@ -62,7 +62,7 @@ export function AppShell({
       <DentalChatbot />
       <BackToTop />
       {/* Single global cart surface, opened from the navbar or the shop page. */}
-      <CartDrawer />
+      <CartDrawer user={user} onSignIn={onSignIn} />
     </div>
   );
 }

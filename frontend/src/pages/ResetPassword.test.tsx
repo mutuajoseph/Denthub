@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "../lib/apiClient";
 import { resetPassword } from "../lib/auth";
+import { useAuthUiStore } from "../store/authUiStore";
 import { ResetPassword } from "./ResetPassword";
 
 vi.mock("../lib/auth", async (importOriginal) => {
@@ -37,6 +38,7 @@ async function fill(password: string, confirm: string) {
 describe("ResetPassword", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuthUiStore.getState().closeAuthModal();
   });
 
   it("sets the new password with the token from the link", async () => {
@@ -47,6 +49,18 @@ describe("ResetPassword", () => {
 
     expect(await screen.findByRole("status")).toHaveTextContent(/password is changed/i);
     expect(resetPasswordMock).toHaveBeenCalledWith("tok-1", "a long new passphrase");
+  });
+
+  it("opens the auth modal from the success state", async () => {
+    resetPasswordMock.mockResolvedValue();
+    renderPage();
+    const user = userEvent.setup();
+
+    await fill("a long new passphrase", "a long new passphrase");
+    await user.click(await screen.findByRole("button", { name: /sign in/i }));
+
+    expect(useAuthUiStore.getState().isOpen).toBe(true);
+    expect(useAuthUiStore.getState().returnTo).toBe("/");
   });
 
   it("refuses mismatched passwords without calling the API", async () => {

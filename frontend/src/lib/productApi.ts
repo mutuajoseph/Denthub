@@ -33,6 +33,8 @@ export interface ProductSupplier {
   slug: string;
   scope: string;
   isVerified: boolean;
+  /** Supplier account's User id, for the shop-conversation checkout flow. */
+  ownerUserId: string | null;
 }
 
 export interface Product {
@@ -99,6 +101,7 @@ interface WireSupplier extends WireRecord {
   slug: string;
   scope: string;
   is_verified: boolean;
+  owner_user_id: string | null;
 }
 
 interface WireProduct extends WireRecord {
@@ -174,6 +177,7 @@ function mapSupplier(wire: WireSupplier | undefined): ProductSupplier {
     slug: wire?.slug ?? "",
     scope: wire?.scope ?? "",
     isVerified: Boolean(wire?.is_verified),
+    ownerUserId: wire?.owner_user_id ?? null,
   };
 }
 

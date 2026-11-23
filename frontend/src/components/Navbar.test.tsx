@@ -9,7 +9,7 @@ import type { AuthUser } from "../lib/auth";
 import { type CountryConfig, fetchCountries } from "../lib/countryConfigApi";
 import { useCountryConfigStore } from "../store/countryConfigStore";
 import { useRegionStore } from "../store/regionStore";
-import Navbar from "./Navbar";
+import Navbar, { NAV_LINKS } from "./Navbar";
 
 vi.mock("../lib/countryConfigApi", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../lib/countryConfigApi")>();
@@ -49,7 +49,7 @@ function makeUser(role: Role): AuthUser {
   };
 }
 
-function renderNavbar(user: AuthUser) {
+function renderNavbar(user: AuthUser | null, onSignIn = vi.fn(), onLogout = vi.fn()) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: 0, gcTime: 0 } },
   });
@@ -57,7 +57,7 @@ function renderNavbar(user: AuthUser) {
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <Navbar onSignIn={vi.fn()} user={user} onLogout={vi.fn()} />
+        <Navbar onSignIn={onSignIn} user={user} onLogout={onLogout} />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -70,33 +70,59 @@ async function openAccountMenu(user: AuthUser) {
   return account;
 }
 
+beforeEach(() => {
+  vi.resetAllMocks();
+  vi.mocked(fetchCountries).mockResolvedValue({ items: [], default_country_code: "KE" });
+  useRegionStore.setState({ regionCode: "KE", hasManualSelection: true });
+  useCountryConfigStore.setState({
+    config: makeConfig("KE"),
+    regions: [],
+    lastCountry: "KE",
+    error: null,
+    loading: false,
+    regionsLoading: false,
+  });
+});
+
+afterEach(() => {
+  useRegionStore.setState({ regionCode: "GLOBAL", hasManualSelection: false });
+  useCountryConfigStore.setState({
+    config: null,
+    regions: [],
+    lastCountry: null,
+    error: null,
+    loading: false,
+    regionsLoading: false,
+  });
+});
+
+describe("Navbar navigation", () => {
+  it("lists every public link in the header", () => {
+    renderNavbar(null);
+
+    for (const { label, href } of NAV_LINKS) {
+      expect(screen.getByRole("link", { name: label })).toHaveAttribute("href", href);
+    }
+  });
+
+  it("has no hamburger menu", () => {
+    renderNavbar(null);
+
+    expect(screen.queryByRole("button", { name: /open menu|close menu/i })).toBeNull();
+    expect(screen.queryByLabelText("mobile-navigation")).toBeNull();
+  });
+
+  it("keeps Sign in reachable when signed out", async () => {
+    const onSignIn = vi.fn();
+    renderNavbar(null, onSignIn);
+
+    await userEvent.setup().click(screen.getByRole("button", { name: /sign in/i }));
+
+    expect(onSignIn).toHaveBeenCalledOnce();
+  });
+});
+
 describe("Navbar account menu", () => {
-  beforeEach(() => {
-    vi.resetAllMocks();
-    vi.mocked(fetchCountries).mockResolvedValue({ items: [], default_country_code: "KE" });
-    useRegionStore.setState({ regionCode: "KE", hasManualSelection: true });
-    useCountryConfigStore.setState({
-      config: makeConfig("KE"),
-      regions: [],
-      lastCountry: "KE",
-      error: null,
-      loading: false,
-      regionsLoading: false,
-    });
-  });
-
-  afterEach(() => {
-    useRegionStore.setState({ regionCode: "GLOBAL", hasManualSelection: false });
-    useCountryConfigStore.setState({
-      config: null,
-      regions: [],
-      lastCountry: null,
-      error: null,
-      loading: false,
-      regionsLoading: false,
-    });
-  });
-
   it("offers a supplier account its store from the account menu", async () => {
     await openAccountMenu(makeUser(ROLE.SUPPLIER));
 
