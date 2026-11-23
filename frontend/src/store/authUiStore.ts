@@ -9,7 +9,12 @@ type AuthUiState = {
 
 /** Only same-origin paths may be used as a post-sign-in destination. */
 function safeReturnTo(path: string | undefined): string | null {
-  if (!path || !path.startsWith("/") || path.startsWith("//") || path.includes("\\")) {
+  if (
+    typeof path !== "string" ||
+    !path.startsWith("/") ||
+    path.startsWith("//") ||
+    path.includes("\\")
+  ) {
     return null;
   }
 
