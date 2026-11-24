@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError, apiRequest } from "./apiClient";
-import { clearStoredAuth, getStoredToken } from "./auth";
+import { AUTH_STORAGE_KEY, clearStoredAuth, getStoredToken } from "./auth";
 
 const user = {
   id: "u-1",
@@ -69,5 +69,48 @@ describe("apiClient session refresh (#121)", () => {
 
     await expect(apiRequest("/products")).rejects.toBeInstanceOf(ApiError);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("apiClient session restore on reload (#170)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    clearStoredAuth();
+  });
+
+  it("restores the access token before the first authenticated request after a reload", async () => {
+    window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ user, surface: "public" }));
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        response(200, { access_token: "restored-token", token_type: "bearer", user }),
+      )
+      .mockResolvedValueOnce(response(200, { ok: true }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(apiRequest("/me/verifications", { auth: true })).resolves.toEqual({ ok: true });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const [refreshUrl] = fetchMock.mock.calls[0] as [string];
+    expect(refreshUrl).toBe("/api/v1/auth/refresh");
+    const [, verificationInit] = fetchMock.mock.calls[1] as [string, RequestInit];
+    expect(new Headers(verificationInit.headers).get("Authorization")).toBe(
+      "Bearer restored-token",
+    );
+  });
+
+  it("still returns 401 to a signed-out caller without a stored profile", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(response(401, { code: 401, message: "Nope" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const error = await apiRequest("/me/verifications", { auth: true }).catch(
+      (cause: unknown) => cause,
+    );
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).status).toBe(401);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/v1/me/verifications");
+    expect(new Headers(init.headers).get("Authorization")).toBeNull();
   });
 });

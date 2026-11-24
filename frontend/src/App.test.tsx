@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
 import { ROLE, type Role } from "./auth/roles";
@@ -168,7 +168,16 @@ function renderApp(path: string) {
   );
 }
 
-function seedAuth(role: Role): void {
+function jsonResponse(status: number, body: unknown): Response {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    statusText: "",
+    text: async () => JSON.stringify(body),
+  } as Response;
+}
+
+function seedAuth(role: Role): AuthResponse {
   const auth: AuthResponse = {
     access_token: "test-token",
     token_type: "bearer",
@@ -188,6 +197,7 @@ function seedAuth(role: Role): void {
   };
 
   window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth));
+  return auth;
 }
 
 describe("App routes", () => {
@@ -204,6 +214,11 @@ describe("App routes", () => {
     fetchMyStoreMock.mockResolvedValue(null);
     fetchMyProviderDashboardMock.mockResolvedValue(null);
     useAuthUiStore.getState().closeAuthModal();
+    clearStoredAuth();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   // Route screens are lazily imported (issue #66), so the first render commits
@@ -334,6 +349,28 @@ describe("App routes", () => {
     expect(await screen.findByRole("heading", { name: /^settings$/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /download my data/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Delete my account" })).toBeInTheDocument();
+  });
+
+  it("sends no unauthenticated verification request after a signed-in reload (#170)", async () => {
+    const auth = seedAuth(ROLE.PATIENT);
+    const fetchMock = vi.fn(async (url: RequestInfo | URL, _init?: RequestInit) =>
+      String(url) === "/api/v1/auth/refresh"
+        ? jsonResponse(200, { ...auth, access_token: "restored-token" })
+        : jsonResponse(200, { items: [] }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderApp("/settings");
+
+    await waitFor(() => {
+      const verificationCall = fetchMock.mock.calls.find(
+        ([url]) => String(url) === "/api/v1/me/verifications",
+      );
+      expect(verificationCall).toBeDefined();
+      expect(new Headers(verificationCall?.[1]?.headers).get("Authorization")).toBe(
+        "Bearer restored-token",
+      );
+    });
   });
 
   it("renders the standalone staff surface at /staff/access", async () => {
