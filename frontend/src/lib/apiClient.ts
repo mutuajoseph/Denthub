@@ -7,7 +7,7 @@
 import { useCountryConfigStore } from "../store/countryConfigStore";
 import { useRegionStore } from "../store/regionStore";
 import { API_BASE } from "./api";
-import { getStoredToken, refreshSession } from "./auth";
+import { getStoredToken, refreshSession, restoreSession } from "./auth";
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 
@@ -219,6 +219,10 @@ async function executeRequest<T>(path: string, options: ApiRequestOptions = {}):
 export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
   const { retryOnUnauthorized, ...request } = options;
   const shouldRetry = retryOnUnauthorized ?? options.auth === true;
+
+  if (options.auth === true && !getStoredToken()) {
+    await restoreSession();
+  }
 
   try {
     return await executeRequest<T>(path, request);
