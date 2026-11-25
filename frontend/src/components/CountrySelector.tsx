@@ -1,3 +1,4 @@
+import * as CountryFlags from "country-flag-icons/react/3x2";
 import { Check, ChevronDown, Globe } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useCountries } from "../hooks/useCountries";
@@ -12,6 +13,10 @@ const GLOBAL_COUNTRY = {
   name: "Worldwide",
 } as const;
 
+function flagFor(code: string) {
+  return CountryFlags[code as keyof typeof CountryFlags];
+}
+
 export default function CountrySelector({ onNavigate }: CountrySelectorProps) {
   const [open, setOpen] = useState(false);
   const regionCode = useRegionStore((s) => s.regionCode || s.getRegion().code);
@@ -25,6 +30,7 @@ export default function CountrySelector({ onNavigate }: CountrySelectorProps) {
   );
 
   const current = options.find((option) => option.code === regionCode) ?? GLOBAL_COUNTRY;
+  const CurrentFlag = current.code === "GLOBAL" ? undefined : flagFor(current.code);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -52,7 +58,11 @@ export default function CountrySelector({ onNavigate }: CountrySelectorProps) {
         aria-label={`Current country: ${current.name}`}
         className="flex h-10 items-center gap-1.5 rounded-button px-2.5 text-sm font-medium text-charcoal ring-1 ring-inset ring-steel transition-colors hover:bg-cloud hover:text-ink"
       >
-        <Globe className="h-[18px] w-[18px] shrink-0" strokeWidth={1.7} aria-hidden="true" />
+        {CurrentFlag ? (
+          <CurrentFlag className="h-[18px] w-[27px] shrink-0 rounded-[2px]" aria-hidden="true" />
+        ) : (
+          <Globe className="h-[18px] w-[18px] shrink-0" strokeWidth={1.7} aria-hidden="true" />
+        )}
         <span className="hidden sm:inline">{current.name}</span>
         <ChevronDown
           className={`h-4 w-4 text-slate transition-transform duration-200 ${open ? "rotate-180" : ""}`}
@@ -68,6 +78,7 @@ export default function CountrySelector({ onNavigate }: CountrySelectorProps) {
         >
           {options.map((option) => {
             const selected = option.code === regionCode;
+            const OptionFlag = option.code === "GLOBAL" ? undefined : flagFor(option.code);
             return (
               <button
                 key={option.code}
@@ -83,6 +94,11 @@ export default function CountrySelector({ onNavigate }: CountrySelectorProps) {
                   className={`h-1.5 w-1.5 shrink-0 rounded-[1px] ${selected ? "bg-aqua-relay ring-1 ring-ink/20" : "bg-transparent"}`}
                   aria-hidden="true"
                 />
+                {OptionFlag ? (
+                  <OptionFlag className="h-3.5 w-5 shrink-0 rounded-[2px]" aria-hidden="true" />
+                ) : (
+                  <Globe className="h-3.5 w-3.5 shrink-0" strokeWidth={1.7} aria-hidden="true" />
+                )}
                 <span className="flex-1 truncate">{option.name}</span>
                 {selected && <Check className="h-4 w-4 shrink-0 text-ink" aria-hidden="true" />}
               </button>

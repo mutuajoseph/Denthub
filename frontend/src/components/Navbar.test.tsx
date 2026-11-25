@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -10,6 +10,12 @@ import { type CountryConfig, fetchCountries } from "../lib/countryConfigApi";
 import { useCountryConfigStore } from "../store/countryConfigStore";
 import { useRegionStore } from "../store/regionStore";
 import Navbar, { NAV_LINKS } from "./Navbar";
+
+const { brandNameState } = vi.hoisted(() => ({ brandNameState: { value: "DentHub Kenya" } }));
+
+vi.mock("../hooks/useRegion", () => ({
+  useRegion: () => ({ brandName: brandNameState.value }),
+}));
 
 vi.mock("../lib/countryConfigApi", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../lib/countryConfigApi")>();
@@ -72,6 +78,7 @@ async function openAccountMenu(user: AuthUser) {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  brandNameState.value = "DentHub Kenya";
   vi.mocked(fetchCountries).mockResolvedValue({ items: [], default_country_code: "KE" });
   useRegionStore.setState({ regionCode: "KE", hasManualSelection: true });
   useCountryConfigStore.setState({
@@ -103,6 +110,15 @@ describe("Navbar navigation", () => {
     for (const { label, href } of NAV_LINKS) {
       expect(screen.getByRole("link", { name: label })).toHaveAttribute("href", href);
     }
+  });
+
+  it("shows the brand artwork and keeps the country suffix as text", () => {
+    brandNameState.value = "DentHub USA";
+    renderNavbar(null);
+
+    const logo = screen.getByRole("link", { name: "DentHub USA home" });
+    expect(logo.querySelector("img")?.getAttribute("src")).toContain("denthub-logo");
+    expect(within(logo).getByText("USA")).toBeInTheDocument();
   });
 
   it("has no hamburger menu", () => {

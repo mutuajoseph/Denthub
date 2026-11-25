@@ -14,6 +14,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 
+import brandLogo from "../assets/brand/denthub-logo.png";
 import {
   isAdminRole,
   isFacilityRole,
@@ -112,7 +113,7 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
   const cartCount = useCartStore((s) => selectCartCount(s.items));
   const openCartDrawer = useCartUiStore((s) => s.openCartDrawer);
   const { brandName } = useRegion();
-  const { mark, suffix } = splitBrand(brandName);
+  const { suffix } = splitBrand(brandName);
   const accountLinks = user ? accountLinksFor(user) : [];
 
   useEffect(() => {
@@ -147,15 +148,7 @@ export default function Navbar({ onSignIn, user, onLogout }: NavbarProps) {
           aria-label={`${brandName} home`}
           className="flex min-w-0 items-center gap-2 whitespace-nowrap rounded-link"
         >
-          <span
-            className="relative flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] bg-graphite shadow-edge"
-            aria-hidden="true"
-          >
-            <span className="h-2 w-2 rounded-[2px] bg-aqua-relay" />
-          </span>
-          <span className="font-display text-[19px] font-semibold tracking-[-0.03em] text-ink sm:text-[21px]">
-            {mark}
-          </span>
+          <img src={brandLogo} alt="" className="h-14 w-auto shrink-0" />
           {suffix && (
             <span className="font-mono text-[11px] font-normal uppercase tracking-[0.06em] text-slate">
               {suffix}

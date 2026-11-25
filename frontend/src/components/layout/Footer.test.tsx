@@ -56,6 +56,13 @@ describe("Footer", () => {
     });
   });
 
+  it("shows the brand artwork with the brand name as its accessible label", () => {
+    renderFooter();
+
+    const logo = screen.getByRole("link", { name: "DentHub" });
+    expect(logo.querySelector("img")?.getAttribute("src")).toContain("denthub-logo");
+  });
+
   it("links to CPD training when the market's flag is on", () => {
     renderFooter();
 
