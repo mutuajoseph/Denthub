@@ -1,5 +1,7 @@
 import { ArrowUpRight, Flag, Globe, Mail } from "lucide-react";
 import { Link } from "react-router-dom";
+import brandLogo from "../../assets/brand/denthub-logo.png";
+import { splitBrand } from "../../config/regions";
 import { useRegion } from "../../hooks/useRegion";
 import { useTrainingEnabled } from "../../hooks/useTraining";
 
@@ -29,17 +31,20 @@ export function Footer() {
     ? professionalLinks
     : professionalLinks.filter((link) => link.to !== "/training");
   const email = `hello@${region.domain}`;
+  const { suffix } = splitBrand(brandName);
   const RegionIcon = region.code === "GLOBAL" ? Globe : Flag;
 
   return (
     <footer className="mt-auto border-t border-white/10 bg-ink pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))] text-paper lg:pb-0">
       <div className="mx-auto grid w-full max-w-7xl gap-10 px-4 pb-12 pt-14 sm:grid-cols-2 sm:px-6 lg:grid-cols-[1.4fr_1fr_1fr_1fr] lg:px-8">
         <section aria-labelledby="footer-about-heading" className="max-w-sm">
-          <Link
-            to="/"
-            className="rounded-link font-display text-feature-heading font-medium text-paper"
-          >
-            {brandName}
+          <Link to="/" aria-label={brandName} className="inline-flex w-fit items-center gap-3">
+            <img src={brandLogo} alt="" className="h-24 w-auto shrink-0" />
+            {suffix && (
+              <span className="font-mono text-[11px] uppercase tracking-[0.06em] text-paper/70">
+                {suffix}
+              </span>
+            )}
           </Link>
           <h2 id="footer-about-heading" className="sr-only">
             About {brandName}
